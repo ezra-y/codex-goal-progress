@@ -77,7 +77,7 @@ command、event、matcher 或控制能力变化时，用户重新审核；普通
 
 Codex 必须通过 LaunchServices 启动。直接由 Goal Progress 启动 App 可让 macOS TCC
 把 Codex 子进程的权限访问错误归因给 Goal Progress。证据见
-`docs/run/evidence/macos-tcc-attribution-v2.json`。
+内部验证档案。
 
 ## 故障边界
 

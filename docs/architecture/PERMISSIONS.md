@@ -56,7 +56,7 @@ loopback CDP 不向局域网或互联网开放。Goal、Contract 和 Token 不�
 Goal Progress 不需要 App 管理、屏幕录制或 Apple Events。真实验收曾发现直接启动
 Codex 会让 macOS 把 Codex 子进程的 TCC 访问归因给 Goal Progress。当前实现已改用
 LaunchServices，修复后责任进程是 `com.openai.codex`。证据见
-`docs/run/evidence/macos-tcc-attribution-v2.json`。
+内部验证档案。
 
 验收期间使用过 Computer Use、截图、测试浏览器和 Downloads 中的开发仓库，因此
 macOS 曾为开发路径记录 Apple Events、Desktop、Downloads、App Bundles 和 Media

@@ -115,14 +115,4 @@ thread ID、React Store、私有 chunk、localStorage 或 indexedDB。
 
 ## 8. 当前证据
 
-- `docs/run/evidence/gate-b-dom-structure.json`
-- `docs/run/evidence/gate-b-sidecar-mount.json`
-- `docs/run/evidence/gate-b-sidecar-reload.json`
-- `docs/run/evidence/gate-b-sidecar-observer.json`
-- `docs/run/evidence/gate-b-sidecar-missing-anchor.json`
-- `docs/run/evidence/macos-26.818.31338-selector-poc.json`
-- `docs/run/evidence/frontend-theme-sidecar-mount.json`
-- `docs/run/screenshots/frontend/theme-sidecar-mounted.png`
-- `docs/run/evidence/stage12-test-matrix.json`
-- `docs/run/screenshots/gate-b/5.3-mounted.png`
-- `docs/run/screenshots/release-safety-v2/goal-progress-component.png`
+- 详细机器证据保存在内部验证档案中。

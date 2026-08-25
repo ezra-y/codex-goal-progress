@@ -1669,13 +1669,7 @@ export class SidecarMountController {
         ? { obstacleLeft: chipObstacle.left, obstacleRight: chipObstacle.right }
         : {}),
     });
-    const requiredStackLift =
-      chipObstacle && chipProjection.blocked
-        ? Math.max(0, chipBaseBottom - chipObstacle.top + 8) / hostScale
-        : 0;
-    const stackLift =
-      chipObstacle && chipProjection.blocked ? Math.max(currentStackLift, requiredStackLift) : 0;
-    if (stackLift > 0) {
+    if (chipProjection.blocked) {
       chipProjection = projectFloatingCenter({
         safeLeft: left,
         safeRight: right,
@@ -1683,6 +1677,7 @@ export class SidecarMountController {
         ratio,
       });
     }
+    const stackLift = 0;
     const panelHalfWidth = panelWidth / 2;
     const panelMinimumCenter = left + panelHalfWidth;
     const panelMaximumCenter = Math.max(panelMinimumCenter, right - panelHalfWidth);

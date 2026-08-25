@@ -1,30 +1,43 @@
 # Codex Goal Progress
 
+![Codex Goal Progress in action](docs/assets/codex-goal-progress-demo.gif)
+
 Optional, deterministic checklist progress for native Codex Goals.
 
-> [!WARNING]
-> This repository is a source preview. The project currently supports only the Codex Desktop
-> versions listed in the [support matrix](docs/quality/SUPPORT-MATRIX.md).
-
-## What it adds
+## ✨ Why it feels native
 
 Goal Progress places a compact progress view next to Codex's native Goal:
 
-- stable acceptance objectives;
-- the current objective and its local progress;
-- deterministic overall progress;
-- trusted Token usage when Codex can attribute it to the current Goal;
-- fixed and draggable floating layouts;
-- live Codex theme, accent, UI size, and language adaptation.
-
-It does not use a second model, an external model API key, or a hidden task. Local Core code
-calculates every percentage from a validated checklist.
-
-| Light theme | Dark theme |
+| Capability | What it does |
 |---|---|
-| ![Goal Progress in the Codex light theme](docs/assets/codex-goal-progress-light.png) | ![Goal Progress in the Codex dark theme](docs/assets/codex-goal-progress-dark.png) |
+| 🎨 Theme-aware | Follows Codex Light/Dark mode and the user's current accent color. |
+| 🔤 Type-aware | Reads the live Codex UI font size and derives spacing from it instead of freezing one layout. |
+| 📐 Layout-aware | Measures the real native Goal and composer geometry, then keeps fixed and draggable floating layouts aligned. |
+| 🌍 Language-aware | Follows the Codex document language and direction without changing the progress Contract. |
+| ✅ Deterministic | Calculates objective and overall progress from a validated checklist, not from guesses, Token usage, or elapsed time. |
+| 🔒 Local-first | Uses the current Codex model and a local Helper. No second model, hidden task, or external model API key. |
 
-## Build from source
+The compact view shows the current objective, local objective progress, overall progress, and
+trusted Token usage when Codex can attribute it to the current Goal.
+
+## 🌓 Light and Dark
+
+### Light
+
+| Fixed view | Floating view |
+|---|---|
+| ![Goal Progress fixed view in the real Codex light theme](docs/assets/codex-goal-progress-light-fixed-en.png) | ![Goal Progress floating view in the real Codex light theme](docs/assets/codex-goal-progress-light-floating-en.png) |
+
+### Dark
+
+| Fixed view | Floating view |
+|---|---|
+| ![Goal Progress fixed view in the real Codex dark theme](docs/assets/codex-goal-progress-dark-fixed-en.png) | ![Goal Progress floating view in the real Codex dark theme](docs/assets/codex-goal-progress-dark-floating-en.png) |
+
+All four screenshots come from the production Renderer mounted beside a real native Goal in
+Codex Desktop.
+
+## 🚀 Build from source
 
 Requirements:
 
@@ -77,19 +90,40 @@ reuses the Goal checklist and initializes one local progress Contract.
 
 Each new native Goal must enable Goal Progress explicitly. Ordinary Codex Goals remain unchanged.
 
-## How it works
+## 🧭 How it works
 
-```text
-Goal Progress Skill
-        |
-        v
-local MCP -> Helper -> Contract store
-                       |
-                       v
-                 deterministic Core
-                       |
-                       v
-              isolated Web Component
+```mermaid
+flowchart LR
+  subgraph CODEX["🧠 Current Codex Goal"]
+    SKILL["Goal Progress Skill"]
+    MODEL["Current Codex model<br/>updates checklist evidence"]
+    NATIVE["Native Goal · Token · Theme"]
+  end
+
+  subgraph LOCAL["🔒 Local deterministic runtime"]
+    MCP["MCP validation"]
+    HELPER["Helper<br/>single writer"]
+    STORE[("Contract + event log")]
+    CORE["Core calculator<br/>checklist → exact %"]
+  end
+
+  subgraph VIEW["✨ Native-adaptive view"]
+    VM["Read-only ViewModel"]
+    RENDERER["Shadow DOM Renderer<br/>fixed ↔ floating"]
+  end
+
+  SKILL --> MODEL --> MCP --> HELPER
+  HELPER <--> STORE
+  HELPER --> CORE --> VM --> RENDERER
+  NATIVE -. "Goal identity + trusted usage" .-> HELPER
+  NATIVE -. "theme · type scale · language" .-> RENDERER
+
+  classDef codex fill:#f3e8e2,stroke:#cc7d5e,color:#2d2d2b,stroke-width:1.5px;
+  classDef local fill:#e9f3ff,stroke:#5f9fd8,color:#17212b,stroke-width:1.5px;
+  classDef view fill:#eee9ff,stroke:#8b72d7,color:#241d38,stroke-width:1.5px;
+  class SKILL,MODEL,NATIVE codex;
+  class MCP,HELPER,STORE,CORE local;
+  class VM,RENDERER view;
 ```
 
 - The current model updates checklist evidence through local MCP tools.
@@ -98,9 +132,11 @@ local MCP -> Helper -> Contract store
 - Renderer receives a display-only ViewModel through the Codex adapter.
 - The installer uses a self-contained Node SEA Helper.
 
-Read the [architecture decision](docs/decisions/CodexGoalProgress技术架构.md), [permissions](docs/architecture/PERMISSIONS.md), and [threat model](docs/quality/THREAT-MODEL.md) for details.
+Read the [architecture decision](docs/decisions/CodexGoalProgress技术架构.md),
+[permissions](docs/architecture/PERMISSIONS.md), and
+[threat model](docs/quality/THREAT-MODEL.md) for details.
 
-## Privacy and permissions
+## 🔐 Privacy and permissions
 
 Goal Progress runs locally. It does not require Screen Recording, Accessibility, Camera,
 Microphone, or Full Disk Access.
@@ -133,3 +169,10 @@ release-candidate numbers are not exported to this repository.
 ## License
 
 [MIT](LICENSE)
+
+## ⚠️ Before you install
+
+> [!WARNING]
+> This repository is a source preview. The project currently supports only the Codex Desktop
+> versions listed in the [support matrix](docs/quality/SUPPORT-MATRIX.md). Build and verify the
+> release locally before installing it.

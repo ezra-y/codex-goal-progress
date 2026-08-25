@@ -57,7 +57,7 @@ Renderer 不写 Contract，也不计算百分比。Helper 是唯一写入者，C
 |---|---|---|
 | 模型直接写百分比 | MCP schema 只接受 checklist 状态；Core 计算 | `tests/unit/core-progress.test.ts` |
 | proof 伪造或重放 | HMAC proof、短有效期、一次消费、0600 secret | `tests/unit/runtime-proof.test.ts` |
-| 跨 thread 串线 | CurrentThreadResolver、Contract binding、createdAt | `docs/run/evidence/gate-a-thread-binding.json` |
+| 跨 thread 串线 | CurrentThreadResolver、Contract binding、createdAt | 内部验证档案 |
 | 并发覆盖 | `expectedRevision`、事件/请求 ID 幂等 | `tests/integration/event-store.test.ts` |
 | Goal 替换继承旧进度 | `contract.replaced`、revision 1 新基线 | `tests/integration/helper-lifecycle.test.ts` |
 | 目标文本脚本注入 | 结构化 CDP 参数、Lit 文本绑定、无 innerHTML | `tests/e2e/sidecar-mount.spec.ts` |
@@ -68,7 +68,7 @@ Renderer 不写 Contract，也不计算百分比。Helper 是唯一写入者，C
 | Renderer bundle 被替换 | release version、bytes 和 SHA-256 | `tests/unit/renderer-bundle.test.ts` |
 | Store 损坏或磁盘满 | 事件先提交、原子快照、重放、ENOSPC 失败 | `tests/integration/event-store.test.ts` |
 | 日志泄露正文或 secret | 日志 schema 只收 ID、状态、code 和计数 | `tests/unit/store-logger.test.ts` |
-| release 或 Plugin 被改 | SHA256SUMS、codesign、Plugin manifest 和 Hook hash | `docs/run/evidence/stage14-install-commands.json` |
+| release 或 Plugin 被改 | SHA256SUMS、codesign、Plugin manifest 和 Hook hash | 内部验证档案 |
 | 安装器修改官方 app | 安装路径白名单和修改前后 app 元数据检查 | `tests/integration/macos-installer.test.ts` |
 
 ## 残余限制
