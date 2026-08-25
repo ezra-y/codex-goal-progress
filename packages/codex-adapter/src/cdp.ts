@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { GOAL_PROGRESS_RELEASE_VERSION } from "../../contracts/src/index.js";
+import { resolveCurrentMacosVisibleThreadId } from "./anchor-adapter.js";
 import { GOAL_PROGRESS_PAGE_HOST_VERSION } from "./page-host.js";
 import {
   assertGoalProgressRendererBundle,
@@ -594,33 +595,7 @@ const VisibleGoalProgressThreadResultSchema = z
   })
   .passthrough();
 
-const visibleGoalProgressThreadExpression = `(() => {
-  const rows = Array.from(document.querySelectorAll("[data-app-action-sidebar-thread-row]"))
-    .filter((row) =>
-      row.getAttribute("aria-current") === "page" &&
-      row.getAttribute("data-app-action-sidebar-thread-active") === "true" &&
-      row.getAttribute("data-app-action-sidebar-thread-selected") === "true"
-    );
-  if (rows.length !== 1) {
-    return null;
-  }
-  const visibleThreadId = rows[0]?.getAttribute("data-app-action-sidebar-thread-id");
-  if (typeof visibleThreadId !== "string" || visibleThreadId.length < 1) {
-    return null;
-  }
-  const visibleThreadHostId = rows[0]?.getAttribute(
-    "data-app-action-sidebar-thread-host-id"
-  );
-  const hostPrefix =
-    typeof visibleThreadHostId === "string" && visibleThreadHostId.length > 0
-      ? visibleThreadHostId + ":"
-      : "";
-  const threadId =
-    hostPrefix.length > 0 && visibleThreadId.startsWith(hostPrefix)
-      ? visibleThreadId.slice(hostPrefix.length)
-      : visibleThreadId;
-  return threadId.length > 0 && threadId.length <= 256 ? threadId : null;
-})()`;
+const visibleGoalProgressThreadExpression = `(${resolveCurrentMacosVisibleThreadId.toString()})(document)`;
 
 export async function readGoalProgressVisibleThreadId(
   sender: CdpCommandSender,

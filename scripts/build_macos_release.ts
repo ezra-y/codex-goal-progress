@@ -5,6 +5,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { writePluginTreeManifest } from "../platform/macos/src/plugin-integrity.js";
 import { createReleasePluginRuntimeFiles } from "../platform/macos/src/plugin-release.js";
 import {
   assertSafeMacosReleaseOutput,
@@ -167,6 +168,7 @@ async function main(): Promise<void> {
       mode: 0o700,
     }),
   ]);
+  await writePluginTreeManifest(releasePluginRoot);
   const pluginArchivePath = resolve(outputRoot, pluginArchiveRelativePath);
   run(
     "/usr/bin/ditto",

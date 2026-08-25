@@ -4,7 +4,7 @@ type: other
 status: active
 version: v1
 created_at: 2026-08-21
-updated_at: 2026-08-25 16:01
+updated_at: 2026-08-26 00:51
 refs: [requirement-20260818-01, plan-20260818-02]
 ---
 # KNOWN LIMITATIONS
@@ -53,6 +53,6 @@ refs: [requirement-20260818-01, plan-20260818-02]
 - 功能运行需要本机 loopback CDP。install/upgrade 只有用户同意重启后才开启；
   restore 和 uninstall 会关闭。
 - Plugin Hook 必须由用户审核。安装器不会自动信任。
-- `0.1.0` 是本地 Release Candidate，不应视为稳定版。
+- `0.0.9` 是本地 Release Candidate，不应视为稳定版。
 
 完整逐条状态见 `docs/quality/REQUIREMENT-TRACE.md`。

@@ -44,6 +44,7 @@ import {
   resolveMacosInstallationLayout,
 } from "./install-layout.js";
 import { InstallTransaction } from "./install-transaction.js";
+import { assertPluginTreeHasNoSymlinks, verifyPluginTreeManifest } from "./plugin-integrity.js";
 import { GOAL_PROGRESS_STABLE_HOOK_COMMAND } from "./plugin-release.js";
 import type { MacosReleaseFile } from "./release.js";
 
@@ -720,9 +721,24 @@ async function installedReleaseMatches(
 ): Promise<boolean> {
   try {
     const installedRelease = await readVerifiedRelease(layout.programReleaseRoot);
+    const installedFiles = Object.values(installedRelease.files).sort((left, right) =>
+      left.path.localeCompare(right.path),
+    );
+    const candidateFiles = Object.values(release.files).sort((left, right) =>
+      left.path.localeCompare(right.path),
+    );
     return (
       installedRelease.releaseVersion === release.releaseVersion &&
-      installedRelease.files.helper.sha256 === release.files.helper.sha256
+      installedFiles.length === candidateFiles.length &&
+      installedFiles.every((installedFile, index) => {
+        const candidateFile = candidateFiles[index];
+        return (
+          candidateFile !== undefined &&
+          installedFile.path === candidateFile.path &&
+          installedFile.bytes === candidateFile.bytes &&
+          installedFile.sha256 === candidateFile.sha256
+        );
+      })
     );
   } catch {
     return false;
@@ -905,6 +921,10 @@ export function createPluginController(options: {
       version,
     );
     try {
+      await Promise.all([
+        verifyPluginTreeManifest(sourceRoot),
+        verifyPluginTreeManifest(cacheRoot),
+      ]);
       const [sourceManifest, cacheManifest, sourceMcp, cacheMcp, sourceHook, cacheHook] =
         await Promise.all([
           readFile(resolve(sourceRoot, ".codex-plugin/plugin.json"), "utf8"),
@@ -953,7 +973,9 @@ export function createPluginController(options: {
       if (extracted.status !== 0) {
         throw new Error("GOAL_PROGRESS_PLUGIN_EXTRACT_FAILED");
       }
+      await assertPluginTreeHasNoSymlinks(marketplaceRoot);
       const pluginRoot = resolve(marketplaceRoot, "plugins", PLUGIN_NAME);
+      await verifyPluginTreeManifest(pluginRoot);
       const [manifest, mcp, hooks] = await Promise.all([
         readFile(resolve(pluginRoot, ".codex-plugin/plugin.json"), "utf8"),
         readFile(resolve(pluginRoot, ".mcp.json"), "utf8"),

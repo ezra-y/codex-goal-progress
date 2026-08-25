@@ -218,6 +218,62 @@ function result(
   };
 }
 
+export function resolveCurrentMacosVisibleThreadId(document: Document): string | null {
+  const rows = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-app-action-sidebar-thread-row]"),
+  ).filter(
+    (row) =>
+      row.getAttribute("aria-current") === "page" &&
+      row.getAttribute("data-app-action-sidebar-thread-active") === "true" &&
+      row.getAttribute("data-app-action-sidebar-thread-selected") === "true",
+  );
+  if (rows.length !== 1) {
+    return null;
+  }
+  const visibleThreadId = rows[0]?.getAttribute("data-app-action-sidebar-thread-id");
+  if (!visibleThreadId) {
+    return null;
+  }
+  const visibleThreadHostId = rows[0]?.getAttribute("data-app-action-sidebar-thread-host-id");
+  const hostPrefix =
+    typeof visibleThreadHostId === "string" && visibleThreadHostId.length > 0
+      ? `${visibleThreadHostId}:`
+      : "";
+  const normalizedVisibleThreadId =
+    hostPrefix.length > 0 && visibleThreadId.startsWith(hostPrefix)
+      ? visibleThreadId.slice(hostPrefix.length)
+      : visibleThreadId;
+  if (normalizedVisibleThreadId.length < 1 || normalizedVisibleThreadId.length > 256) {
+    return null;
+  }
+  if (!normalizedVisibleThreadId.startsWith("client-new-thread:")) {
+    return normalizedVisibleThreadId;
+  }
+  const mainContent = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '[data-app-shell-main-content-layout="thread-edge-scroll"]',
+    ),
+  );
+  if (mainContent.length !== 1) {
+    return null;
+  }
+  const conversationThreadIds = new Set(
+    Array.from(
+      mainContent[0]?.querySelectorAll<HTMLElement>("[data-response-annotation-conversation]") ??
+        [],
+    )
+      .map((element) => element.getAttribute("data-response-annotation-conversation"))
+      .filter(
+        (threadId): threadId is string =>
+          typeof threadId === "string" && threadId.length > 0 && threadId.length <= 256,
+      ),
+  );
+  if (conversationThreadIds.size !== 1) {
+    return null;
+  }
+  return conversationThreadIds.values().next().value ?? null;
+}
+
 function matchCurrentMacosVisibleThread(
   adapterId: string,
   document: Document,
@@ -257,14 +313,7 @@ function matchCurrentMacosVisibleThread(
       candidateCount: 1,
     };
   }
-  const visibleThreadHostId = currentRows[0]?.getAttribute(
-    "data-app-action-sidebar-thread-host-id",
-  );
-  const matchesExpectedThread =
-    visibleThreadId === expectedThreadId ||
-    (typeof visibleThreadHostId === "string" &&
-      visibleThreadHostId.length > 0 &&
-      visibleThreadId === `${visibleThreadHostId}:${expectedThreadId}`);
+  const matchesExpectedThread = resolveCurrentMacosVisibleThreadId(document) === expectedThreadId;
   return {
     matched: matchesExpectedThread,
     adapterId,
