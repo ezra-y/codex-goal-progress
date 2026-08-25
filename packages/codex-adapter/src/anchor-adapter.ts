@@ -265,7 +265,10 @@ export function resolveCurrentMacosVisibleThreadId(document: Document): string |
       .map((element) => element.getAttribute("data-response-annotation-conversation"))
       .filter(
         (threadId): threadId is string =>
-          typeof threadId === "string" && threadId.length > 0 && threadId.length <= 256,
+          typeof threadId === "string" &&
+          threadId.length > 0 &&
+          threadId.length <= 256 &&
+          !threadId.startsWith("client-new-thread:"),
       ),
   );
   if (conversationThreadIds.size !== 1) {

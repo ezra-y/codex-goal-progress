@@ -29,74 +29,30 @@ progress, overall progress, and Token usage attributable to that Goal.
 
 ## 🚀 Quick start
 
-### Install with AI
+### Option 1: Download the macOS Release
 
-Send this instruction to an AI:
+Download [codex-goal-progress-macos-arm64.zip](https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/codex-goal-progress-macos-arm64.zip),
+unzip it, then double-click **Install Goal Progress.command**.
 
-```text
-Please install and enable https://github.com/Ezra-Y/codex-goal-progress. After installation, run doctor and verify to confirm that it works correctly.
-```
-
-### Install manually
-
-Build from source:
+### Option 2: Install from Terminal
 
 ```bash
-git clone https://github.com/Ezra-Y/codex-goal-progress.git
-cd codex-goal-progress
-
-pnpm install --frozen-lockfile
-pnpm build
-
-GOAL_PROGRESS_NODE_BINARY="$PWD/.cache/node-v24.19.0/node-v24.19.0-darwin-arm64/bin/node" \
-  pnpm build:release:macos
-
-./dist/release/macos-arm64/bin/goal-progress install --json
-./dist/release/macos-arm64/bin/goal-progress doctor --json
-./dist/release/macos-arm64/bin/goal-progress verify --json
+curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh | sh
 ```
 
-Replace the Node path with the real path on your machine. Follow the installer prompt if Codex
-must reconnect or review a Hook.
+The script downloads the macOS Release and `SHA256SUMS`, verifies the ZIP, and runs the bundled
+installer. If Codex must restart, the script asks first.
+
+If Codex asks you to review the Goal Progress Hook, approve it, then open a new task so the new
+Plugin session loads.
 
 ## 🛠️ Requirements
 
 * Apple Silicon Mac
-* Node.js 22.12 or newer
-* pnpm 11
-* A Node.js 24.19.0 arm64 binary when building the macOS Release
+* Codex Desktop
 
-### Prepare Node 24.19.0 arm64
-
-Download the official macOS arm64 archive and SHA-256 manifest:
-
-```bash
-NODE_RELEASE_DIR="$PWD/.cache/node-v24.19.0"
-mkdir -p "$NODE_RELEASE_DIR"
-cd "$NODE_RELEASE_DIR"
-
-curl -fLO https://nodejs.org/download/release/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz
-curl -fLO https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt
-
-grep '  node-v24.19.0-darwin-arm64.tar.gz$' SHASUMS256.txt \
-  | shasum -a 256 -c -
-tar -xzf node-v24.19.0-darwin-arm64.tar.gz
-
-NODE_BINARY="$NODE_RELEASE_DIR/node-v24.19.0-darwin-arm64/bin/node"
-"$NODE_BINARY" -p 'process.version + " " + process.arch'
-file "$NODE_BINARY"
-
-cd ../..
-```
-
-The version check must print `v24.19.0 arm64`. The `file` command must report a Mach-O arm64
-binary.
-
-The built Release is written to:
-
-```text
-dist/release/macos-arm64
-```
+Release users do not need Node.js or pnpm. Contributors can follow
+[CONTRIBUTING.md](CONTRIBUTING.md) to build and verify the source.
 
 ## 🎯 How to use
 

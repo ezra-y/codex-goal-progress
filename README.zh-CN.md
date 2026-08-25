@@ -28,72 +28,30 @@
 
 ## 🚀 快速开始
 
-### 让 AI 安装
+### 方式一：下载 macOS Release
 
-把下面这句话发给 AI：
+下载 [codex-goal-progress-macos-arm64.zip](https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/codex-goal-progress-macos-arm64.zip)，
+解压后双击 **Install Goal Progress.command**。
 
-```text
-请安装并启用 https://github.com/Ezra-Y/codex-goal-progress。安装完成后运行 doctor 和 verify，确认它可以正常工作。
-```
-
-### 自己安装
-
-从源码构建：
+### 方式二：在终端一行安装
 
 ```bash
-git clone https://github.com/Ezra-Y/codex-goal-progress.git
-cd codex-goal-progress
-
-pnpm install --frozen-lockfile
-pnpm build
-
-GOAL_PROGRESS_NODE_BINARY="$PWD/.cache/node-v24.19.0/node-v24.19.0-darwin-arm64/bin/node" \
-  pnpm build:release:macos
-
-./dist/release/macos-arm64/bin/goal-progress install --json
-./dist/release/macos-arm64/bin/goal-progress doctor --json
-./dist/release/macos-arm64/bin/goal-progress verify --json
+curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh | sh
 ```
 
-把 Node 路径替换为本机实际路径。安装时按提示重新连接 Codex 或审核 Hook。
+脚本会下载 macOS Release 和 `SHA256SUMS`，校验 ZIP 后运行 Release 自带的安装器。
+如果需要重启 Codex，脚本会先询问。
+
+如果 Codex 提示审核 Goal Progress Hook，请完成审核，然后打开一个新任务，让新的
+Plugin 会话加载。
 
 ## 🛠️ 环境要求
 
 * Apple Silicon Mac
-* Node.js 22.12 或更高版本
-* pnpm 11
-* 构建 macOS Release 时，需要 Node.js 24.19.0 arm64 二进制文件
+* Codex Desktop
 
-### 准备 Node 24.19.0 arm64
-
-从 Node.js 官方 Release 下载 macOS arm64 文件和 SHA-256 清单：
-
-```bash
-NODE_RELEASE_DIR="$PWD/.cache/node-v24.19.0"
-mkdir -p "$NODE_RELEASE_DIR"
-cd "$NODE_RELEASE_DIR"
-
-curl -fLO https://nodejs.org/download/release/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz
-curl -fLO https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt
-
-grep '  node-v24.19.0-darwin-arm64.tar.gz$' SHASUMS256.txt \
-  | shasum -a 256 -c -
-tar -xzf node-v24.19.0-darwin-arm64.tar.gz
-
-NODE_BINARY="$NODE_RELEASE_DIR/node-v24.19.0-darwin-arm64/bin/node"
-"$NODE_BINARY" -p 'process.version + " " + process.arch'
-file "$NODE_BINARY"
-
-cd ../..
-```
-
-版本检查应显示 `v24.19.0 arm64`，`file` 应显示 Mach-O arm64。
-
-构建完成的 Release 位于：
-
-```text
-dist/release/macos-arm64
-```
+使用 Release 不需要 Node.js 或 pnpm。贡献者可以按
+[CONTRIBUTING.md](CONTRIBUTING.md) 构建和验证源码。
 
 ## 🎯 如何使用
 
