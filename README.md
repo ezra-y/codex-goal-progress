@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="96">
+</p>
+
 <h1 align="center">Codex Goal Progress</h1>
 
 <p align="center">
