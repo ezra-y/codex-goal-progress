@@ -1,8 +1,14 @@
-# Codex Goal Progress
+<h1 align="center">Codex Goal Progress</h1>
 
-![Codex Goal Progress in action](docs/assets/codex-goal-progress-demo.gif)
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
+</p>
 
-Optional, deterministic checklist progress for native Codex Goals.
+<p align="center">
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+<p align="center">Optional, deterministic checklist progress for native Codex Goals.</p>
 
 ## ✨ Why it feels native
 
@@ -138,10 +144,7 @@ Read the [architecture decision](docs/decisions/CodexGoalProgress技术架构.md
 
 ## 🔐 Privacy and permissions
 
-Goal Progress runs locally. It does not require Screen Recording, Accessibility, Camera,
-Microphone, or Full Disk Access.
-
-It uses:
+Goal Progress uses:
 
 - local files under its application-support directory;
 - a private local Unix socket;
