@@ -1,14 +1,11 @@
-<p align="center">
+<div align="center">
   <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="200">
-</p>
-
-<h1 align="center">Codex Goal Progress</h1>
-
-
-<p align="center">Give native Codex Goals clear, verifiable progress.</p>
-<p align="center">
-  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
-</p>
+  <h1 align="center">Codex Goal Progress</h1>
+  <p>A native progress bar for Codex Goals, powered by verified checklists and local progress tracking.</p>
+  <p>
+    <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
+  </p>
+</div>
 
 <p align="center">
   <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
