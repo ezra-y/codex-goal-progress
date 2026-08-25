@@ -1,6 +1,8 @@
 <div align="center">
-  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="160">
-  <h1 align="center">Codex Goal Progress</h1>
+  <h1 align="center">
+    <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="130"><br>
+    Codex Goal Progress
+  </h1>
   <p>A native progress bar for Codex Goals, powered by verified checklists and local progress tracking.</p>
   <p>
     <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
