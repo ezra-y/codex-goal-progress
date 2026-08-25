@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="200">
+  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="160">
   <h1 align="center">Codex Goal Progress</h1>
   <p>A native progress bar for Codex Goals, powered by verified checklists and local progress tracking.</p>
   <p>
