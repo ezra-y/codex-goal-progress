@@ -29,18 +29,21 @@ progress, overall progress, and Token usage attributable to that Goal.
 
 ## 🚀 Quick start
 
-### Option 1: Download the macOS Release
+### Install with AI
 
-Download [codex-goal-progress-macos-arm64.zip](https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/codex-goal-progress-macos-arm64.zip),
-unzip it, then double-click **Install Goal Progress.command**.
+Send this instruction to an AI:
 
-### Option 2: Install from Terminal
+```text
+Please install and enable https://github.com/Ezra-Y/codex-goal-progress. After installation, run doctor and verify to confirm that it works correctly.
+```
+
+### Install from Terminal
 
 ```bash
 curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh | sh
 ```
 
-The script downloads the macOS Release and `SHA256SUMS`, verifies the ZIP, and runs the bundled
+The script downloads the macOS package and `SHA256SUMS`, verifies the ZIP, and runs the bundled
 installer. If Codex must restart, the script asks first.
 
 If Codex asks you to review the Goal Progress Hook, approve it, then open a new task so the new
@@ -51,7 +54,7 @@ Plugin session loads.
 * Apple Silicon Mac
 * Codex Desktop
 
-Release users do not need Node.js or pnpm. Contributors can follow
+People using the macOS package do not need Node.js or pnpm. Contributors can follow
 [CONTRIBUTING.md](CONTRIBUTING.md) to build and verify the source.
 
 ## 🎯 How to use

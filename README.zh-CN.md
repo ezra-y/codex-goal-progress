@@ -28,18 +28,21 @@
 
 ## 🚀 快速开始
 
-### 方式一：下载 macOS Release
+### 让 AI 安装
 
-下载 [codex-goal-progress-macos-arm64.zip](https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/codex-goal-progress-macos-arm64.zip)，
-解压后双击 **Install Goal Progress.command**。
+把下面这句话发给 AI：
 
-### 方式二：在终端一行安装
+```text
+请安装并启用 https://github.com/Ezra-Y/codex-goal-progress。安装完成后运行 doctor 和 verify，确认它可以正常工作。
+```
+
+### 在终端一行安装
 
 ```bash
 curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh | sh
 ```
 
-脚本会下载 macOS Release 和 `SHA256SUMS`，校验 ZIP 后运行 Release 自带的安装器。
+脚本会下载 macOS 安装包和 `SHA256SUMS`，校验 ZIP 后运行安装包自带的安装器。
 如果需要重启 Codex，脚本会先询问。
 
 如果 Codex 提示审核 Goal Progress Hook，请完成审核，然后打开一个新任务，让新的
@@ -50,7 +53,7 @@ Plugin 会话加载。
 * Apple Silicon Mac
 * Codex Desktop
 
-使用 Release 不需要 Node.js 或 pnpm。贡献者可以按
+使用 macOS 安装包不需要 Node.js 或 pnpm。贡献者可以按
 [CONTRIBUTING.md](CONTRIBUTING.md) 构建和验证源码。
 
 ## 🎯 如何使用
