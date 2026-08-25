@@ -44,19 +44,23 @@ if [ "$install_status" -ne 0 ]; then
   if ! printf '%s\n' "$install_output" | /usr/bin/grep -Fq '"code":"INSTALL_RESTART_REQUIRED"'; then
     exit "$install_status"
   fi
-  if [ ! -r /dev/tty ]; then
-    printf '%s\n' "Codex must restart. Run this installer again from an interactive Terminal." >&2
+  if ! { exec 3<>/dev/tty; } 2>/dev/null; then
+    printf '%s\n' "Codex must restart. Run this command in an interactive Terminal." >&2
     exit 1
   fi
-  printf '%s' "Goal Progress needs to restart Codex once. Restart now? [y/N] " > /dev/tty
+  printf '%s' "Goal Progress needs to restart Codex once. Restart now? [y/N] " >&3
   answer=""
-  IFS= read -r answer < /dev/tty || true
+  IFS= read -r answer <&3 || true
   case "$answer" in
     y | Y | yes | YES)
       set +e
       restart_output=$("$installer" install --json --restart-codex 2>&1)
+      restart_status=$?
       set -e
       printf '%s\n' "$restart_output"
+      if [ "$restart_status" -ne 0 ]; then
+        exit "$restart_status"
+      fi
       ;;
     *)
       printf '%s\n' "Installation stopped before restarting Codex." >&2

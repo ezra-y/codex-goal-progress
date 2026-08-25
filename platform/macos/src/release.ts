@@ -16,6 +16,7 @@ export interface CreateMacosReleaseManifestInput {
   readonly releaseVersion: string;
   readonly rendererReleaseVersion: string;
   readonly nodeVersion: string;
+  readonly pluginTreeManifestSha256: string;
   readonly helper: MacosReleaseFile;
   readonly renderer: MacosReleaseFile;
   readonly rendererManifest: MacosReleaseFile;
@@ -44,6 +45,9 @@ export function createMacosReleaseManifest(input: CreateMacosReleaseManifestInpu
   if (!input.releaseVersion || input.releaseVersion !== input.rendererReleaseVersion) {
     throw new Error("GOAL_PROGRESS_RELEASE_VERSION_MISMATCH");
   }
+  if (!/^[0-9a-f]{64}$/u.test(input.pluginTreeManifestSha256)) {
+    throw new Error("GOAL_PROGRESS_PLUGIN_TREE_MANIFEST_SHA256_INVALID");
+  }
   for (const file of [
     input.helper,
     input.renderer,
@@ -68,6 +72,7 @@ export function createMacosReleaseManifest(input: CreateMacosReleaseManifestInpu
       kind: "node-sea" as const,
       nodeVersion: input.nodeVersion,
     },
+    pluginTreeManifestSha256: input.pluginTreeManifestSha256,
     files: {
       helper: input.helper,
       renderer: input.renderer,

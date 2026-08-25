@@ -4,14 +4,15 @@ type: other
 status: active
 version: v1
 created_at: 2026-08-21
-updated_at: 2026-08-26 04:10
+updated_at: 2026-08-26 04:52
 refs: [requirement-20260818-01, plan-20260818-02]
 ---
 # KNOWN LIMITATIONS
 
-## Release blockers
+## Release status
 
-当前没有未解决的代码审查 P0/P1 finding。以下是明确接受的 MVP 产品限制。
+`0.1.0` 是 Preview。源码、校验和、安装器和本地完整性检查可用；预构建 Helper
+仍缺少 Developer ID 签名和 Apple notarization。
 
 ## 入口和生命周期
 
@@ -53,7 +54,5 @@ refs: [requirement-20260818-01, plan-20260818-02]
 - 功能运行需要本机 loopback CDP。install/upgrade 只有用户同意重启后才开启；
   restore 和 uninstall 会关闭。
 - Plugin Hook 必须由用户审核。安装器不会自动信任。
-- 公开 Release 为 `0.1.0`，当前只提供 macOS arm64。
+- Preview Release 为 `0.1.0`，当前只提供 macOS arm64。
 - Helper 仍是 ad-hoc codesign，没有 Developer ID 和 Apple notarization。
-
-完整逐条状态见 `docs/quality/REQUIREMENT-TRACE.md`。

@@ -4,7 +4,7 @@ type: other
 status: active
 version: v1
 created_at: 2026-08-21
-updated_at: 2026-08-26 00:51
+updated_at: 2026-08-26 04:52
 refs: [requirement-20260818-01, decision-20260818-01, plan-20260818-02]
 ---
 # THREAT MODEL
@@ -76,10 +76,8 @@ Renderer 不写 Contract，也不计算百分比。Helper 是唯一写入者，C
 - 原生 Goal 行启动按钮尚未发布。当前入口是 Plugin Skill。
 - 外部 checklist 文件没有自动 watcher。
 - CDP 在功能运行期间仍是本机调试面。它只绑定 loopback，并由 restore 关闭。
-- 当前 Helper 只有 ad-hoc codesign，没有 Developer ID 和 notarization。公开源码不受
-  影响；公开分发预构建二进制前，必须增加可验证的发布者签名和公证。
-
-这些限制同时记录在 `docs/quality/REQUIREMENT-TRACE.md`。
+- 当前 Preview Helper 只有 ad-hoc codesign，没有 Developer ID 和 notarization。
+  正式稳定分发预构建二进制前，必须增加可验证的发布者签名和公证。
 
 ## 变更规则
 

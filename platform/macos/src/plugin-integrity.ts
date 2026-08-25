@@ -135,26 +135,34 @@ function parsePluginTreeManifest(value: unknown): PluginTreeManifest {
   };
 }
 
-export async function writePluginTreeManifest(root: string): Promise<void> {
+export async function writePluginTreeManifest(root: string): Promise<string> {
   const manifest: PluginTreeManifest = {
     schemaVersion: 1,
     files: await collectPluginTreeFiles(root),
   };
-  await writeFile(
-    resolve(root, GOAL_PROGRESS_PLUGIN_TREE_MANIFEST),
-    `${JSON.stringify(manifest, null, 2)}\n`,
-    "utf8",
-  );
+  const contents = `${JSON.stringify(manifest, null, 2)}\n`;
+  await writeFile(resolve(root, GOAL_PROGRESS_PLUGIN_TREE_MANIFEST), contents, "utf8");
+  return fileSha256(Buffer.from(contents, "utf8"));
 }
 
-export async function verifyPluginTreeManifest(root: string): Promise<void> {
+export async function verifyPluginTreeManifest(
+  root: string,
+  expectedManifestSha256: string,
+): Promise<void> {
+  if (!/^[0-9a-f]{64}$/u.test(expectedManifestSha256)) {
+    throw new Error("GOAL_PROGRESS_PLUGIN_TREE_MANIFEST_SHA256_INVALID");
+  }
   await assertPluginTreeHasNoSymlinks(root);
   const manifestPath = resolve(root, GOAL_PROGRESS_PLUGIN_TREE_MANIFEST);
   const manifestMetadata = await lstat(manifestPath);
   if (!manifestMetadata.isFile() || manifestMetadata.isSymbolicLink()) {
     throw new Error("GOAL_PROGRESS_PLUGIN_TREE_MANIFEST_INVALID");
   }
-  const expected = parsePluginTreeManifest(JSON.parse(await readFile(manifestPath, "utf8")));
+  const manifestContents = await readFile(manifestPath);
+  if (fileSha256(manifestContents) !== expectedManifestSha256) {
+    throw new Error("GOAL_PROGRESS_PLUGIN_TREE_MANIFEST_SHA256_MISMATCH");
+  }
+  const expected = parsePluginTreeManifest(JSON.parse(manifestContents.toString("utf8")));
   const actual = await collectPluginTreeFiles(root);
   if (JSON.stringify(expected.files) !== JSON.stringify(actual)) {
     throw new Error("GOAL_PROGRESS_PLUGIN_TREE_MISMATCH");

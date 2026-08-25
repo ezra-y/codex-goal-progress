@@ -66,6 +66,7 @@ interface ParsedReleaseManifest {
   readonly releaseVersion: string;
   readonly platform: "darwin";
   readonly arch: "arm64";
+  readonly pluginTreeManifestSha256: string;
   readonly runtime: {
     readonly kind: "node-sea";
     readonly nodeVersion: string;
@@ -106,9 +107,14 @@ export interface LaunchAgentController {
 }
 
 export interface PluginController {
-  ensure(archivePath: string, marketplaceRoot: string, reinstall: boolean): Promise<boolean>;
+  ensure(
+    archivePath: string,
+    marketplaceRoot: string,
+    reinstall: boolean,
+    expectedTreeManifestSha256: string,
+  ): Promise<boolean>;
   remove(): Promise<boolean>;
-  verify(releaseVersion?: string): Promise<boolean>;
+  verify(releaseVersion: string | undefined, expectedTreeManifestSha256: string): Promise<boolean>;
 }
 
 export interface CdpController {
@@ -513,6 +519,9 @@ function parseReleaseManifest(input: unknown): ParsedReleaseManifest {
     input.platform !== "darwin" ||
     !("arch" in input) ||
     input.arch !== "arm64" ||
+    !("pluginTreeManifestSha256" in input) ||
+    typeof input.pluginTreeManifestSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(input.pluginTreeManifestSha256) ||
     !("runtime" in input) ||
     input.runtime === null ||
     typeof input.runtime !== "object" ||
@@ -899,7 +908,10 @@ export function createPluginController(options: {
     );
   const hasMarketplace = () =>
     marketplaceList().some((marketplace) => marketplace.name === MARKETPLACE_NAME);
-  const verifyInstalled = async (releaseVersion?: string): Promise<boolean> => {
+  const verifyInstalled = async (
+    releaseVersion: string | undefined,
+    expectedTreeManifestSha256: string,
+  ): Promise<boolean> => {
     const plugin = pluginList().find(
       (candidate) =>
         candidate.pluginId === PLUGIN_ID &&
@@ -922,8 +934,8 @@ export function createPluginController(options: {
     );
     try {
       await Promise.all([
-        verifyPluginTreeManifest(sourceRoot),
-        verifyPluginTreeManifest(cacheRoot),
+        verifyPluginTreeManifest(sourceRoot, expectedTreeManifestSha256),
+        verifyPluginTreeManifest(cacheRoot, expectedTreeManifestSha256),
       ]);
       const [sourceManifest, cacheManifest, sourceMcp, cacheMcp, sourceHook, cacheHook] =
         await Promise.all([
@@ -960,8 +972,8 @@ export function createPluginController(options: {
   };
 
   return {
-    async ensure(archivePath, marketplaceRoot, reinstall) {
-      if (!reinstall && (await verifyInstalled())) {
+    async ensure(archivePath, marketplaceRoot, reinstall, expectedTreeManifestSha256) {
+      if (!reinstall && (await verifyInstalled(undefined, expectedTreeManifestSha256))) {
         return false;
       }
       await rm(marketplaceRoot, { recursive: true, force: true });
@@ -975,7 +987,7 @@ export function createPluginController(options: {
       }
       await assertPluginTreeHasNoSymlinks(marketplaceRoot);
       const pluginRoot = resolve(marketplaceRoot, "plugins", PLUGIN_NAME);
-      await verifyPluginTreeManifest(pluginRoot);
+      await verifyPluginTreeManifest(pluginRoot, expectedTreeManifestSha256);
       const [manifest, mcp, hooks] = await Promise.all([
         readFile(resolve(pluginRoot, ".codex-plugin/plugin.json"), "utf8"),
         readFile(resolve(pluginRoot, ".mcp.json"), "utf8"),
@@ -1049,7 +1061,7 @@ export function createPluginController(options: {
           options.codexHomeDirectory,
         );
         runCodexJson(command, ["plugin", "add", PLUGIN_ID, "--json"], options.codexHomeDirectory);
-        if (!(await verifyInstalled(pluginManifest.version))) {
+        if (!(await verifyInstalled(pluginManifest.version, expectedTreeManifestSha256))) {
           throw new Error("GOAL_PROGRESS_PLUGIN_INSTALL_VERIFY_FAILED");
         }
       } finally {
@@ -1086,8 +1098,8 @@ export function createPluginController(options: {
       }
       return changed;
     },
-    async verify(releaseVersion) {
-      return verifyInstalled(releaseVersion);
+    async verify(releaseVersion, expectedTreeManifestSha256) {
+      return verifyInstalled(releaseVersion, expectedTreeManifestSha256);
     },
   };
 }
@@ -1655,6 +1667,9 @@ export function createMacosCommandHandlers(
     validateCodexIdentity(codex);
     const plugin = await pluginFor(codex);
     const installed = await readInstalledManifest(layout.installManifestPath);
+    const installedRelease = installed
+      ? await readVerifiedRelease(installed.programReleaseRoot).catch(() => null)
+      : null;
     const transaction = new InstallTransaction();
     const alreadyCurrent =
       installed?.releaseVersion === release.releaseVersion &&
@@ -1668,7 +1683,11 @@ export function createMacosCommandHandlers(
     const manifestSnapshot = await captureFile(layout.installManifestPath);
     const helperJobWasLoaded = await launchAgent.isLoaded(layout.launchAgentLabel);
     const pluginWasHealthy =
-      installed !== null && (await plugin.verify(installed.releaseVersion).catch(() => false));
+      installed !== null &&
+      installedRelease !== null &&
+      (await plugin
+        .verify(installed.releaseVersion, installedRelease.pluginTreeManifestSha256)
+        .catch(() => false));
     const releaseBackupPath = `${layout.programReleaseRoot}.rollback-${randomUUID()}`;
     let releaseBackupCreated = false;
     try {
@@ -1772,12 +1791,13 @@ export function createMacosCommandHandlers(
             resolve(layout.programReleaseRoot, release.files.pluginArchive.path),
             resolve(layout.programReleaseRoot, "plugin-marketplace"),
             !alreadyCurrent,
+            release.pluginTreeManifestSha256,
           );
           await options.installFaultForTest?.("after-plugin");
           return { changed, value: undefined };
         },
         async () => {
-          if (!pluginWasHealthy || !installed) {
+          if (!pluginWasHealthy || !installed || !installedRelease) {
             await plugin.remove();
             return;
           }
@@ -1794,6 +1814,7 @@ export function createMacosCommandHandlers(
               "plugin-marketplace",
             ),
             true,
+            installedRelease.pluginTreeManifestSha256,
           );
         },
       );
@@ -1867,7 +1888,7 @@ export function createMacosCommandHandlers(
           }
           const [jobLoaded, pluginInstalled, hook, cdpReadyNow] = await Promise.all([
             launchAgent.isLoaded(layout.launchAgentLabel),
-            plugin.verify(release.releaseVersion),
+            plugin.verify(release.releaseVersion, release.pluginTreeManifestSha256),
             inspectInstalledHook(options.homeDirectory, installManifest),
             cdp.verify(),
           ]);
@@ -2059,7 +2080,10 @@ export function createMacosCommandHandlers(
     const codex = await discoverCodex();
     validateCodexIdentity(codex);
     const plugin = await pluginFor(codex);
-    const pluginInstalled = await plugin.verify(installed.releaseVersion);
+    const pluginInstalled = await plugin.verify(
+      installed.releaseVersion,
+      release.pluginTreeManifestSha256,
+    );
     if (!pluginInstalled) {
       return commandResult("doctor", {
         ok: false,
@@ -2197,7 +2221,7 @@ export function createMacosCommandHandlers(
     const codex = await discoverCodex();
     validateCodexIdentity(codex);
     const plugin = await pluginFor(codex);
-    if (!(await plugin.verify(installed.releaseVersion))) {
+    if (!(await plugin.verify(installed.releaseVersion, release.pluginTreeManifestSha256))) {
       return commandResult("verify", {
         ok: false,
         code: "VERIFY_PLUGIN_INVALID",
@@ -2502,6 +2526,7 @@ export function createMacosCommandHandlers(
       homeDirectory: options.homeDirectory,
       releaseVersion: installed.releaseVersion,
     });
+    const installedRelease = await readVerifiedRelease(installed.programReleaseRoot);
     const helperCodes = new Set([
       "DOCTOR_HELPER_JOB_NOT_LOADED",
       "DOCTOR_HELPER_SOCKET_MISSING",
@@ -2562,6 +2587,7 @@ export function createMacosCommandHandlers(
             resolve(installed.programReleaseRoot, "plugin-marketplace.zip"),
             resolve(installed.programReleaseRoot, "plugin-marketplace"),
             true,
+            installedRelease.pluginTreeManifestSha256,
           );
         } else if (hookCodes.has(current.code)) {
           const installedAgain = await installOrUpgrade("install", input);

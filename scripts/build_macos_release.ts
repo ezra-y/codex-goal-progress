@@ -161,7 +161,7 @@ async function main(): Promise<void> {
     JSON.parse(await readFile(resolve(releasePluginRoot, "hooks/hooks.json"), "utf8")),
   );
   await writeReleasePluginRuntimeFiles(releasePluginRoot, pluginRuntime);
-  await writePluginTreeManifest(releasePluginRoot);
+  const pluginTreeManifestSha256 = await writePluginTreeManifest(releasePluginRoot);
   const pluginArchivePath = resolve(outputRoot, pluginArchiveRelativePath);
   run(
     "/usr/bin/ditto",
@@ -296,6 +296,7 @@ async function main(): Promise<void> {
     releaseVersion: packageJson.version,
     rendererReleaseVersion: rendererManifest.releaseVersion ?? "",
     nodeVersion: GOAL_PROGRESS_MACOS_RELEASE_NODE_VERSION,
+    pluginTreeManifestSha256,
     helper,
     renderer,
     rendererManifest: rendererManifestFile,
