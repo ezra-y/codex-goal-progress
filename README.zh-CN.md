@@ -10,21 +10,70 @@
 
 <p align="center">为 Codex 原生 Goal 提供可选、确定性的 Checklist 进度。</p>
 
-## ✨ 为什么它看起来像原生功能
+## ✨ 功能特性
 
-Goal Progress 在 Codex 原生 Goal 旁边增加一个紧凑的进度视图：
+在 Codex 原生 Goal 旁显示一个的进度视图，集中展示当前阶段进度、总体进度，以及可归属于该 Goal 的 Token 用量。
 
 | 能力 | 表现 |
 |---|---|
-| 🎨 适配主题 | 跟随 Codex 的浅色/深色主题和用户当前选择的强调色。 |
-| 🔤 适配字号 | 读取 Codex 当前 UI 字号，并由字号连续计算间距，不把布局写死。 |
-| 📐 适配布局 | 测量真实原生 Goal 和输入框尺寸，让固定布局与可拖动漂浮布局保持协调。 |
-| 🌍 适配语言 | 跟随 Codex 文档的语言和文字方向，不修改进度 Contract。 |
-| ✅ 确定性计算 | 根据已验证的 Checklist 计算小目标和总体进度，不根据 Token、耗时或猜测生成百分比。 |
-| 🔒 本地运行 | 使用当前 Codex 模型和本地 Helper，不启动第二个模型或隐藏任务，也不需要外部模型 API Key。 |
+| 规则驱动进度 | 根据已验证的 Checklist 计算小目标和总体进度，不根据 Token、耗时或猜测生成百分比。 |
+| 可验证计算 | 模型只参与必要的目标理解与 Checklist 更新，进度计算和状态管理由本地 Helper 完成。 |
+| 原生主题适配 | 跟随 Codex 的浅色/深色主题和用户当前选择的强调色。 |
+| 字号适配 | 读取 Codex 当前 UI 字号，并由字号连续计算间距。 |
+| 布局适配 | 测量真实原生 Goal 和输入框尺寸，让固定布局与可拖动漂浮布局保持协调。 |
+| 语言适配 | 跟随 Codex 文档的语言和文字方向，不修改进度 Contract。 |
 
-紧凑视图会显示当前小目标、小目标进度、总体进度，以及 Codex 能可靠归属给当前
-Goal 的 Token 用量。
+## 🚀 快速开始
+
+### 让 AI 安装
+
+把下面这句话发给 AI：
+
+```text
+请安装并启用 https://github.com/Ezra-Y/codex-goal-progress。安装完成后运行 doctor 和 verify，确认它可以正常工作。
+```
+
+### 自己安装
+
+从源码构建：
+
+```bash
+git clone https://github.com/Ezra-Y/codex-goal-progress.git
+cd codex-goal-progress
+
+pnpm install --frozen-lockfile
+pnpm build
+
+GOAL_PROGRESS_NODE_BINARY=/你的/node-v24.19.0-arm64路径 \
+  pnpm build:release:macos
+
+./dist/release/macos-arm64/bin/goal-progress install --json
+./dist/release/macos-arm64/bin/goal-progress doctor --json
+./dist/release/macos-arm64/bin/goal-progress verify --json
+```
+
+把 Node 路径替换为本机实际路径。安装时按提示重新连接 Codex 或审核 Hook。
+
+## 🛠️ 环境要求
+
+* Apple Silicon Mac
+* Node.js 22.12 或更高版本
+* pnpm 11
+* 构建 macOS Release 时，需要 Node.js 24.19.0 arm64 二进制文件
+
+构建完成的 Release 位于：
+
+```text
+dist/release/macos-arm64
+```
+
+## 🎯 如何使用
+
+打开一个原生 Codex Goal，然后选择 **Goal Progress** Skill。
+
+当前 Codex 模型会整理或复用该 Goal 的 Checklist，并创建本地进度记录。
+
+每个新 Goal 都需要单独启用一次。没有启用 Goal Progress 的普通 Goal 不受影响。
 
 ## 🌓 浅色与深色
 
@@ -40,96 +89,11 @@ Goal 的 Token 用量。
 |---|---|
 | ![真实 Codex 深色主题中的 Goal Progress 固定显示](docs/assets/codex-goal-progress-dark-fixed-en.png) | ![真实 Codex 深色主题中的 Goal Progress 漂浮显示](docs/assets/codex-goal-progress-dark-floating-en.png) |
 
-四张截图均来自生产 Renderer，组件挂载在真实 Codex Desktop 原生 Goal 旁边。
-
-## 🚀 从源码构建
-
-环境要求：
-
-- Apple Silicon Mac；
-- Node.js 22.12 或更高版本；
-- pnpm 11。
-
-```bash
-git clone https://github.com/Ezra-Y/codex-goal-progress.git
-cd codex-goal-progress
-pnpm install --frozen-lockfile
-pnpm build
-```
-
-使用 Node 24.19 arm64 构建自包含的 macOS Release：
-
-```bash
-GOAL_PROGRESS_NODE_BINARY=/absolute/path/to/node-v24.19.0-arm64 \
-  pnpm build:release:macos
-```
-
-Release 输出到：
-
-```text
-dist/release/macos-arm64
-```
-
-## 安装
-
-进入构建完成的 Release 目录，运行：
-
-```bash
-./bin/goal-progress install --json
-```
-
-安装器会明确告诉你是否需要让 Codex 重新连接或审核 Hook。它不会静默关闭 Codex，
-也不会替用户写入 Hook 信任。
-
-检查安装结果：
-
-```bash
-./bin/goal-progress doctor --json
-./bin/goal-progress verify --json
-```
-
-## 使用
-
-在原生 Goal 中选择 **Goal Progress** Skill。当前 Codex 模型会整理或复用 Goal
-Checklist，并初始化一份本地进度 Contract。
-
-每个新的原生 Goal 都要显式开启一次 Goal Progress。普通 Codex Goal 不受影响。
-
 ## 🧭 工作原理
 
-```mermaid
-flowchart LR
-  subgraph CODEX["🧠 当前 Codex Goal"]
-    SKILL["Goal Progress Skill"]
-    MODEL["当前 Codex 模型<br/>更新 Checklist 证据"]
-    NATIVE["原生 Goal · Token · 主题"]
-  end
-
-  subgraph LOCAL["🔒 本地确定性运行时"]
-    MCP["MCP 校验"]
-    HELPER["Helper<br/>唯一写入者"]
-    STORE[("Contract + 事件日志")]
-    CORE["Core 计算器<br/>Checklist → 精确百分比"]
-  end
-
-  subgraph VIEW["✨ 原生自适应界面"]
-    VM["只读 ViewModel"]
-    RENDERER["Shadow DOM Renderer<br/>固定 ↔ 漂浮"]
-  end
-
-  SKILL --> MODEL --> MCP --> HELPER
-  HELPER <--> STORE
-  HELPER --> CORE --> VM --> RENDERER
-  NATIVE -. "Goal 身份 + 可信用量" .-> HELPER
-  NATIVE -. "主题 · 字号 · 语言" .-> RENDERER
-
-  classDef codex fill:#f3e8e2,stroke:#cc7d5e,color:#2d2d2b,stroke-width:1.5px;
-  classDef local fill:#e9f3ff,stroke:#5f9fd8,color:#17212b,stroke-width:1.5px;
-  classDef view fill:#eee9ff,stroke:#8b72d7,color:#241d38,stroke-width:1.5px;
-  class SKILL,MODEL,NATIVE codex;
-  class MCP,HELPER,STORE,CORE local;
-  class VM,RENDERER view;
-```
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-architecture.png" alt="Codex Goal Progress 工作原理">
+</p>
 
 - 当前模型通过本地 MCP 工具更新 Checklist 证据。
 - Helper 校验 revision，并作为唯一状态写入者。
@@ -153,27 +117,6 @@ Goal Progress 使用：
 
 完整范围和卸载步骤见 [PERMISSIONS.md](docs/architecture/PERMISSIONS.md)。
 
-## 开发
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm build
-```
-
-提交 Pull Request 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-## 版本
-
-对外源码版本只保存在 [`VERSION`](VERSION) 中。内部开发版本和 Release Candidate
-编号不会导出到这个仓库。
-
 ## 许可证
 
 [MIT](LICENSE)
-
-## ⚠️ 安装前请注意
-
-> [!WARNING]
-> 当前仓库是源码预览。项目只支持[支持矩阵](docs/quality/SUPPORT-MATRIX.md)中列出的
-> Codex Desktop 版本。安装前请在本机完成构建和验证。
