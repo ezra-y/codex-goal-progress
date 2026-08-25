@@ -1,0 +1,10 @@
+{
+  "goal_progress": {
+    "command": "./bin/goal-progress-mcp",
+    "args": [],
+    "cwd": ".",
+    "env": {
+      "GOAL_PROGRESS_PLUGIN_DATA": "${PLUGIN_DATA}"
+    }
+  }
+}

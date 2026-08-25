@@ -1,0 +1,7 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": ["packages/**/*.ts", "platform/**/*.ts", "hooks/**/*.ts", "scripts/**/*.ts"],
+  "compilerOptions": {
+    "types": ["node"]
+  }
+}
