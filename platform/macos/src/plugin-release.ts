@@ -1,3 +1,6 @@
+import { chmod, mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
 const INSTALLED_BINARY =
   "$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress";
 export const GOAL_PROGRESS_STABLE_HOOK_COMMAND =
@@ -81,4 +84,20 @@ export function createReleasePluginRuntimeFiles(
     mcpLauncher: mcpLauncher(),
     hookLauncher: hookLauncher(),
   };
+}
+
+export async function writeReleasePluginRuntimeFiles(
+  pluginRoot: string,
+  files: ReleasePluginRuntimeFiles,
+): Promise<void> {
+  const mcpLauncherPath = resolve(pluginRoot, "bin/goal-progress-mcp");
+  const hookLauncherPath = resolve(pluginRoot, "bin/goal-progress-hook");
+  await mkdir(resolve(pluginRoot, "bin"), { recursive: true });
+  await Promise.all([
+    writeFile(resolve(pluginRoot, ".mcp.json"), files.mcpJson),
+    writeFile(resolve(pluginRoot, "hooks/hooks.json"), files.hooksJson),
+    writeFile(mcpLauncherPath, files.mcpLauncher),
+    writeFile(hookLauncherPath, files.hookLauncher),
+  ]);
+  await Promise.all([chmod(mcpLauncherPath, 0o700), chmod(hookLauncherPath, 0o700)]);
 }

@@ -6,7 +6,10 @@ import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { writePluginTreeManifest } from "../platform/macos/src/plugin-integrity.js";
-import { createReleasePluginRuntimeFiles } from "../platform/macos/src/plugin-release.js";
+import {
+  createReleasePluginRuntimeFiles,
+  writeReleasePluginRuntimeFiles,
+} from "../platform/macos/src/plugin-release.js";
 import {
   assertSafeMacosReleaseOutput,
   createMacosReleaseManifest,
@@ -157,17 +160,7 @@ async function main(): Promise<void> {
     JSON.parse(await readFile(resolve(releasePluginRoot, ".mcp.json"), "utf8")),
     JSON.parse(await readFile(resolve(releasePluginRoot, "hooks/hooks.json"), "utf8")),
   );
-  await mkdir(resolve(releasePluginRoot, "bin"), { recursive: true });
-  await Promise.all([
-    writeFile(resolve(releasePluginRoot, ".mcp.json"), pluginRuntime.mcpJson),
-    writeFile(resolve(releasePluginRoot, "hooks/hooks.json"), pluginRuntime.hooksJson),
-    writeFile(resolve(releasePluginRoot, "bin/goal-progress-mcp"), pluginRuntime.mcpLauncher, {
-      mode: 0o700,
-    }),
-    writeFile(resolve(releasePluginRoot, "bin/goal-progress-hook"), pluginRuntime.hookLauncher, {
-      mode: 0o700,
-    }),
-  ]);
+  await writeReleasePluginRuntimeFiles(releasePluginRoot, pluginRuntime);
   await writePluginTreeManifest(releasePluginRoot);
   const pluginArchivePath = resolve(outputRoot, pluginArchiveRelativePath);
   run(

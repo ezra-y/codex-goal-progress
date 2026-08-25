@@ -1787,7 +1787,12 @@ export function createMacosCommandHandlers(
               : installed.programReleaseRoot;
           await plugin.ensure(
             resolve(oldReleaseRoot, "plugin-marketplace.zip"),
-            resolve(layout.programReleaseRoot, "plugin-marketplace"),
+            resolve(
+              installed.programReleaseRoot === layout.programReleaseRoot
+                ? layout.programReleaseRoot
+                : installed.programReleaseRoot,
+              "plugin-marketplace",
+            ),
             true,
           );
         },
