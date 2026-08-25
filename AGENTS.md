@@ -12,8 +12,7 @@ This file is for external coding agents working in the public repository.
 ## Commands
 
 - Use `pnpm`. Do not use npm, yarn, or Bun to change dependencies or the lockfile.
-- Type-check: `pnpm typecheck`
-- Build: `pnpm build`
+- Run all public validation gates: `pnpm verify`
 
 ## Architecture boundaries
 

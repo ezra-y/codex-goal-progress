@@ -4,8 +4,7 @@
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm typecheck
-pnpm build
+pnpm verify
 ```
 
 ## Make a change
@@ -14,7 +13,7 @@ pnpm build
 2. Keep the change focused.
 3. Reproduce bugs before fixing them.
 4. Explain the expected behavior and verification method.
-5. Run `pnpm typecheck` and `pnpm build`.
+5. Run `pnpm verify`.
 
 Do not modify Codex application files, private stores, private JavaScript chunks, or code
 signatures. Keep Codex-specific DOM knowledge inside `packages/codex-adapter`.

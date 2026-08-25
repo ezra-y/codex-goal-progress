@@ -20,7 +20,7 @@
     "build:release:macos": "pnpm build:renderer && tsx scripts/build_macos_release.ts",
     "build": "pnpm build:code && pnpm build:renderer && pnpm build:plugin",
     "verify": "pnpm verify:public",
-    "verify:public": "pnpm lint && pnpm typecheck && pnpm build"
+    "verify:public": "pnpm lint && pnpm typecheck && pnpm build && pnpm validate:plugin && pnpm validate:hygiene"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

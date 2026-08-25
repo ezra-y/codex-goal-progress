@@ -44,7 +44,7 @@ cd codex-goal-progress
 pnpm install --frozen-lockfile
 pnpm build
 
-GOAL_PROGRESS_NODE_BINARY=/你的/node-v24.19.0-arm64路径 \
+GOAL_PROGRESS_NODE_BINARY="$PWD/.cache/node-v24.19.0/node-v24.19.0-darwin-arm64/bin/node" \
   pnpm build:release:macos
 
 ./dist/release/macos-arm64/bin/goal-progress install --json
@@ -60,6 +60,31 @@ GOAL_PROGRESS_NODE_BINARY=/你的/node-v24.19.0-arm64路径 \
 * Node.js 22.12 或更高版本
 * pnpm 11
 * 构建 macOS Release 时，需要 Node.js 24.19.0 arm64 二进制文件
+
+### 准备 Node 24.19.0 arm64
+
+从 Node.js 官方 Release 下载 macOS arm64 文件和 SHA-256 清单：
+
+```bash
+NODE_RELEASE_DIR="$PWD/.cache/node-v24.19.0"
+mkdir -p "$NODE_RELEASE_DIR"
+cd "$NODE_RELEASE_DIR"
+
+curl -fLO https://nodejs.org/download/release/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz
+curl -fLO https://nodejs.org/download/release/v24.19.0/SHASUMS256.txt
+
+grep '  node-v24.19.0-darwin-arm64.tar.gz$' SHASUMS256.txt \
+  | shasum -a 256 -c -
+tar -xzf node-v24.19.0-darwin-arm64.tar.gz
+
+NODE_BINARY="$NODE_RELEASE_DIR/node-v24.19.0-darwin-arm64/bin/node"
+"$NODE_BINARY" -p 'process.version + " " + process.arch'
+file "$NODE_BINARY"
+
+cd ../..
+```
+
+版本检查应显示 `v24.19.0 arm64`，`file` 应显示 Mach-O arm64。
 
 构建完成的 Release 位于：
 
