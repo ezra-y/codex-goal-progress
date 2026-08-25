@@ -1,18 +1,18 @@
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress 标志" width="96">
+  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress 标志" width="200">
 </p>
 
 <h1 align="center">Codex Goal Progress</h1>
 
-<p align="center">
-  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress 演示">
-</p>
 
+<p align="center">给 Codex 原生 Goal 加上一条清晰、可验证的进度。</p>
 <p align="center">
   <a href="README.md">English</a> · <strong>简体中文</strong>
 </p>
 
-<p align="center">为 Codex 原生 Goal 提供可选、确定性的 Checklist 进度。</p>
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress 演示">
+</p>
 
 ## ✨ 功能特性
 

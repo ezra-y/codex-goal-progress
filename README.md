@@ -1,18 +1,18 @@
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="96">
+  <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="200">
 </p>
 
 <h1 align="center">Codex Goal Progress</h1>
 
-<p align="center">
-  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
-</p>
 
+<p align="center">Give native Codex Goals clear, verifiable progress.</p>
 <p align="center">
   <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
-<p align="center">Optional, deterministic checklist progress for native Codex Goals.</p>
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
+</p>
 
 ## ✨ Features
 
