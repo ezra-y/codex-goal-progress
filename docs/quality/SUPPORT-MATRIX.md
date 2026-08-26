@@ -4,7 +4,7 @@ type: other
 status: active
 version: v1
 created_at: 2026-08-21
-updated_at: 2026-08-26 04:52
+updated_at: 2026-08-26 12:08
 refs: [decision-20260818-01, decision-20260820-01, plan-20260818-02]
 ---
 # SUPPORT MATRIX
@@ -13,7 +13,7 @@ refs: [decision-20260818-01, decision-20260820-01, plan-20260818-02]
 
 | 项目 | 支持值 | 状态 |
 |---|---|---|
-| Goal Progress | `0.1.0` | Preview |
+| Goal Progress | `0.1.1` | Preview |
 | Goal Contract | schema v2 | 冻结 |
 | IPC | protocol v4 | 冻结 |
 | Renderer/UI Intent Bridge | protocol v2 | 冻结 |

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- One-line installation now follows `INSTALL_RESTART_REQUIRED`,
+  `INSTALL_RESTART_PENDING`, and completed JSON protocol states.
+- Reproducible SEA Helper builds no longer embed the local source or build path.
+- Release assets include the matching Node.js license and generated production dependency notices.
+
 ## 0.1.0
 
 - First public release.
@@ -11,7 +18,3 @@
 - Reliable new-task identity recovery and transactional cross-version Plugin rollback.
 - Plugin integrity anchored to the verified top-level Release manifest.
 - Clear non-interactive installation errors and immediate restart failure handling.
-- One-line installation now follows `INSTALL_RESTART_REQUIRED`,
-  `INSTALL_RESTART_PENDING`, and completed JSON protocol states.
-- Reproducible SEA Helper builds no longer embed the local source or build path.
-- Release assets include the matching Node.js license and generated production dependency notices.
