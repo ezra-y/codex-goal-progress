@@ -12,6 +12,30 @@ export interface MacosReleaseFile {
   readonly sha256: string;
 }
 
+export function createNodeSeaConfig() {
+  return {
+    main: "helper.cjs",
+    output: "sea.blob",
+    disableExperimentalSEAWarning: true,
+    useSnapshot: false,
+    useCodeCache: false,
+    execArgvExtension: "none" as const,
+  };
+}
+
+export function assertReleaseBinaryHygiene(
+  contents: Buffer,
+  forbiddenAbsolutePaths: readonly string[],
+): void {
+  const forbidden = [
+    ".build/helper.cjs",
+    ...forbiddenAbsolutePaths.filter((path) => isAbsolute(path)),
+  ];
+  if (forbidden.some((value) => value && contents.includes(Buffer.from(value, "utf8")))) {
+    throw new Error("GOAL_PROGRESS_RELEASE_BINARY_PATH_LEAK");
+  }
+}
+
 export interface CreateMacosReleaseManifestInput {
   readonly releaseVersion: string;
   readonly rendererReleaseVersion: string;
@@ -22,6 +46,8 @@ export interface CreateMacosReleaseManifestInput {
   readonly rendererManifest: MacosReleaseFile;
   readonly pluginArchive: MacosReleaseFile;
   readonly license: MacosReleaseFile;
+  readonly nodeLicense: MacosReleaseFile;
+  readonly thirdPartyNotices: MacosReleaseFile;
   readonly readme: MacosReleaseFile;
   readonly installGuide: MacosReleaseFile;
   readonly installCommand: MacosReleaseFile;
@@ -54,6 +80,8 @@ export function createMacosReleaseManifest(input: CreateMacosReleaseManifestInpu
     input.rendererManifest,
     input.pluginArchive,
     input.license,
+    input.nodeLicense,
+    input.thirdPartyNotices,
     input.readme,
     input.installGuide,
     input.installCommand,
@@ -79,6 +107,8 @@ export function createMacosReleaseManifest(input: CreateMacosReleaseManifestInpu
       rendererManifest: input.rendererManifest,
       pluginArchive: input.pluginArchive,
       license: input.license,
+      nodeLicense: input.nodeLicense,
+      thirdPartyNotices: input.thirdPartyNotices,
       readme: input.readme,
       installGuide: input.installGuide,
       installCommand: input.installCommand,

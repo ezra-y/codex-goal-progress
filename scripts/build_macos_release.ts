@@ -11,8 +11,10 @@ import {
   writeReleasePluginRuntimeFiles,
 } from "../platform/macos/src/plugin-release.js";
 import {
+  assertReleaseBinaryHygiene,
   assertSafeMacosReleaseOutput,
   createMacosReleaseManifest,
+  createNodeSeaConfig,
   GOAL_PROGRESS_DISABLE_COMMAND_PATH,
   GOAL_PROGRESS_INSTALL_COMMAND_PATH,
   GOAL_PROGRESS_MACOS_RELEASE_NODE_VERSION,
@@ -25,6 +27,7 @@ import {
   renderSha256Sums,
   renderUninstallGoalProgressCommand,
 } from "../platform/macos/src/release.js";
+import { generateThirdPartyNotices } from "./generate_third_party_notices.js";
 
 const require = createRequire(import.meta.url);
 const { inject } = require("postject") as {
@@ -55,11 +58,14 @@ const installCommandPath = resolve(outputRoot, GOAL_PROGRESS_INSTALL_COMMAND_PAT
 const repairCommandPath = resolve(outputRoot, GOAL_PROGRESS_REPAIR_COMMAND_PATH);
 const disableCommandPath = resolve(outputRoot, GOAL_PROGRESS_DISABLE_COMMAND_PATH);
 const uninstallCommandPath = resolve(outputRoot, GOAL_PROGRESS_UNINSTALL_COMMAND_PATH);
+const nodeLicensePath = resolve(outputRoot, "NODE-LICENSE.txt");
+const thirdPartyNoticesPath = resolve(outputRoot, "THIRD_PARTY_NOTICES.txt");
 const documentationRelativePaths = ["INSTALL-FOR-AI.md", "LICENSE", "README.md"] as const;
 const seaFuse = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
 
-function run(command: string, args: readonly string[], code: string): string {
+function run(command: string, args: readonly string[], code: string, cwd?: string): string {
   const result = spawnSync(command, [...args], {
+    cwd,
     encoding: "utf8",
     maxBuffer: 4 * 1024 * 1024,
   });
@@ -106,6 +112,7 @@ async function main(): Promise<void> {
   }
   assertSafeMacosReleaseOutput(root, outputRoot);
   const releaseNode = requireNodeBinary();
+  const nodeLicenseSource = resolve(dirname(releaseNode), "..", "LICENSE");
   const nodeContents = await readFile(releaseNode);
   if (!nodeContents.includes(Buffer.from(`${seaFuse}:0`))) {
     throw new Error("GOAL_PROGRESS_RELEASE_NODE_SEA_FUSE_MISSING");
@@ -137,6 +144,8 @@ async function main(): Promise<void> {
     ...documentationRelativePaths.map((relativePath) =>
       copyFile(resolve(root, relativePath), resolve(outputRoot, relativePath)),
     ),
+    copyFile(nodeLicenseSource, nodeLicensePath),
+    writeFile(thirdPartyNoticesPath, await generateThirdPartyNotices(root), "utf8"),
     writeFile(installCommandPath, renderInstallGoalProgressCommand(), { mode: 0o700 }),
     writeFile(repairCommandPath, renderRepairGoalProgressCommand(), { mode: 0o700 }),
     writeFile(disableCommandPath, renderDisableGoalProgressCommand(), { mode: 0o700 }),
@@ -225,25 +234,12 @@ async function main(): Promise<void> {
 
   const blobPath = resolve(workRoot, "sea.blob");
   const seaConfigPath = resolve(workRoot, "sea-config.json");
-  await writeFile(
-    seaConfigPath,
-    `${JSON.stringify(
-      {
-        main: helperBundlePath,
-        output: blobPath,
-        disableExperimentalSEAWarning: true,
-        useSnapshot: false,
-        useCodeCache: true,
-        execArgvExtension: "none",
-      },
-      null,
-      2,
-    )}\n`,
-  );
+  await writeFile(seaConfigPath, `${JSON.stringify(createNodeSeaConfig(), null, 2)}\n`);
   run(
     releaseNode,
     ["--experimental-sea-config", seaConfigPath],
     "GOAL_PROGRESS_RELEASE_SEA_BLOB_FAILED",
+    workRoot,
   );
   await copyFile(releaseNode, helperPath);
   run(
@@ -255,6 +251,7 @@ async function main(): Promise<void> {
     machoSegmentName: "NODE_SEA",
     sentinelFuse: seaFuse,
   });
+  assertReleaseBinaryHygiene(await readFile(helperPath), [root, outputRoot, workRoot]);
   await chmod(helperPath, 0o755);
   run(
     "/usr/bin/codesign",
@@ -278,6 +275,8 @@ async function main(): Promise<void> {
     disableCommand,
     uninstallCommand,
     license,
+    nodeLicense,
+    thirdPartyNotices,
     readme,
   ] = await Promise.all([
     releaseFile(helperPath, helperRelativePath),
@@ -290,6 +289,8 @@ async function main(): Promise<void> {
     releaseFile(disableCommandPath, GOAL_PROGRESS_DISABLE_COMMAND_PATH),
     releaseFile(uninstallCommandPath, GOAL_PROGRESS_UNINSTALL_COMMAND_PATH),
     releaseFile(resolve(outputRoot, "LICENSE"), "LICENSE"),
+    releaseFile(nodeLicensePath, "NODE-LICENSE.txt"),
+    releaseFile(thirdPartyNoticesPath, "THIRD_PARTY_NOTICES.txt"),
     releaseFile(resolve(outputRoot, "README.md"), "README.md"),
   ]);
   const releaseManifest = createMacosReleaseManifest({
@@ -302,6 +303,8 @@ async function main(): Promise<void> {
     rendererManifest: rendererManifestFile,
     pluginArchive,
     license,
+    nodeLicense,
+    thirdPartyNotices,
     readme,
     installGuide,
     installCommand,
@@ -325,6 +328,8 @@ async function main(): Promise<void> {
       disableCommand,
       uninstallCommand,
       license,
+      nodeLicense,
+      thirdPartyNotices,
       readme,
       manifestFile,
     ]),

@@ -33,53 +33,99 @@ fi
 
 run_install() {
   set +e
-  install_output=$("$installer" install --json 2>&1)
+  install_output=$("$installer" install --json "$@" 2>&1)
   install_status=$?
   set -e
   printf '%s\n' "$install_output"
+  install_code=$(
+    printf '%s\n' "$install_output" |
+      /usr/bin/sed -n 's/.*"code"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' |
+      /usr/bin/tail -n 1
+  )
 }
 
-run_install
-if [ "$install_status" -ne 0 ]; then
-  if ! printf '%s\n' "$install_output" | /usr/bin/grep -Fq '"code":"INSTALL_RESTART_REQUIRED"'; then
+fail_install() {
+  if [ "$install_status" -ne 0 ]; then
     exit "$install_status"
   fi
-  if ! { exec 3<>/dev/tty; } 2>/dev/null; then
-    printf '%s\n' "Codex must restart. Run this command in an interactive Terminal." >&2
-    exit 1
-  fi
-  printf '%s' "Goal Progress needs to restart Codex once. Restart now? [y/N] " >&3
-  answer=""
-  IFS= read -r answer <&3 || true
-  case "$answer" in
-    y | Y | yes | YES)
-      set +e
-      restart_output=$("$installer" install --json --restart-codex 2>&1)
-      restart_status=$?
-      set -e
-      printf '%s\n' "$restart_output"
-      if [ "$restart_status" -ne 0 ]; then
-        exit "$restart_status"
-      fi
-      ;;
-    *)
-      printf '%s\n' "Installation stopped before restarting Codex." >&2
-      exit 1
-      ;;
-  esac
+  exit 1
+}
 
+install_ready=false
+wait_for_restart=false
+
+run_install
+case "$install_code" in
+  INSTALL_OK | INSTALL_ALREADY_CURRENT)
+    if [ "$install_status" -ne 0 ]; then
+      fail_install
+    fi
+    install_ready=true
+    ;;
+  INSTALL_RESTART_PENDING)
+    wait_for_restart=true
+    ;;
+  INSTALL_RESTART_REQUIRED)
+    if ! { exec 3<>/dev/tty; } 2>/dev/null; then
+      printf '%s\n' "Codex must restart. Run this command in an interactive Terminal." >&2
+      exit 1
+    fi
+    printf '%s' "Goal Progress needs to restart Codex once. Restart now? [y/N] " >&3
+    answer=""
+    IFS= read -r answer <&3 || true
+    case "$answer" in
+      y | Y | yes | YES)
+        run_install --restart-codex
+        case "$install_code" in
+          INSTALL_OK | INSTALL_ALREADY_CURRENT)
+            if [ "$install_status" -ne 0 ]; then
+              fail_install
+            fi
+            install_ready=true
+            ;;
+          INSTALL_RESTART_REQUIRED | INSTALL_RESTART_PENDING)
+            wait_for_restart=true
+            ;;
+          *)
+            fail_install
+            ;;
+        esac
+        ;;
+      *)
+        printf '%s\n' "Installation stopped before restarting Codex." >&2
+        exit 1
+        ;;
+    esac
+    ;;
+  *)
+    fail_install
+    ;;
+esac
+
+if [ "$wait_for_restart" = true ]; then
   attempt=0
   while [ "$attempt" -lt 60 ]; do
     /bin/sleep 1
     run_install
-    if [ "$install_status" -eq 0 ]; then
-      break
-    fi
+    case "$install_code" in
+      INSTALL_OK | INSTALL_ALREADY_CURRENT)
+        if [ "$install_status" -ne 0 ]; then
+          fail_install
+        fi
+        install_ready=true
+        break
+        ;;
+      INSTALL_RESTART_REQUIRED | INSTALL_RESTART_PENDING)
+        ;;
+      *)
+        fail_install
+        ;;
+    esac
     attempt=$((attempt + 1))
   done
-  if [ "$install_status" -ne 0 ]; then
+  if [ "$install_ready" != true ]; then
     printf '%s\n' "Codex did not become ready within 60 seconds." >&2
-    exit "$install_status"
+    exit 1
   fi
 fi
 

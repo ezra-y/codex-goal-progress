@@ -77,6 +77,8 @@ interface ParsedReleaseManifest {
     readonly rendererManifest: MacosReleaseFile;
     readonly pluginArchive: MacosReleaseFile;
     readonly license: MacosReleaseFile;
+    readonly nodeLicense: MacosReleaseFile;
+    readonly thirdPartyNotices: MacosReleaseFile;
     readonly readme: MacosReleaseFile;
     readonly installGuide: MacosReleaseFile;
     readonly installCommand: MacosReleaseFile;
@@ -537,6 +539,8 @@ function parseReleaseManifest(input: unknown): ParsedReleaseManifest {
     !("rendererManifest" in input.files) ||
     !("pluginArchive" in input.files) ||
     !("license" in input.files) ||
+    !("nodeLicense" in input.files) ||
+    !("thirdPartyNotices" in input.files) ||
     !("readme" in input.files) ||
     !("installGuide" in input.files) ||
     !("installCommand" in input.files) ||
@@ -551,6 +555,8 @@ function parseReleaseManifest(input: unknown): ParsedReleaseManifest {
   assertReleaseFile(input.files.rendererManifest);
   assertReleaseFile(input.files.pluginArchive);
   assertReleaseFile(input.files.license);
+  assertReleaseFile(input.files.nodeLicense);
+  assertReleaseFile(input.files.thirdPartyNotices);
   assertReleaseFile(input.files.readme);
   assertReleaseFile(input.files.installGuide);
   assertReleaseFile(input.files.installCommand);
