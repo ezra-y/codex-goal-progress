@@ -1039,6 +1039,7 @@ export function createPluginController(options: {
           preserveTimestamps: true,
         });
       }
+      let installedCurrentVersion = false;
       try {
         if (previousPlugin) {
           runCodexJson(
@@ -1046,13 +1047,6 @@ export function createPluginController(options: {
             ["plugin", "remove", PLUGIN_ID, "--json"],
             options.codexHomeDirectory,
           );
-          if (previousCacheRoot && retainedCacheRoot) {
-            await cp(retainedCacheRoot, previousCacheRoot, {
-              recursive: true,
-              force: true,
-              preserveTimestamps: true,
-            });
-          }
         }
         if (hasMarketplace()) {
           runCodexJson(
@@ -1070,8 +1064,12 @@ export function createPluginController(options: {
         if (!(await verifyInstalled(pluginManifest.version, expectedTreeManifestSha256))) {
           throw new Error("GOAL_PROGRESS_PLUGIN_INSTALL_VERIFY_FAILED");
         }
+        if (previousCacheRoot) {
+          await rm(previousCacheRoot, { recursive: true, force: true });
+        }
+        installedCurrentVersion = true;
       } finally {
-        if (previousCacheRoot && retainedCacheRoot) {
+        if (!installedCurrentVersion && previousCacheRoot && retainedCacheRoot) {
           await cp(retainedCacheRoot, previousCacheRoot, {
             recursive: true,
             force: true,
