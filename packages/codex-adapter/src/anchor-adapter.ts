@@ -472,6 +472,11 @@ export const macosCodex261861809GoalRowAdapter = createMacosGoalRowAdapter(
   "26.818.61809",
 );
 
+export const macosCodex2682060940GoalRowAdapter = createMacosGoalRowAdapter(
+  "macos-26.820.60940-goal-row-v1",
+  "26.820.60940",
+);
+
 export class CodexAnchorAdapterRegistry {
   readonly #adapters: readonly CodexAnchorAdapter[];
 
@@ -541,5 +546,6 @@ export function createDefaultCodexAnchorAdapterRegistry(): CodexAnchorAdapterReg
     macosCodex261831338GoalRowAdapter,
     macosCodex261841509GoalRowAdapter,
     macosCodex261861809GoalRowAdapter,
+    macosCodex2682060940GoalRowAdapter,
   ]);
 }

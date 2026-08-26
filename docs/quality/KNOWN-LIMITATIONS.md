@@ -4,14 +4,14 @@ type: other
 status: active
 version: v1
 created_at: 2026-08-21
-updated_at: 2026-08-26 12:08
+updated_at: 2026-08-26 18:37
 refs: [requirement-20260818-01, plan-20260818-02]
 ---
 # KNOWN LIMITATIONS
 
 ## Release status
 
-`0.1.1` 是当前 Preview。源码、校验和、安装器和本地完整性检查可用；预构建 Helper
+`0.1.2` 是当前 Preview。源码、校验和、安装器和本地完整性检查可用；预构建 Helper
 仍缺少 Developer ID 签名和 Apple notarization。
 
 ## 入口和生命周期
@@ -48,11 +48,12 @@ refs: [requirement-20260818-01, plan-20260818-02]
 
 - release 仅提供 macOS arm64。
 - DOM Adapter 只支持 Codex Desktop `26.818.21641 (6849)` 和
-  `26.818.31338 (6892)`、`26.818.41509 (6962)`、`26.818.61809 (7019)`。
+  `26.818.31338 (6892)`、`26.818.41509 (6962)`、`26.818.61809 (7019)`、
+  `26.820.60940 (7119)`。
 - install 会注册 `com.codexgoalprogress.helper` launchd 后台项并保持本地 Helper
   运行；uninstall 会删除该后台项。
 - 功能运行需要本机 loopback CDP。install/upgrade 只有用户同意重启后才开启；
   restore 和 uninstall 会关闭。
 - Plugin Hook 必须由用户审核。安装器不会自动信任。
-- 当前 Preview Release 为 `0.1.1`，当前只提供 macOS arm64。
+- 当前 Preview Release 为 `0.1.2`，当前只提供 macOS arm64。
 - Helper 仍是 ad-hoc codesign，没有 Developer ID 和 Apple notarization。

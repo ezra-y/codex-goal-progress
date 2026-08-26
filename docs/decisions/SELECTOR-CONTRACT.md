@@ -4,7 +4,7 @@ type: decision
 status: active
 version: v1
 created_at: 2026-08-20
-updated_at: 2026-08-22 21:54
+updated_at: 2026-08-26 18:34
 refs: [requirement-20260818-01, decision-20260818-01, research-20260818-01, plan-20260818-02]
 ---
 # SELECTOR-CONTRACT
@@ -17,9 +17,9 @@ refs: [requirement-20260818-01, decision-20260818-01, research-20260818-01, plan
 |---|---|
 | Platform | macOS |
 | macOS | `26.5 (25F71)` |
-| Codex Desktop | `26.818.21641 (6849)`；`26.818.31338 (6892)`；`26.818.41509 (6962)` |
-| Adapter | `macos-26.818.21641-goal-row-v1`；`macos-26.818.31338-goal-row-v1`；`macos-26.818.41509-goal-row-v1` |
-| Page API | v13 |
+| Codex Desktop | `26.818.21641 (6849)`；`26.818.31338 (6892)`；`26.818.41509 (6962)`；`26.818.61809 (7019)`；`26.820.60940 (7119)` |
+| Adapter | `macos-26.818.21641-goal-row-v1`；`macos-26.818.31338-goal-row-v1`；`macos-26.818.41509-goal-row-v1`；`macos-26.818.61809-goal-row-v1`；`macos-26.820.60940-goal-row-v1` |
+| Page API | v52 |
 
 Codex 版本变化后，当前 Adapter 必须返回 unsupported，直到新的真实 DOM 探测、
 脱敏 fixture 和测试通过。不得用版本范围猜测兼容。

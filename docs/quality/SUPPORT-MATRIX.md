@@ -4,7 +4,7 @@ type: other
 status: active
 version: v1
 created_at: 2026-08-21
-updated_at: 2026-08-26 12:08
+updated_at: 2026-08-26 18:37
 refs: [decision-20260818-01, decision-20260820-01, plan-20260818-02]
 ---
 # SUPPORT MATRIX
@@ -13,7 +13,7 @@ refs: [decision-20260818-01, decision-20260820-01, plan-20260818-02]
 
 | 项目 | 支持值 | 状态 |
 |---|---|---|
-| Goal Progress | `0.1.1` | Preview |
+| Goal Progress | `0.1.2` | Preview |
 | Goal Contract | schema v2 | 冻结 |
 | IPC | protocol v4 | 冻结 |
 | Renderer/UI Intent Bridge | protocol v2 | 冻结 |
@@ -37,14 +37,15 @@ refs: [decision-20260818-01, decision-20260820-01, plan-20260818-02]
 | Codex Desktop | `26.818.31338 (6892)` | 已验证 |
 | Codex Desktop | `26.818.41509 (6962)` | 已验证 |
 | Codex Desktop | `26.818.61809 (7019)` | 已验证 |
+| Codex Desktop | `26.820.60940 (7119)` | 已验证 |
 | Codex CLI Plugin 安装 | `0.149.0-alpha.4` | 已验证 |
 | 其他 Desktop 版本 | 任意 | Adapter 返回 unsupported |
 | Web / IDE 专用入口 | 任意 | 未验证 |
 
 DOM Adapter 只支持 `macos-26.818.21641-goal-row-v1` 和
 `macos-26.818.31338-goal-row-v1`、`macos-26.818.41509-goal-row-v1`、
-`macos-26.818.61809-goal-row-v1`。版本或结构变化后必须重新采集脱敏 fixture、
-截图和真实 smoke；不得扩大版本范围猜兼容。
+`macos-26.818.61809-goal-row-v1`、`macos-26.820.60940-goal-row-v1`。
+版本或结构变化后必须重新采集脱敏 fixture、截图和真实 smoke；不得扩大版本范围猜兼容。
 
 ## 安装
 

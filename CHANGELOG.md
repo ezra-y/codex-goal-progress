@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Add a measured Goal-row Adapter for Codex Desktop `26.820.60940 (7119)`.
+- Preserve fail-closed behavior for every unmeasured Codex Desktop version.
+
 ## 0.1.1
 
 - One-line installation now follows `INSTALL_RESTART_REQUIRED`,
