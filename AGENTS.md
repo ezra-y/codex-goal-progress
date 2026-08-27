@@ -32,6 +32,7 @@ Check `git status` before editing.
   accepted change.
 - Keep each commit to one verified change.
 - Preserve user changes already present in the worktree.
+- Any file change must use a dedicated branch and Worktree and be submitted through a PR. Do not modify `main` directly.
 - Ask before pushing, publishing a Release, or changing repository visibility.
 
 ## Public version

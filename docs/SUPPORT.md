@@ -33,7 +33,7 @@ Font regression tests cover 11, 14, 16, and 20 px.
 A healthy installation returns:
 
 ```text
-INSTALL_OK
+INSTALL_OK or INSTALL_ALREADY_CURRENT
 DOCTOR_OK
 VERIFY_OK
 ```

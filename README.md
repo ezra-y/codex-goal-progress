@@ -31,7 +31,7 @@ progress, overall progress, and Token usage attributable to that Goal.
 Send this instruction to an AI:
 
 ```text
-Follow INSTALL-FOR-AI.md to install and verify Codex Goal Progress.
+Install and verify https://github.com/Ezra-Y/codex-goal-progress by following its INSTALL-FOR-AI.md.
 ```
 
 ### Install from Terminal

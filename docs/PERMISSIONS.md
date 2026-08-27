@@ -23,11 +23,17 @@ macOS displays a Goal Progress background item because launchd starts the Helper
 Codex restarts through LaunchServices when CDP configuration changes. This keeps macOS permission
 attribution attached to the Codex application.
 
+Set the installed command once in the current Terminal:
+
+```bash
+goal_progress="$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress"
+```
+
 If macOS displays an additional permission prompt:
 
 1. Save the prompt time and a screenshot.
-2. Run `goal-progress doctor --json`.
-3. Run `goal-progress emergency-disable --json` when the prompt repeats.
+2. Run `"$goal_progress" doctor --json`.
+3. Run `"$goal_progress" emergency-disable --json` when the prompt repeats.
 4. Attach the Doctor result to a private security report.
 
 ## Removal
@@ -35,7 +41,7 @@ If macOS displays an additional permission prompt:
 Run:
 
 ```bash
-goal-progress uninstall --json --keep-history
+"$goal_progress" uninstall --json --keep-history
 ```
 
 Use `--delete-history` after the user requests Goal history deletion.

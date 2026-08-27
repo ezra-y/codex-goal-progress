@@ -5,7 +5,7 @@
 - Keep Goal Progress visible across Codex Desktop version changes.
 - Select Native or managed fallback placement from the current Goal-row structure.
 - Reuse one Host and one complete ViewModel while switching between display modes.
-- Restore the current task after task switches and page lifecycle changes.
+- Restore Goal Progress after returning to the task and after page lifecycle changes.
 - Treat healthy fallback and retained states as valid Renderer delivery.
 - Recover the latest Token and tracking state even when the Contract revision stays unchanged.
 - Clean failed candidate injection and preserve the original native Host.

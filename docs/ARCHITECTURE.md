@@ -84,8 +84,9 @@ Helper confirms the same identity through the public App Server thread, turn, an
 Page Host selects one placement after thread verification:
 
 - **Native**: the native Goal row is available.
-- **Managed fallback**: the thread matches while the native Goal row is rebuilding.
-- **Detached**: the user stops tracking or the visible thread changes.
+- **Managed fallback**: the thread matches while the native Goal row is unavailable.
+- **Hidden**: the visible thread changes.
+- **Detached**: the user stops tracking.
 
 Route changes, Reload, Composer rebuilds, Helper restarts, and short identity gaps trigger bounded
 reconciliation. Native and fallback placement reuse the same Host and ViewModel.

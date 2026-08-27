@@ -48,7 +48,11 @@ approval, run:
 ./bin/goal-progress install --json --restart-codex
 ```
 
-When `code` is `INSTALL_RESTART_PENDING`, wait for the command to finish its bounded polling.
+When `code` is `INSTALL_RESTART_PENDING`, wait for Codex to reopen, then run:
+
+```bash
+./bin/goal-progress install --json
+```
 
 ## Review the Hook
 
