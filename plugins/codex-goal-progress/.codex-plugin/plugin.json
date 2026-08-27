@@ -1,6 +1,6 @@
 {
   "name": "codex-goal-progress",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Explicitly attach deterministic progress tracking to one native Codex Goal.",
   "author": {
     "name": "Codex Goal Progress Contributors"

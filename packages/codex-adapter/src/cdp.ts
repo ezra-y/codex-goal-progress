@@ -528,7 +528,14 @@ export async function installGoalProgressPageBundle(
       source: bundle.source,
     }),
   );
-  await evaluateGoalProgressPageBundle(sender, bundle);
+  try {
+    await evaluateGoalProgressPageBundle(sender, bundle);
+  } catch (error) {
+    await sender.send("Page.removeScriptToEvaluateOnNewDocument", {
+      identifier: newDocumentScript.identifier,
+    });
+    throw error;
+  }
   return {
     installed: true,
     newDocumentScriptIdentifier: newDocumentScript.identifier,

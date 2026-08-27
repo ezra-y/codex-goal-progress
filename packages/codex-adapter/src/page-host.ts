@@ -11,10 +11,11 @@ import type {
   GoalProgressUiPreference,
 } from "../../contracts/src/ui-preference.js";
 import {
-  type CodexAnchorAdapter,
-  type CodexAnchorAdapterRegistry,
   type CodexHostPlatform,
-  createDefaultCodexAnchorAdapterRegistry,
+  type CodexNativeGoalLocatorRegistry,
+  type CodexVisibleThreadRejectionReason,
+  createDefaultCodexNativeGoalLocatorRegistry,
+  matchCurrentVisibleThread,
 } from "./anchor-adapter.js";
 import {
   GOAL_PROGRESS_ELEMENT_NAME,
@@ -26,7 +27,7 @@ import {
 } from "./sidecar-mount.js";
 
 export const GOAL_PROGRESS_PAGE_HOST_GLOBAL = "__CODEX_GOAL_PROGRESS__";
-export const GOAL_PROGRESS_PAGE_HOST_VERSION = 52;
+export const GOAL_PROGRESS_PAGE_HOST_VERSION = 53;
 export const GOAL_PROGRESS_OBSERVER_DEBOUNCE_MS = 150;
 export const GOAL_PROGRESS_OBSERVER_RETRY_DELAYS_MS = Object.freeze([
   250, 500, 1_000, 2_000, 4_000,
@@ -54,9 +55,7 @@ type PageHostFailureReason =
   | "invalid-input"
   | "not-configured"
   | "platform-unsupported"
-  | "app-version-unsupported"
-  | "capability-unsupported"
-  | "adapter-ambiguous";
+  | CodexVisibleThreadRejectionReason;
 
 export interface GoalProgressPageHostFailure {
   readonly action: "none";
@@ -65,11 +64,18 @@ export interface GoalProgressPageHostFailure {
   readonly adapterRejectionReason: null;
   readonly hostCount: number;
   readonly threadChanged: false;
+  readonly displayMode: "hidden";
+  readonly nativeAnchorMatched: false;
+  readonly visibleThreadStatus: "unknown" | "mismatch" | null;
+  readonly componentVisible: false;
+  readonly viewModelRevision: null;
 }
 
 export interface GoalProgressPageRuntimeDiagnostics {
   readonly uiIntentBindingActive: boolean;
   readonly observerActive: boolean;
+  readonly locatorId: string | null;
+  readonly appVersionVerified: boolean | null;
   readonly debounceDelayMs: typeof GOAL_PROGRESS_OBSERVER_DEBOUNCE_MS;
   readonly retryDelaysMs: typeof GOAL_PROGRESS_OBSERVER_RETRY_DELAYS_MS;
   readonly mutationBatches: number;
@@ -93,7 +99,10 @@ export interface GoalProgressPageRuntimeDiagnostics {
   readonly layout: SidecarLayoutDiagnostics;
 }
 
-export type GoalProgressPageHealthResult = (SidecarHealthResult | GoalProgressPageHostFailure) & {
+export type GoalProgressPageHealthResult = (
+  | SidecarHealthResult
+  | (GoalProgressPageHostFailure & { readonly status: "unmounted" })
+) & {
   readonly runtime: GoalProgressPageRuntimeDiagnostics;
 };
 
@@ -118,7 +127,7 @@ export interface GoalProgressPageHostApi {
 
 export interface GoalProgressPageHostOptions {
   readonly elementName?: string;
-  readonly registry?: CodexAnchorAdapterRegistry;
+  readonly registry?: CodexNativeGoalLocatorRegistry;
 }
 
 type GoalProgressPageWindow = Window &
@@ -262,7 +271,23 @@ function hostCount(document: Document): number {
   ).length;
 }
 
+function hasRetainableTaskSurface(document: Document): boolean {
+  const composers = document.querySelectorAll<HTMLElement>("[data-codex-composer-root]");
+  return (
+    composers.length === 1 &&
+    composers[0]?.querySelectorAll('[role="textbox"][data-codex-composer]').length === 1
+  );
+}
+
 function failure(document: Document, reason: PageHostFailureReason): GoalProgressPageHostFailure {
+  const visibleThreadStatus =
+    reason === "visible-thread-mismatch"
+      ? "mismatch"
+      : reason === "visible-thread-marker-missing" ||
+          reason === "visible-thread-marker-ambiguous" ||
+          reason === "visible-thread-id-missing"
+        ? "unknown"
+        : null;
   return {
     action: "none",
     reason,
@@ -270,6 +295,11 @@ function failure(document: Document, reason: PageHostFailureReason): GoalProgres
     adapterRejectionReason: null,
     hostCount: hostCount(document),
     threadChanged: false,
+    displayMode: "hidden",
+    nativeAnchorMatched: false,
+    visibleThreadStatus,
+    componentVisible: false,
+    viewModelRevision: null,
   };
 }
 
@@ -343,7 +373,18 @@ function containsObservedRegion(node: Node): boolean {
   );
 }
 
-function relevantMutation(record: MutationRecord): boolean {
+function containsForeignGoalProgressHost(node: Node, managedHost: HTMLElement | null): boolean {
+  if (!isElement(node)) {
+    return false;
+  }
+  const candidates = [
+    ...(node.matches(GOAL_PROGRESS_HOST_SELECTOR) ? [node] : []),
+    ...node.querySelectorAll<HTMLElement>(GOAL_PROGRESS_HOST_SELECTOR),
+  ];
+  return candidates.some((candidate) => candidate !== managedHost);
+}
+
+function relevantMutation(record: MutationRecord, managedHost: HTMLElement | null): boolean {
   if (record.type === "attributes") {
     if (
       record.target === record.target.ownerDocument?.documentElement &&
@@ -354,9 +395,13 @@ function relevantMutation(record: MutationRecord): boolean {
     return isInsideObservedRegion(record.target);
   }
   const changedNodes = [...record.addedNodes, ...record.removedNodes];
+  if (changedNodes.some((node) => containsForeignGoalProgressHost(node, managedHost))) {
+    return true;
+  }
   if (
     changedNodes.length > 0 &&
-    changedNodes.every((node) => isElement(node) && node.matches(GOAL_PROGRESS_HOST_SELECTOR))
+    managedHost !== null &&
+    changedNodes.every((node) => node === managedHost)
   ) {
     return false;
   }
@@ -372,17 +417,19 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
   readonly releaseVersion = GOAL_PROGRESS_RELEASE_VERSION;
   readonly #document: Document;
   readonly #elementName: string;
-  readonly #registry: CodexAnchorAdapterRegistry;
+  readonly #registry: CodexNativeGoalLocatorRegistry;
   #uiIntentBinding: ((payload: string) => void) | undefined;
   #uiIntentBindingName: string | undefined;
-  #adapter: CodexAnchorAdapter | null = null;
   #controller: SidecarMountController | null = null;
+  #lastManagedHost: HTMLElement | null = null;
   #configuration: GoalProgressPageMountInput | null = null;
   #observer: MutationObserver | null = null;
   #debounceTimer: ReturnType<typeof setTimeout> | null = null;
   #retryTimer: ReturnType<typeof setTimeout> | null = null;
   #retryIndex = 0;
   #retryExhausted = false;
+  #retainingUnknown = false;
+  #unknownRetentionExpired = false;
   #mutationBatches = 0;
   #debounceRuns = 0;
   #retryRuns = 0;
@@ -393,13 +440,18 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
   #unmountActions = 0;
   #failureCount = 0;
   #lastFailureReason: string | null = null;
+  #lastLayoutDiagnostics: SidecarLayoutDiagnostics = emptyLayoutDiagnostics();
+  #locatorId: string | null = null;
+  #appVersionVerified: boolean | null = null;
+  #lastVisibleThreadStatus: "matched" | "unknown" | "mismatch" | null = null;
+  #lastVisibleThreadReason: CodexVisibleThreadRejectionReason | null = null;
   #lastReconcileCause: GoalProgressPageRuntimeDiagnostics["lastReconcileCause"] = "none";
   #lastMutationKind: GoalProgressPageRuntimeDiagnostics["lastMutationKind"] = "none";
 
   constructor(document: Document, options: GoalProgressPageHostOptions) {
     this.#document = document;
     this.#elementName = options.elementName ?? GOAL_PROGRESS_ELEMENT_NAME;
-    this.#registry = options.registry ?? createDefaultCodexAnchorAdapterRegistry();
+    this.#registry = options.registry ?? createDefaultCodexNativeGoalLocatorRegistry();
   }
 
   mount(input: unknown): SidecarMountResult | GoalProgressPageHostFailure {
@@ -412,6 +464,9 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
     const sameView =
       current?.viewModel.contractId === parsed.viewModel.contractId &&
       current.viewModel.sessionId === parsed.viewModel.sessionId;
+    if (!sameView) {
+      this.#unknownRetentionExpired = false;
+    }
     this.#captureUiIntentBinding(parsed.bridgeBindingName);
     this.#configuration = sameView
       ? {
@@ -447,13 +502,25 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
     }
     const result = this.#controller?.unmount() ?? failure(this.#document, "not-configured");
     this.#recordResult(result);
+    this.#captureControllerLayout();
     this.#controller = null;
     this.#stopRuntime();
     return result;
   }
 
   health(): GoalProgressPageHealthResult {
-    const result = this.#controller?.health() ?? failure(this.#document, "not-configured");
+    const hiddenReason =
+      this.#lastVisibleThreadStatus === "mismatch"
+        ? (this.#lastVisibleThreadReason ?? "visible-thread-mismatch")
+        : this.#lastVisibleThreadStatus === "unknown"
+          ? (this.#lastVisibleThreadReason ?? "visible-thread-id-missing")
+          : "not-configured";
+    const result =
+      this.#controller?.health() ??
+      ({
+        ...failure(this.#document, hiddenReason),
+        status: "unmounted",
+      } as const);
     return {
       ...result,
       runtime: this.#diagnostics(),
@@ -466,51 +533,132 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
       return failure(this.#document, "not-configured");
     }
     this.#reconcileRuns += 1;
-    const selected = this.#registry.resolve({
-      platform: parsed.platform,
-      appVersion: parsed.appVersion,
-      document: this.#document,
-    });
-    if (!selected.supported) {
-      if (
-        selected.rejectionReason === "capability-unsupported" &&
-        this.#controller &&
-        this.#adapter
-      ) {
-        const retained = this.#controller.ensureMounted(parsed.viewModel, parsed.uiPreference, {
-          environmentChanged: this.#lastReconcileCause === "relevant-mutation",
-        });
+    const visibleThread = matchCurrentVisibleThread(this.#document, parsed.viewModel.sessionId);
+    this.#lastVisibleThreadStatus = visibleThread.status;
+    this.#lastVisibleThreadReason = visibleThread.rejectionReason;
+    if (visibleThread.status === "mismatch") {
+      this.#retainingUnknown = false;
+      this.#unknownRetentionExpired = false;
+      if (this.#controller) {
+        this.#recordResult(this.#controller.unmount());
+      }
+      this.#captureControllerLayout();
+      this.#controller = null;
+      const result = failure(
+        this.#document,
+        visibleThread.rejectionReason ?? "visible-thread-mismatch",
+      );
+      this.#recordResult(result);
+      this.#cancelRetry();
+      this.#retryIndex = 0;
+      this.#retryExhausted = false;
+      return result;
+    }
+    if (visibleThread.status === "unknown") {
+      const unknownReason = visibleThread.rejectionReason ?? "visible-thread-id-missing";
+      if (this.#controller && !hasRetainableTaskSurface(this.#document)) {
+        this.#retainingUnknown = false;
+        this.#unknownRetentionExpired = true;
+        this.#recordResult(this.#controller.unmount());
+        this.#captureControllerLayout();
+        this.#controller = null;
+        this.#cancelRetry();
+        this.#retryIndex = 0;
+        this.#retryExhausted = false;
+        const result = failure(this.#document, unknownReason);
+        this.#recordResult(result);
+        return result;
+      }
+      if (this.#controller) {
+        const retained = this.#controller.retainCurrentSession(
+          parsed.viewModel,
+          parsed.uiPreference,
+        );
         this.#recordResult(retained);
+        this.#lastManagedHost = this.#controller.managedHostElement() ?? this.#lastManagedHost;
         if (retained.reason === "ok") {
+          this.#retainingUnknown = true;
+          this.#scheduleRetry();
+          if (this.#retryExhausted) {
+            this.#retainingUnknown = false;
+            this.#unknownRetentionExpired = true;
+            this.#recordResult(this.#controller.unmount());
+            this.#captureControllerLayout();
+            this.#controller = null;
+            const result = failure(this.#document, unknownReason);
+            this.#recordResult(result);
+            return result;
+          }
+          return retained;
+        }
+        if (retained.reason === "host-ambiguous" || retained.reason === "host-unmanaged") {
+          this.#retainingUnknown = false;
+          this.#unknownRetentionExpired = false;
           this.#cancelRetry();
           this.#retryIndex = 0;
           this.#retryExhausted = false;
+          return retained;
+        }
+        if (retained.action === "unmounted") {
+          this.#retainingUnknown = false;
+          this.#captureControllerLayout();
+          this.#controller = null;
+          this.#scheduleRetry();
           return retained;
         }
       }
       if (this.#controller) {
         this.#recordResult(this.#controller.unmount());
       }
+      this.#captureControllerLayout();
       this.#controller = null;
-      this.#adapter = null;
-      const result = failure(this.#document, selected.rejectionReason);
+      this.#retainingUnknown = false;
+      const result = failure(this.#document, unknownReason);
       this.#recordResult(result);
-      this.#scheduleRetry();
+      if (!this.#unknownRetentionExpired) {
+        this.#scheduleRetry();
+      }
       return result;
     }
-    if (this.#adapter?.id !== selected.adapter.id || !this.#controller) {
+    this.#retainingUnknown = false;
+    this.#unknownRetentionExpired = false;
+    const locator = this.#registry.resolvePlatform(parsed.platform);
+    if (!locator) {
       if (this.#controller) {
         this.#recordResult(this.#controller.unmount());
       }
-      this.#adapter = selected.adapter;
-      this.#controller = new SidecarMountController(this.#document, selected.adapter, {
+      this.#captureControllerLayout();
+      this.#controller = null;
+      this.#locatorId = null;
+      this.#appVersionVerified = null;
+      const result = failure(this.#document, "platform-unsupported");
+      this.#recordResult(result);
+      this.#cancelRetry();
+      this.#retryIndex = 0;
+      this.#retryExhausted = false;
+      return result;
+    }
+    this.#locatorId = locator.id;
+    this.#appVersionVerified = locator.verifiedVersions.has(parsed.appVersion);
+    if (!this.#controller) {
+      this.#controller = new SidecarMountController(this.#document, {
+        nativeGoalLocator: locator,
         elementName: this.#elementName,
         onUiIntent: (intent, context) => this.#forwardUiIntent(intent, context.userActivated),
       });
     }
+    const location = locator.locate(this.#document);
     const result = this.#controller.ensureMounted(parsed.viewModel, parsed.uiPreference, {
+      displayTarget: location.target
+        ? {
+            kind: "native",
+            ...location.target,
+          }
+        : { kind: "fallback" },
       environmentChanged: this.#lastReconcileCause === "relevant-mutation",
+      nativeGoalRejectionReason: location.rejectionReason,
     });
+    this.#lastManagedHost = this.#controller.managedHostElement() ?? this.#lastManagedHost;
     this.#recordResult(result);
     if (result.reason === "native-goal-changed") {
       this.#stopRuntime();
@@ -569,7 +717,8 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
       return;
     }
     this.#observer = new MutationObserver((records) => {
-      const relevant = records.filter(relevantMutation);
+      const managedHost = this.#controller?.managedHostElement() ?? this.#lastManagedHost;
+      const relevant = records.filter((record) => relevantMutation(record, managedHost));
       if (relevant.length === 0) {
         return;
       }
@@ -578,6 +727,8 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
         kinds.size > 1 ? "mixed" : relevant[0]?.type === "attributes" ? "attributes" : "child-list";
       this.#mutationBatches += 1;
       if (this.#controller?.health().reason === "native-goal-changed") {
+        this.#retainingUnknown = false;
+        this.#unknownRetentionExpired = false;
         if (this.#debounceTimer) {
           clearTimeout(this.#debounceTimer);
           this.#debounceTimer = null;
@@ -595,9 +746,11 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
       this.#debounceTimer = setTimeout(() => {
         this.#debounceTimer = null;
         this.#debounceRuns += 1;
-        this.#cancelRetry();
-        this.#retryIndex = 0;
-        this.#retryExhausted = false;
+        if (!this.#retainingUnknown && !this.#unknownRetentionExpired) {
+          this.#cancelRetry();
+          this.#retryIndex = 0;
+          this.#retryExhausted = false;
+        }
         this.#lastReconcileCause = "relevant-mutation";
         this.#reconcile();
       }, GOAL_PROGRESS_OBSERVER_DEBOUNCE_MS);
@@ -645,11 +798,17 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
     }
     this.#cancelRetry();
     this.#controller?.unmount();
+    this.#captureControllerLayout();
     this.#controller = null;
-    this.#adapter = null;
     this.#configuration = null;
+    this.#locatorId = null;
+    this.#appVersionVerified = null;
+    this.#lastVisibleThreadStatus = null;
+    this.#lastVisibleThreadReason = null;
     this.#retryIndex = 0;
     this.#retryExhausted = false;
+    this.#retainingUnknown = false;
+    this.#unknownRetentionExpired = false;
   }
 
   #recordResult(result: SidecarMountResult | GoalProgressPageHostFailure): void {
@@ -666,10 +825,18 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
     }
   }
 
+  #captureControllerLayout(): void {
+    if (this.#controller) {
+      this.#lastLayoutDiagnostics = this.#controller.diagnostics();
+    }
+  }
+
   #diagnostics(): GoalProgressPageRuntimeDiagnostics {
     return {
       uiIntentBindingActive: this.#uiIntentBinding !== undefined,
       observerActive: this.#observer !== null,
+      locatorId: this.#locatorId,
+      appVersionVerified: this.#appVersionVerified,
       debounceDelayMs: GOAL_PROGRESS_OBSERVER_DEBOUNCE_MS,
       retryDelaysMs: GOAL_PROGRESS_OBSERVER_RETRY_DELAYS_MS,
       mutationBatches: this.#mutationBatches,
@@ -685,7 +852,7 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
       retryExhausted: this.#retryExhausted,
       lastReconcileCause: this.#lastReconcileCause,
       lastMutationKind: this.#lastMutationKind,
-      layout: this.#controller?.diagnostics() ?? emptyLayoutDiagnostics(),
+      layout: this.#controller?.diagnostics() ?? this.#lastLayoutDiagnostics,
     };
   }
 }

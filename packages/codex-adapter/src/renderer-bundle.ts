@@ -4,7 +4,7 @@ import { GOAL_PROGRESS_RELEASE_VERSION } from "../../contracts/src/index.js";
 import { GOAL_PROGRESS_PAGE_HOST_VERSION } from "./page-host.js";
 
 export const GOAL_PROGRESS_RENDERER_BUNDLE_FILE = "goal-progress.js";
-export const GOAL_PROGRESS_RENDERER_BUNDLE_MAX_BYTES = 136_000;
+export const GOAL_PROGRESS_RENDERER_BUNDLE_MAX_BYTES = 140_000;
 
 export const GoalProgressRendererBundleManifestSchema = z
   .object({

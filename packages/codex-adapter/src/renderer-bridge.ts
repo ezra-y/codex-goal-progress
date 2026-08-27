@@ -77,6 +77,10 @@ export interface GoalProgressRendererBridgeDoctor {
   readonly capabilitySupported: boolean | null;
   readonly capabilityReason: string | null;
   readonly anchorMatched: boolean | null;
+  readonly displayMode: "native" | "fallback" | "hidden" | null;
+  readonly nativeAnchorMatched: boolean | null;
+  readonly componentVisible: boolean | null;
+  readonly visibleThreadStatus: "matched" | "retained" | "unknown" | "mismatch" | null;
   readonly componentCount: number | null;
   readonly bundleReleaseVersion: string;
   readonly bundlePageHostVersion: number;
@@ -204,6 +208,28 @@ export class GoalProgressRendererBridge {
         : null;
     const reason = typeof health?.reason === "string" ? health.reason : null;
     const adapterId = typeof health?.adapterId === "string" ? health.adapterId : null;
+    const displayMode =
+      health?.displayMode === "native" ||
+      health?.displayMode === "fallback" ||
+      health?.displayMode === "hidden"
+        ? health.displayMode
+        : null;
+    const nativeAnchorMatched =
+      typeof health?.nativeAnchorMatched === "boolean" ? health.nativeAnchorMatched : null;
+    const componentVisible =
+      typeof health?.componentVisible === "boolean" ? health.componentVisible : null;
+    const visibleThreadStatus =
+      health?.visibleThreadStatus === "matched" ||
+      health?.visibleThreadStatus === "retained" ||
+      health?.visibleThreadStatus === "unknown" ||
+      health?.visibleThreadStatus === "mismatch"
+        ? health.visibleThreadStatus
+        : null;
+    const viewModelRevision =
+      typeof health?.viewModelRevision === "number" &&
+      Number.isSafeInteger(health.viewModelRevision)
+        ? health.viewModelRevision
+        : null;
     const latest = this.#latestViewModel;
     return {
       appPath: this.#environment?.appPath ?? null,
@@ -214,7 +240,11 @@ export class GoalProgressRendererBridge {
       adapterId,
       capabilitySupported: reason === null ? null : reason === "ok",
       capabilityReason: reason,
-      anchorMatched: reason === null ? null : reason === "ok",
+      anchorMatched: nativeAnchorMatched,
+      displayMode,
+      nativeAnchorMatched,
+      componentVisible,
+      visibleThreadStatus,
       componentCount:
         typeof health?.hostCount === "number" && Number.isSafeInteger(health.hostCount)
           ? health.hostCount
@@ -222,9 +252,12 @@ export class GoalProgressRendererBridge {
       bundleReleaseVersion: this.#bundle.manifest.releaseVersion,
       bundlePageHostVersion: this.#bundle.manifest.pageHostVersion,
       bundleSha256: this.#bundle.manifest.sha256,
-      latestViewModelRevision: latest?.revision ?? null,
+      latestViewModelRevision: viewModelRevision,
       currentThreadMatched:
-        expectedThreadId === undefined || !latest ? null : latest.sessionId === expectedThreadId,
+        expectedThreadId === undefined || !latest || visibleThreadStatus === null
+          ? null
+          : latest.sessionId === expectedThreadId &&
+            (visibleThreadStatus === "matched" || visibleThreadStatus === "retained"),
       lastErrorCode:
         this.#lastErrorCode ??
         (typeof runtime?.lastFailureReason === "string"

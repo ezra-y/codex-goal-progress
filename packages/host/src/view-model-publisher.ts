@@ -29,6 +29,17 @@ export class ViewModelPublisher {
     return this.#currentThreadId;
   }
 
+  get currentRevision(): number | undefined {
+    return this.#latestViewModel?.revision;
+  }
+
+  get deliveryCurrent(): boolean {
+    return (
+      this.#latestFingerprint !== undefined &&
+      this.#latestFingerprint === this.#deliveredFingerprint
+    );
+  }
+
   get visibleThreadAwarenessAvailable(): boolean {
     return this.#sink?.recoverVisibleThreadId !== undefined;
   }

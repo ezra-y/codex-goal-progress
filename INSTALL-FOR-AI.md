@@ -1,62 +1,84 @@
 # Install Goal Progress for a user
 
-Use this procedure only on macOS arm64 and only from an extracted `macos-arm64` Release.
-Do not assemble installation files manually from the source tree.
+This procedure installs the latest verified macOS arm64 Release and checks the running product.
+
+## Confirm the platform
+
+Run:
+
+```bash
+uname -s
+uname -m
+```
+
+Continue when the results are `Darwin` and `arm64`.
+
+## Download and verify the Release
+
+```bash
+goal_progress_install_dir="$(mktemp -d /tmp/codex-goal-progress-install.XXXXXX)"
+cd "$goal_progress_install_dir"
+curl -fL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/codex-goal-progress-macos-arm64.zip -o codex-goal-progress-macos-arm64.zip
+curl -fL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/SHA256SUMS -o SHA256SUMS
+grep '  codex-goal-progress-macos-arm64.zip$' SHA256SUMS | shasum -a 256 -c -
+ditto -x -k codex-goal-progress-macos-arm64.zip .
+```
+
+The checksum command must print:
+
+```text
+codex-goal-progress-macos-arm64.zip: OK
+```
 
 ## Install
 
-Run from the extracted Release directory:
+Run:
 
 ```bash
+cd "$goal_progress_install_dir/codex-goal-progress-macos-arm64"
 ./bin/goal-progress install --json
 ```
 
-Read only `ok`, `code`, `nextStep`, and `details`.
+Read `ok`, `code`, `nextStep`, and `details`.
 
-If `nextStep` requires a Codex restart, ask the user first. After approval, run:
+When `code` is `INSTALL_RESTART_REQUIRED`, ask the user for permission to restart Codex. After
+approval, run:
 
 ```bash
 ./bin/goal-progress install --json --restart-codex
 ```
 
-When Hook review is required, stop and ask the user to review Goal Progress in Codex. Do not
-edit `config.toml`, write `trusted_hash`, or bypass Hook review.
+When `code` is `INSTALL_RESTART_PENDING`, wait for Codex to reopen, then run:
 
-After the user confirms Hook review, run:
+```bash
+./bin/goal-progress install --json
+```
+
+## Review the Hook
+
+When `hookReviewRequired` is `true`, ask the user to open `/hooks` in Codex and approve the
+Goal Progress Hook. Continue after the user confirms the review.
+
+## Verify
+
+Run:
 
 ```bash
 ./bin/goal-progress doctor --json
 ./bin/goal-progress verify --json
 ```
 
-If either command returns `ok: false`, follow its single `nextStep` and retry. Do not guess the
-Codex application path.
+Installation is complete when both commands return `"ok": true`.
 
-## Repair, upgrade, and uninstall
+If a command returns `"ok": false`, follow its single `nextStep`, then run Doctor and Verify
+again.
 
-Repair only reported failures:
+## Report the result
 
-```bash
-./bin/goal-progress repair --json
-```
+Tell the user:
 
-Upgrade from the new extracted Release:
-
-```bash
-./bin/goal-progress upgrade --json
-```
-
-Uninstall while preserving Goal history:
-
-```bash
-./bin/goal-progress uninstall --json --keep-history
-```
-
-Use `--delete-history` only when the user explicitly requests deletion.
-
-## Do not
-
-- Do not edit launchd or Codex Plugin configuration manually.
-- Do not modify Codex application files or code signatures.
-- Do not bypass Hook review.
-- Do not create a hidden Codex task or use another model for progress.
+- the final install code
+- the Doctor code
+- the Verify code
+- whether Codex restarted
+- whether Hook review completed
