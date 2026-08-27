@@ -1,40 +1,11 @@
 # AGENTS.md
 
-This file is for external coding agents working in the public repository.
+This file is for AI agents installing Goal Progress for a user.
 
-## Choose the task path
+## Installation
 
-- **Installation**: For installation tasks, read `INSTALL-FOR-AI.md` first and follow that procedure.
-- **Code change**: Read `docs/ARCHITECTURE.md`, then inspect the relevant source.
-- **Runtime diagnosis**: Read `docs/SUPPORT.md` and the relevant architecture section.
-
-Check `git status` before editing.
-
-## Commands
-
-- Use `pnpm` for dependencies and the lockfile.
-- Run all public validation gates with `pnpm verify`.
-
-## Architecture boundaries
-
-- Renderer displays a ViewModel.
-- Helper is the only state writer.
-- Core is the only progress calculator.
-- Codex `.app`, `app.asar`, code signing, private React state, and private JavaScript chunks stay unchanged.
-- The current Codex model performs Goal interpretation.
-- Token usage appears after current-Goal attribution succeeds.
-- DOM selectors belong only in the Codex adapter layer.
-
-## Change rules
-
-- Reproduce a bug before fixing it.
-- Describe how the change was verified. Maintainers run the internal test suite after importing an
-  accepted change.
-- Keep each commit to one verified change.
-- Preserve user changes already present in the worktree.
-- Any file change must use a dedicated branch and Worktree and be submitted through a PR. Do not modify `main` directly.
-- Ask before pushing, publishing a Release, or changing repository visibility.
-
-## Public version
-
-`VERSION` is the only public product version. Public files use that version.
+1. Read `INSTALL-FOR-AI.md` and follow it from start to finish.
+2. Ask the user before restarting Codex.
+3. Wait for the user to approve the Goal Progress Hook.
+4. Run Doctor and Verify after installation.
+5. Report the installation, Doctor, Verify, restart, and Hook review results to the user.
