@@ -11,12 +11,12 @@ pnpm verify
 
 1. Create a feature branch.
 2. Keep the change focused.
-3. Reproduce the current behavior.
-4. Implement the smallest complete change.
+3. Reproduce bugs before fixing them.
+4. Explain the expected behavior and verification method.
 5. Run `pnpm verify`.
 
-Codex-specific DOM knowledge belongs in `packages/codex-adapter`. Renderer receives a ViewModel,
-Helper owns writes, and Core owns progress calculation.
+Do not modify Codex application files, private stores, private JavaScript chunks, or code
+signatures. Keep Codex-specific DOM knowledge inside `packages/codex-adapter`.
 
 ## Submit a pull request
 
@@ -26,9 +26,10 @@ Include:
 - the reason for the change;
 - exact verification commands and results;
 - screenshots for visual changes;
-- the current scope after the change.
+- any known limitation that remains.
 
-The public repository contains the release source. Maintainers apply the internal test suite
-before the next public export.
+The maintained internal test suite is not part of this public mirror. Maintainers run it after
+moving an accepted change back to the internal source repository.
 
-Pull-request evidence uses bounded technical data such as IDs, states, counts, and hashes.
+Do not include conversation transcripts, private prompts, user files, credentials, local absolute
+paths, or raw machine-specific evidence.

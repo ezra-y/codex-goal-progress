@@ -1,42 +1,46 @@
 # Install Goal Progress for a user
 
-Use the extracted macOS arm64 Release package.
+Use this procedure only on macOS arm64 and only from an extracted `macos-arm64` Release.
+Do not assemble installation files manually from the source tree.
 
 ## Install
 
-Run from the Release directory:
+Run from the extracted Release directory:
 
 ```bash
 ./bin/goal-progress install --json
 ```
 
-Read `ok`, `code`, `nextStep`, and `details`.
+Read only `ok`, `code`, `nextStep`, and `details`.
 
-When `nextStep` requests a Codex restart, obtain user approval and run:
+If `nextStep` requires a Codex restart, ask the user first. After approval, run:
 
 ```bash
 ./bin/goal-progress install --json --restart-codex
 ```
 
-When Hook review is required, ask the user to review Goal Progress in Codex. After confirmation,
-run:
+When Hook review is required, stop and ask the user to review Goal Progress in Codex. Do not
+edit `config.toml`, write `trusted_hash`, or bypass Hook review.
+
+After the user confirms Hook review, run:
 
 ```bash
 ./bin/goal-progress doctor --json
 ./bin/goal-progress verify --json
 ```
 
-An `ok: false` result includes the next supported recovery step.
+If either command returns `ok: false`, follow its single `nextStep` and retry. Do not guess the
+Codex application path.
 
-## Maintain the installation
+## Repair, upgrade, and uninstall
 
-Repair reported components:
+Repair only reported failures:
 
 ```bash
 ./bin/goal-progress repair --json
 ```
 
-Upgrade from a new extracted Release:
+Upgrade from the new extracted Release:
 
 ```bash
 ./bin/goal-progress upgrade --json
@@ -48,7 +52,11 @@ Uninstall while preserving Goal history:
 ./bin/goal-progress uninstall --json --keep-history
 ```
 
-Use `--delete-history` after the user explicitly requests history removal.
+Use `--delete-history` only when the user explicitly requests deletion.
 
-The bundled commands manage launchd, Plugin state, Hook review, Codex identity, and release
-integrity.
+## Do not
+
+- Do not edit launchd or Codex Plugin configuration manually.
+- Do not modify Codex application files or code signatures.
+- Do not bypass Hook review.
+- Do not create a hidden Codex task or use another model for progress.
