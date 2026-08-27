@@ -2,37 +2,38 @@
 
 This file is for external coding agents working in the public repository.
 
-## Start here
+## Choose the task path
 
-1. Read `README.md`.
-2. Read `docs/decisions/CodexGoalProgress技术架构.md`.
-3. Read `docs/quality/KNOWN-LIMITATIONS.md`.
-4. Check `git status` before editing.
+- **Installation**: For installation tasks, read `INSTALL-FOR-AI.md` first and follow that procedure.
+- **Code change**: Read `docs/ARCHITECTURE.md`, then inspect the relevant source.
+- **Runtime diagnosis**: Read `docs/SUPPORT.md` and the relevant architecture section.
+
+Check `git status` before editing.
 
 ## Commands
 
-- Use `pnpm`. Do not use npm, yarn, or Bun to change dependencies or the lockfile.
-- Run all public validation gates: `pnpm verify`
+- Use `pnpm` for dependencies and the lockfile.
+- Run all public validation gates with `pnpm verify`.
 
 ## Architecture boundaries
 
-- Renderer displays a ViewModel. It does not save state or calculate progress.
+- Renderer displays a ViewModel.
 - Helper is the only state writer.
 - Core is the only progress calculator.
-- Do not modify Codex `.app`, `app.asar`, code signing, private React state, or private JavaScript chunks.
-- Do not add an external progress model, a model API key, or a hidden Codex task.
-- Token usage must stay hidden when it cannot be attributed to the current Goal.
+- Codex `.app`, `app.asar`, code signing, private React state, and private JavaScript chunks stay unchanged.
+- The current Codex model performs Goal interpretation.
+- Token usage appears after current-Goal attribution succeeds.
 - DOM selectors belong only in the Codex adapter layer.
 
 ## Change rules
 
 - Reproduce a bug before fixing it.
-- Describe how the change was verified. The public mirror does not contain the internal test suite.
+- Describe how the change was verified. Maintainers run the internal test suite after importing an
+  accepted change.
 - Keep each commit to one verified change.
 - Preserve user changes already present in the worktree.
-- Do not push, publish a Release, or change repository visibility unless the user asks.
+- Ask before pushing, publishing a Release, or changing repository visibility.
 
 ## Public version
 
-`VERSION` is the only public product version. Do not copy internal development or release-candidate
-numbers into public files.
+`VERSION` is the only public product version. Public files use that version.

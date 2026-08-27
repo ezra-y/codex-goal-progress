@@ -1,16 +1,13 @@
 <div align="center">
   <h1 align="center">
-    <img src="docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="130"><br>
+    <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="130"><br>
     Codex Goal Progress
   </h1>
   <p>A native progress bar for Codex Goals, powered by verified checklists and local progress tracking.</p>
-  <p>
-    <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
-  </p>
 </div>
 
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
 </p>
 
 ## ✨ Features
@@ -20,12 +17,12 @@ progress, overall progress, and Token usage attributable to that Goal.
 
 | Capability | Behavior |
 |---|---|
-| Rule-driven progress | Calculates objective and overall progress from a validated checklist, not from Token usage, elapsed time, or guesses. |
+| Rule-driven progress | Calculates objective and overall progress from a validated checklist; Token usage and elapsed time remain separate supporting data. |
 | Verifiable calculation | The model handles only the necessary Goal understanding and checklist updates; the local Helper manages state and progress calculation. |
 | Native theme adaptation | Follows Codex Light/Dark mode and the user's current accent color. |
 | Type scale adaptation | Reads the current Codex UI font size and derives spacing continuously from it. |
 | Layout adaptation | Measures the real native Goal and composer geometry to coordinate fixed and draggable floating layouts. |
-| Language adaptation | Follows the Codex document language and text direction without changing the progress Contract. |
+| Language adaptation | Reads the live Codex document locale and direction, selects a matching built-in catalog, and falls back to English. |
 
 ## 🚀 Quick start
 
@@ -34,7 +31,7 @@ progress, overall progress, and Token usage attributable to that Goal.
 Send this instruction to an AI:
 
 ```text
-Please install and enable https://github.com/Ezra-Y/codex-goal-progress. After installation, run doctor and verify to confirm that it works correctly.
+Follow INSTALL-FOR-AI.md to install and verify Codex Goal Progress.
 ```
 
 ### Install from Terminal
@@ -54,8 +51,7 @@ Plugin session loads.
 * Apple Silicon Mac
 * Codex Desktop
 
-People using the macOS package do not need Node.js or pnpm. Contributors can follow
-[CONTRIBUTING.md](CONTRIBUTING.md) to build and verify the source.
+The macOS package includes its runtime.
 
 ## 🎯 How to use
 
@@ -64,27 +60,27 @@ Open a native Codex Goal, then select the **Goal Progress** Skill.
 The current Codex model prepares or reuses that Goal's checklist and creates a local progress
 record.
 
-Enable Goal Progress separately for each new Goal. Ordinary Goals remain unchanged when Goal
-Progress is not enabled.
+Enable Goal Progress separately for each new Goal. Ordinary Goals continue through the native
+Codex flow.
 
-## 🌓 Light and Dark
+## 🌓 Light and dark
 
 ### Light
 
 | Fixed view | Floating view |
 |---|---|
-| ![Goal Progress fixed view in the real Codex light theme](docs/assets/codex-goal-progress-light-fixed-en.png) | ![Goal Progress floating view in the real Codex light theme](docs/assets/codex-goal-progress-light-floating-en.png) |
+| ![Goal Progress fixed view in the real Codex light theme](https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-light-fixed-en.png) | ![Goal Progress floating view in the real Codex light theme](https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-light-floating-en.png) |
 
 ### Dark
 
 | Fixed view | Floating view |
 |---|---|
-| ![Goal Progress fixed view in the real Codex dark theme](docs/assets/codex-goal-progress-dark-fixed-en.png) | ![Goal Progress floating view in the real Codex dark theme](docs/assets/codex-goal-progress-dark-floating-en.png) |
+| ![Goal Progress fixed view in the real Codex dark theme](https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-dark-fixed-en.png) | ![Goal Progress floating view in the real Codex dark theme](https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-dark-floating-en.png) |
 
 ## 🧭 How it works
 
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-architecture.png" alt="How Codex Goal Progress works">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-architecture.png" alt="How Codex Goal Progress works">
 </p>
 
 - The current model updates checklist evidence through local MCP tools.
@@ -93,9 +89,10 @@ Progress is not enabled.
 - Renderer receives a display-only ViewModel.
 - The installer uses a self-contained Node SEA Helper.
 
-Read the [architecture decision](docs/decisions/CodexGoalProgress技术架构.md),
-[permissions](docs/architecture/PERMISSIONS.md), and
-[threat model](docs/quality/THREAT-MODEL.md) for details.
+Read the [architecture](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md),
+[permissions](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md), and
+[support reference](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/SUPPORT.md)
+for details.
 
 ## 🔐 Privacy and permissions
 
@@ -107,8 +104,9 @@ Goal Progress uses:
 - a background Helper registered through launchd;
 - three reviewable Plugin Hooks.
 
-See [PERMISSIONS.md](docs/architecture/PERMISSIONS.md) for the exact scope and removal steps.
+See [PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)
+for the exact scope and removal steps.
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/Ezra-Y/codex-goal-progress/blob/main/LICENSE)

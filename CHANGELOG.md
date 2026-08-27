@@ -13,7 +13,7 @@
 ## 0.1.2
 
 - Add a measured Goal-row Adapter for Codex Desktop `26.820.60940 (7119)`.
-- Scope native Goal-row placement to measured Codex Desktop versions.
+- Preserve fail-closed behavior for every unmeasured Codex Desktop version.
 
 ## 0.1.1
 
