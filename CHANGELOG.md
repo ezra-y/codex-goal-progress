@@ -1,9 +1,19 @@
 # Changelog
 
+## 0.2.0
+
+- Keep Goal Progress visible across Codex Desktop version changes.
+- Select Native or managed fallback placement from the current Goal-row structure.
+- Reuse one Host and one complete ViewModel while switching between display modes.
+- Restore the current task after task switches and page lifecycle changes.
+- Treat healthy fallback and retained states as valid Renderer delivery.
+- Recover the latest Token and tracking state even when the Contract revision stays unchanged.
+- Clean failed candidate injection and preserve the original native Host.
+
 ## 0.1.2
 
 - Add a measured Goal-row Adapter for Codex Desktop `26.820.60940 (7119)`.
-- Preserve fail-closed behavior for every unmeasured Codex Desktop version.
+- Scope native Goal-row placement to measured Codex Desktop versions.
 
 ## 0.1.1
 

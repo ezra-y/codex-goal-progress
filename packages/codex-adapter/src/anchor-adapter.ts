@@ -31,50 +31,34 @@ export interface CapabilityProbeResult {
   readonly candidateCount: number;
 }
 
-export interface VisibleThreadMatchResult {
-  readonly matched: boolean;
-  readonly adapterId: string;
+export type CodexVisibleThreadStatus = "matched" | "unknown" | "mismatch";
+
+export interface CurrentVisibleThreadMatchResult {
+  readonly status: CodexVisibleThreadStatus;
   readonly rejectionReason: CodexVisibleThreadRejectionReason | null;
   readonly candidateCount: number;
 }
 
-export interface CodexAnchorAdapter {
+export interface NativeGoalTarget {
+  readonly anchor: HTMLElement;
+  readonly controlArea: HTMLElement | null;
+  readonly goalIdentity: string | null;
+}
+
+export interface NativeGoalLocationResult {
+  readonly target: NativeGoalTarget | null;
+  readonly rejectionReason: CodexAnchorRejectionReason | null;
+  readonly candidateCount: number;
+  readonly matchedSignals: readonly CodexAnchorSignal[];
+}
+
+export interface CodexNativeGoalLocator {
   readonly id: string;
   readonly platform: CodexAnchorPlatform;
-  readonly appVersionRange: string;
-  probe(document: Document): CapabilityProbeResult;
-  matchVisibleThread(document: Document, expectedThreadId: string): VisibleThreadMatchResult;
-  findGoalAnchor(document: Document): HTMLElement | null;
-  findGoalControlArea?(document: Document): HTMLElement | null;
+  readonly verifiedVersions: ReadonlySet<string>;
+  locate(document: Document): NativeGoalLocationResult;
   findFloatingObstacles?(document: Document): readonly HTMLElement[];
-  readGoalIdentity?(document: Document): string | null;
 }
-
-export type CodexAnchorRegistryRejectionReason =
-  | "platform-unsupported"
-  | "app-version-unsupported"
-  | "capability-unsupported"
-  | "adapter-ambiguous";
-
-export interface CodexAnchorRegistryInput {
-  readonly platform: CodexHostPlatform;
-  readonly appVersion: string;
-  readonly document: Document;
-}
-
-export type CodexAnchorRegistryResult =
-  | {
-      readonly supported: true;
-      readonly adapter: CodexAnchorAdapter;
-      readonly probe: CapabilityProbeResult;
-      readonly rejectionReason: null;
-    }
-  | {
-      readonly supported: false;
-      readonly adapter: null;
-      readonly probes: readonly CapabilityProbeResult[];
-      readonly rejectionReason: CodexAnchorRegistryRejectionReason;
-    };
 
 interface LocatedGoalAnchor {
   readonly anchor: HTMLElement;
@@ -277,11 +261,10 @@ export function resolveCurrentMacosVisibleThreadId(document: Document): string |
   return conversationThreadIds.values().next().value ?? null;
 }
 
-function matchCurrentMacosVisibleThread(
-  adapterId: string,
+export function matchCurrentVisibleThread(
   document: Document,
   expectedThreadId: string,
-): VisibleThreadMatchResult {
+): CurrentVisibleThreadMatchResult {
   const currentRows = elements<HTMLElement>(
     document,
     "[data-app-action-sidebar-thread-row]",
@@ -293,34 +276,43 @@ function matchCurrentMacosVisibleThread(
   );
   if (currentRows.length === 0) {
     return {
-      matched: false,
-      adapterId,
+      status: "unknown",
       rejectionReason: "visible-thread-marker-missing",
       candidateCount: 0,
     };
   }
   if (currentRows.length !== 1) {
     return {
-      matched: false,
-      adapterId,
+      status: "unknown",
       rejectionReason: "visible-thread-marker-ambiguous",
       candidateCount: currentRows.length,
     };
   }
-  const visibleThreadId = currentRows[0]?.getAttribute("data-app-action-sidebar-thread-id");
-  if (!visibleThreadId) {
+  if (!currentRows[0]?.getAttribute("data-app-action-sidebar-thread-id")) {
     return {
-      matched: false,
-      adapterId,
+      status: "unknown",
       rejectionReason: "visible-thread-id-missing",
       candidateCount: 1,
     };
   }
-  const matchesExpectedThread = resolveCurrentMacosVisibleThreadId(document) === expectedThreadId;
+  const visibleThreadId = resolveCurrentMacosVisibleThreadId(document);
+  if (visibleThreadId === null) {
+    return {
+      status: "unknown",
+      rejectionReason: "visible-thread-id-missing",
+      candidateCount: 1,
+    };
+  }
+  if (visibleThreadId !== expectedThreadId) {
+    return {
+      status: "mismatch",
+      rejectionReason: "visible-thread-mismatch",
+      candidateCount: 1,
+    };
+  }
   return {
-    matched: matchesExpectedThread,
-    adapterId,
-    rejectionReason: matchesExpectedThread ? null : "visible-thread-mismatch",
+    status: "matched",
+    rejectionReason: null,
     candidateCount: 1,
   };
 }
@@ -425,127 +417,64 @@ function locateCurrentMacosGoalAnchor(adapterId: string, document: Document): An
   };
 }
 
-function createMacosGoalRowAdapter(id: string, appVersion: string): CodexAnchorAdapter {
-  return {
-    id,
-    platform: "macos",
-    appVersionRange: appVersion,
-    probe(document) {
-      return locateCurrentMacosGoalAnchor(id, document).probe;
-    },
-    matchVisibleThread(document, expectedThreadId) {
-      return matchCurrentMacosVisibleThread(id, document, expectedThreadId);
-    },
-    findGoalAnchor(document) {
-      return locateCurrentMacosGoalAnchor(id, document).located?.anchor ?? null;
-    },
-    findGoalControlArea(document) {
-      return locateCurrentMacosGoalAnchor(id, document).located?.controlArea ?? null;
-    },
-    findFloatingObstacles(document) {
-      return findNativeStepSurfaces(document);
-    },
-    readGoalIdentity(document) {
-      const goalButton = locateCurrentMacosGoalAnchor(id, document).located?.goalButton;
-      return goalButton ? readGoalButtonIdentity(goalButton) : null;
-    },
-  };
-}
-
-export const macosCodex261821641GoalRowAdapter = createMacosGoalRowAdapter(
-  "macos-26.818.21641-goal-row-v1",
+const MACOS_GOAL_ROW_V1_VERIFIED_VERSIONS = new Set([
   "26.818.21641",
-);
-
-export const macosCodex261831338GoalRowAdapter = createMacosGoalRowAdapter(
-  "macos-26.818.31338-goal-row-v1",
   "26.818.31338",
-);
-
-export const macosCodex261841509GoalRowAdapter = createMacosGoalRowAdapter(
-  "macos-26.818.41509-goal-row-v1",
   "26.818.41509",
-);
-
-export const macosCodex261861809GoalRowAdapter = createMacosGoalRowAdapter(
-  "macos-26.818.61809-goal-row-v1",
   "26.818.61809",
-);
-
-export const macosCodex2682060940GoalRowAdapter = createMacosGoalRowAdapter(
-  "macos-26.820.60940-goal-row-v1",
   "26.820.60940",
-);
+]);
 
-export class CodexAnchorAdapterRegistry {
-  readonly #adapters: readonly CodexAnchorAdapter[];
+export const macosGoalRowV1Locator: CodexNativeGoalLocator = {
+  id: "macos-goal-row-v1",
+  platform: "macos",
+  verifiedVersions: MACOS_GOAL_ROW_V1_VERIFIED_VERSIONS,
+  locate(document) {
+    const located = locateCurrentMacosGoalAnchor(this.id, document);
+    return {
+      target: located.located
+        ? {
+            anchor: located.located.anchor,
+            controlArea: located.located.controlArea,
+            goalIdentity: readGoalButtonIdentity(located.located.goalButton),
+          }
+        : null,
+      rejectionReason: located.probe.rejectionReason,
+      candidateCount: located.probe.candidateCount,
+      matchedSignals: located.probe.matchedSignals,
+    };
+  },
+  findFloatingObstacles(document) {
+    return findNativeStepSurfaces(document);
+  },
+};
 
-  constructor(adapters: readonly CodexAnchorAdapter[]) {
+export class CodexNativeGoalLocatorRegistry {
+  readonly #locators: readonly CodexNativeGoalLocator[];
+
+  constructor(locators: readonly CodexNativeGoalLocator[]) {
     const ids = new Set<string>();
-    for (const adapter of adapters) {
-      if (ids.has(adapter.id)) {
-        throw new Error(`GOAL_PROGRESS_ANCHOR_ADAPTER_ID_DUPLICATE: ${adapter.id}`);
+    const platforms = new Set<CodexAnchorPlatform>();
+    for (const locator of locators) {
+      if (ids.has(locator.id)) {
+        throw new Error(`GOAL_PROGRESS_NATIVE_GOAL_LOCATOR_ID_DUPLICATE: ${locator.id}`);
       }
-      ids.add(adapter.id);
+      if (platforms.has(locator.platform)) {
+        throw new Error(
+          `GOAL_PROGRESS_NATIVE_GOAL_LOCATOR_PLATFORM_DUPLICATE: ${locator.platform}`,
+        );
+      }
+      ids.add(locator.id);
+      platforms.add(locator.platform);
     }
-    this.#adapters = [...adapters];
+    this.#locators = [...locators];
   }
 
-  resolve(input: CodexAnchorRegistryInput): CodexAnchorRegistryResult {
-    const platformAdapters = this.#adapters.filter(
-      (adapter) => adapter.platform === input.platform,
-    );
-    if (platformAdapters.length === 0) {
-      return {
-        supported: false,
-        adapter: null,
-        probes: [],
-        rejectionReason: "platform-unsupported",
-      };
-    }
-    const versionAdapters = platformAdapters.filter(
-      (adapter) => adapter.appVersionRange === input.appVersion,
-    );
-    if (versionAdapters.length === 0) {
-      return {
-        supported: false,
-        adapter: null,
-        probes: [],
-        rejectionReason: "app-version-unsupported",
-      };
-    }
-    const probed = versionAdapters.map((adapter) => ({
-      adapter,
-      probe: adapter.probe(input.document),
-    }));
-    const supported = probed.filter((candidate) => candidate.probe.supported);
-    if (supported.length === 1) {
-      const selected = supported[0] as {
-        readonly adapter: CodexAnchorAdapter;
-        readonly probe: CapabilityProbeResult;
-      };
-      return {
-        supported: true,
-        adapter: selected.adapter,
-        probe: selected.probe,
-        rejectionReason: null,
-      };
-    }
-    return {
-      supported: false,
-      adapter: null,
-      probes: probed.map((candidate) => candidate.probe),
-      rejectionReason: supported.length > 1 ? "adapter-ambiguous" : "capability-unsupported",
-    };
+  resolvePlatform(platform: CodexHostPlatform): CodexNativeGoalLocator | null {
+    return this.#locators.find((locator) => locator.platform === platform) ?? null;
   }
 }
 
-export function createDefaultCodexAnchorAdapterRegistry(): CodexAnchorAdapterRegistry {
-  return new CodexAnchorAdapterRegistry([
-    macosCodex261821641GoalRowAdapter,
-    macosCodex261831338GoalRowAdapter,
-    macosCodex261841509GoalRowAdapter,
-    macosCodex261861809GoalRowAdapter,
-    macosCodex2682060940GoalRowAdapter,
-  ]);
+export function createDefaultCodexNativeGoalLocatorRegistry(): CodexNativeGoalLocatorRegistry {
+  return new CodexNativeGoalLocatorRegistry([macosGoalRowV1Locator]);
 }

@@ -16,9 +16,10 @@ import type {
   GoalProgressUiPreference,
 } from "../../contracts/src/ui-preference.js";
 import type {
-  CodexAnchorAdapter,
   CodexAnchorRejectionReason,
+  CodexNativeGoalLocator,
   CodexVisibleThreadRejectionReason,
+  NativeGoalTarget,
 } from "./anchor-adapter.js";
 import { projectFloatingCenter } from "./floating-placement.js";
 
@@ -51,11 +52,17 @@ export interface GoalProgressLocalUiIntentContext {
 }
 
 export type SidecarMountAction = "mounted" | "updated" | "unmounted" | "none";
+export type GoalProgressDisplayMode = "native" | "fallback" | "hidden";
+
+export type GoalProgressDisplayTarget =
+  | ({ readonly kind: "native" } & NativeGoalTarget)
+  | { readonly kind: "fallback" };
 
 export type SidecarMountReason =
   | "ok"
   | "anchor-unavailable"
   | "native-goal-changed"
+  | "host-missing"
   | "host-ambiguous"
   | "host-unmanaged"
   | CodexVisibleThreadRejectionReason;
@@ -67,6 +74,9 @@ export interface SidecarMountResult {
   readonly adapterRejectionReason: CodexAnchorRejectionReason | null;
   readonly hostCount: number;
   readonly threadChanged: boolean;
+  readonly displayMode: GoalProgressDisplayMode;
+  readonly nativeAnchorMatched: boolean;
+  readonly visibleThreadStatus: "matched" | "retained";
 }
 
 export type SidecarHealthStatus = "mounted" | "unmounted" | "blocked";
@@ -87,6 +97,11 @@ export interface SidecarHealthResult {
   readonly adapterId: string;
   readonly adapterRejectionReason: CodexAnchorRejectionReason | null;
   readonly hostCount: number;
+  readonly displayMode: GoalProgressDisplayMode;
+  readonly nativeAnchorMatched: boolean;
+  readonly visibleThreadStatus: "matched" | "retained";
+  readonly componentVisible: boolean;
+  readonly viewModelRevision: number | null;
 }
 
 export interface SidecarLayoutDiagnostics {
@@ -144,6 +159,7 @@ export interface SidecarVisibilityDiagnostics {
 }
 
 export interface SidecarMountControllerOptions {
+  readonly nativeGoalLocator: CodexNativeGoalLocator;
   readonly elementName?: string;
   readonly onUiIntent?: (
     intent: GoalProgressLocalUiIntent,
@@ -152,7 +168,9 @@ export interface SidecarMountControllerOptions {
 }
 
 export interface SidecarEnsureMountedOptions {
+  readonly displayTarget: GoalProgressDisplayTarget;
   readonly environmentChanged?: boolean;
+  readonly nativeGoalRejectionReason?: CodexAnchorRejectionReason | null;
 }
 
 function rectFingerprint(rect: DOMRect | null): string {
@@ -385,15 +403,18 @@ function findFloatingObstacle(
 
 export class SidecarMountController {
   readonly #document: Document;
-  readonly #adapter: CodexAnchorAdapter;
+  readonly #nativeGoalLocator: CodexNativeGoalLocator;
   readonly #elementName: string;
   readonly #onUiIntent:
     | ((intent: GoalProgressLocalUiIntent, context: GoalProgressLocalUiIntentContext) => void)
     | undefined;
   #host: GoalProgressHostElement | null = null;
   #anchor: HTMLElement | null = null;
+  #controlArea: HTMLElement | null = null;
+  #currentNativeTarget: NativeGoalTarget | null = null;
+  #displayMode: GoalProgressDisplayMode = "hidden";
+  #nativeGoalRejectionReason: CodexAnchorRejectionReason | null = null;
   #validatedGoalIdentity: string | null = null;
-  #validatedComposer: HTMLElement | null = null;
   #continuityModeActive = false;
   #floatingActive = false;
   #floatingFallbackActive = false;
@@ -577,21 +598,17 @@ export class SidecarMountController {
     this.#emitUiIntent({ type: "requestDetach" });
   };
 
-  constructor(
-    document: Document,
-    adapter: CodexAnchorAdapter,
-    options: SidecarMountControllerOptions = {},
-  ) {
+  constructor(document: Document, options: SidecarMountControllerOptions) {
     this.#document = document;
-    this.#adapter = adapter;
+    this.#nativeGoalLocator = options.nativeGoalLocator;
     this.#elementName = options.elementName ?? GOAL_PROGRESS_ELEMENT_NAME;
     this.#onUiIntent = options.onUiIntent;
   }
 
   ensureMounted(
     viewModel: GoalProgressViewModel,
-    uiPreference?: GoalProgressUiPreference,
-    options: SidecarEnsureMountedOptions = {},
+    uiPreference: GoalProgressUiPreference | undefined,
+    options: SidecarEnsureMountedOptions,
   ): SidecarMountResult {
     const existingHosts = hosts(this.#document);
     if (existingHosts.length > 1) {
@@ -611,41 +628,17 @@ export class SidecarMountController {
       this.#retryFloatingPlacement();
     }
 
-    const visibleThread = this.#adapter.matchVisibleThread(this.#document, viewModel.sessionId);
-    const retainingMissingThreadMarker =
-      !visibleThread.matched &&
-      visibleThread.rejectionReason === "visible-thread-marker-missing" &&
-      existingHost !== null &&
-      this.#canRetainContinuity(existingHost, viewModel.sessionId);
-    if (!visibleThread.matched && !retainingMissingThreadMarker) {
-      this.#lastAnchorState = "none";
-      this.#lastHostRemovalReason = visibleThread.rejectionReason ?? "visible-thread-mismatch";
-      const action = existingHost ? "unmounted" : "none";
-      if (existingHost) {
-        this.#adoptHost(existingHost);
-      }
-      this.#releaseHost(true);
-      return this.#result(
-        action,
-        visibleThread.rejectionReason ?? "visible-thread-mismatch",
-        hosts(this.#document).length,
-        false,
-        null,
-      );
+    this.#nativeGoalRejectionReason = options.nativeGoalRejectionReason ?? null;
+    if (options.displayTarget.kind === "fallback") {
+      return this.#ensureFallbackMounted(viewModel, uiPreference, existingHost);
     }
 
-    const probe = this.#adapter.probe(this.#document);
-    const previousElement = existingHost?.previousElementSibling as HTMLElement | null;
-    const retainedCandidate = this.#anchor ?? previousElement;
-    const retainedAnchor =
-      existingHost &&
-      retainedCandidate?.isConnected === true &&
-      retainedCandidate.parentElement === existingHost.parentElement
-        ? retainedCandidate
-        : null;
-    const anchor = probe.supported ? this.#adapter.findGoalAnchor(this.#document) : retainedAnchor;
-    if (existingHost && this.#anchor && anchor && !retainingMissingThreadMarker) {
-      const identityFailure = this.#continuityIdentityFailure(anchor);
+    const anchor = options.displayTarget.anchor;
+    if (existingHost && this.#anchor && anchor) {
+      const identityFailure = this.#continuityIdentityFailure(
+        anchor,
+        options.displayTarget.goalIdentity,
+      );
       if (identityFailure) {
         this.#lastAnchorState = "unavailable";
         this.#lastHostRemovalReason = identityFailure;
@@ -656,41 +649,11 @@ export class SidecarMountController {
           "native-goal-changed",
           hosts(this.#document).length,
           false,
-          probe.rejectionReason,
-        );
-      }
-    }
-    if (retainingMissingThreadMarker && anchor) {
-      const continuityFailure = this.#continuityIdentityFailure(anchor);
-      if (continuityFailure) {
-        this.#lastAnchorState = "unavailable";
-        this.#lastHostRemovalReason = continuityFailure;
-        this.#adoptHost(existingHost);
-        this.#releaseHost(true);
-        return this.#result(
-          "unmounted",
-          "visible-thread-marker-missing",
-          hosts(this.#document).length,
-          false,
-          probe.rejectionReason,
+          this.#nativeGoalRejectionReason,
         );
       }
     }
     if (!anchor?.parentElement) {
-      if (existingHost && this.#canRetainContinuity(existingHost, viewModel.sessionId)) {
-        this.#adoptHost(existingHost);
-        syncHostLocale(existingHost, this.#document);
-        this.#lastAnchorState = "unavailable";
-        this.#lastHostRemovalReason = null;
-        this.#continuityModeActive = true;
-        existingHost.viewModel = viewModel;
-        existingHost.spaceConstrained = true;
-        existingHost.placement = "inline";
-        this.#clearMeasuredInlineGeometry();
-        this.#clearFloatingLayout(true);
-        this.#sessionId = viewModel.sessionId;
-        return this.#result("updated", "ok", 1, false, probe.rejectionReason);
-      }
       this.#lastAnchorState = "unavailable";
       this.#lastHostRemovalReason = "anchor-unavailable";
       const action = existingHost ? "unmounted" : "none";
@@ -703,12 +666,12 @@ export class SidecarMountController {
         "anchor-unavailable",
         hosts(this.#document).length,
         false,
-        probe.rejectionReason,
+        this.#nativeGoalRejectionReason,
       );
     }
     this.#lastAnchorState = "live";
     this.#lastHostRemovalReason = null;
-    this.#continuityModeActive = retainingMissingThreadMarker;
+    this.#continuityModeActive = false;
 
     let host = existingHost;
     let action: SidecarMountAction = "updated";
@@ -735,7 +698,11 @@ export class SidecarMountController {
     if (!this.#viewportPortalActive && anchor.nextSibling !== host) {
       anchor.parentElement.insertBefore(host, anchor.nextSibling);
     }
-    this.#adoptAnchor(anchor);
+    this.#clearFallbackLayout();
+    this.#displayMode = "native";
+    this.#controlArea = options.displayTarget.controlArea;
+    this.#currentNativeTarget = options.displayTarget;
+    this.#adoptAnchor(anchor, options.displayTarget.goalIdentity);
 
     const threadChanged = this.#sessionId !== null && this.#sessionId !== viewModel.sessionId;
     if (threadChanged) {
@@ -779,7 +746,151 @@ export class SidecarMountController {
     }
     this.#syncPlacement();
     this.#sessionId = viewModel.sessionId;
-    return this.#result(action, "ok", hosts(this.#document).length, threadChanged, null);
+    return this.#result(
+      action,
+      "ok",
+      hosts(this.#document).length,
+      threadChanged,
+      this.#nativeGoalRejectionReason,
+    );
+  }
+
+  canRetainCurrentSession(sessionId: string): boolean {
+    return this.#retentionFailureReason(sessionId) === null;
+  }
+
+  managedHostElement(): HTMLElement | null {
+    return this.#host;
+  }
+
+  retainCurrentSession(
+    viewModel: GoalProgressViewModel,
+    uiPreference?: GoalProgressUiPreference,
+  ): SidecarMountResult {
+    const retentionFailure = this.#retentionFailureReason(viewModel.sessionId);
+    if (retentionFailure) {
+      return this.#result(
+        "none",
+        retentionFailure,
+        hosts(this.#document).length,
+        false,
+        this.#nativeGoalRejectionReason,
+      );
+    }
+    const host = this.#host as GoalProgressHostElement;
+    if (this.#displayMode === "native" && this.#anchor) {
+      const location = this.#nativeGoalLocator.locate(this.#document);
+      if (
+        location.target &&
+        this.#continuityIdentityFailure(location.target.anchor, location.target.goalIdentity)
+      ) {
+        this.#lastAnchorState = "unavailable";
+        this.#lastHostRemovalReason = "continuity-goal-changed";
+        this.#releaseHost(true);
+        return this.#result(
+          "unmounted",
+          "visible-thread-marker-missing",
+          hosts(this.#document).length,
+          false,
+          location.rejectionReason,
+        );
+      }
+    }
+    syncHostLocale(host, this.#document);
+    host.viewModel = viewModel;
+    if (uiPreference) {
+      host.motionPaused = uiPreference.motionPaused;
+      host.hidden = uiPreference.hidden;
+    }
+    this.#continuityModeActive = true;
+    this.#sessionId = viewModel.sessionId;
+    return this.#result("updated", "ok", hosts(this.#document).length, false, null);
+  }
+
+  #retentionFailureReason(
+    sessionId: string,
+  ): "host-ambiguous" | "host-unmanaged" | "host-missing" | null {
+    const existingHosts = hosts(this.#document);
+    if (existingHosts.length > 1) {
+      return "host-ambiguous";
+    }
+    const existingHost = existingHosts[0] ?? null;
+    if (!existingHost) {
+      return "host-missing";
+    }
+    if (!isManagedHost(existingHost)) {
+      return "host-unmanaged";
+    }
+    if (
+      this.#host !== existingHost ||
+      !existingHost.isConnected ||
+      this.#sessionId !== sessionId ||
+      existingHost.viewModel?.sessionId !== sessionId
+    ) {
+      return "host-missing";
+    }
+    return null;
+  }
+
+  #ensureFallbackMounted(
+    viewModel: GoalProgressViewModel,
+    uiPreference: GoalProgressUiPreference | undefined,
+    existingHost: GoalProgressHostElement | null,
+  ): SidecarMountResult {
+    let host = existingHost;
+    let action: SidecarMountAction = "updated";
+    if (!host) {
+      this.#releaseHost(false);
+      host = this.#document.createElement(this.#elementName) as GoalProgressHostElement;
+      host.setAttribute(GOAL_PROGRESS_HOST_ATTRIBUTE, GOAL_PROGRESS_HOST_ATTRIBUTE_VALUE);
+      action = "mounted";
+    }
+    this.#adoptHost(host);
+    syncHostLocale(host, this.#document);
+    const preserveVisibleCollapsed =
+      action === "updated" && this.#sessionId === viewModel.sessionId;
+    const visibleCollapsed = host.collapsed;
+    const threadChanged = this.#sessionId !== null && this.#sessionId !== viewModel.sessionId;
+    if (threadChanged) {
+      host.viewModel = null;
+    }
+    host.viewModel = viewModel;
+    if (uiPreference) {
+      this.#requestedPlacement = uiPreference.placement;
+      this.#requestedFloatingXRatio = clampFloatingDockRatio(uiPreference.floatingXRatio);
+      this.#floatingPreviewRatio = null;
+      this.#lastCollapsedTransition = uiPreference.collapsed
+        ? "preference-collapsed"
+        : "preference-expanded";
+      host.collapsed = preserveVisibleCollapsed ? visibleCollapsed : uiPreference.collapsed;
+      host.motionPaused = uiPreference.motionPaused;
+      host.hidden = uiPreference.hidden;
+      host.requestedPlacement = uiPreference.placement;
+      host.floatingXRatio = this.#requestedFloatingXRatio;
+    }
+    host.placement = "floating";
+    host.spaceConstrained = false;
+    host.floatingPanelConstrained = false;
+    this.#clearViewportPortal(false);
+    this.#clearInlineConstraintObserver();
+    this.#clearFloatingLayout();
+    this.#restoreAnchor();
+    this.#controlArea = null;
+    this.#currentNativeTarget = null;
+    this.#document.body.append(host);
+    this.#applyFallbackLayout();
+    this.#lastAnchorState = "unavailable";
+    this.#lastHostRemovalReason = null;
+    this.#continuityModeActive = false;
+    this.#displayMode = "fallback";
+    this.#sessionId = viewModel.sessionId;
+    return this.#result(
+      action,
+      "ok",
+      hosts(this.#document).length,
+      threadChanged,
+      this.#nativeGoalRejectionReason,
+    );
   }
 
   unmount(): SidecarMountResult {
@@ -809,53 +920,39 @@ export class SidecarMountController {
     if (host && !isManagedHost(host)) {
       return this.#healthResult("blocked", "host-unmanaged", 1, null);
     }
-    if (this.#sessionId !== null) {
-      const visibleThread = this.#adapter.matchVisibleThread(this.#document, this.#sessionId);
-      const retainingMissingThreadMarker =
-        !visibleThread.matched &&
-        visibleThread.rejectionReason === "visible-thread-marker-missing" &&
-        host !== null &&
-        this.#continuityModeActive &&
-        this.#canRetainContinuity(host, this.#sessionId);
-      if (!visibleThread.matched && !retainingMissingThreadMarker) {
-        return this.#healthResult(
-          "blocked",
-          visibleThread.rejectionReason ?? "visible-thread-mismatch",
-          existingHosts.length,
-          null,
-        );
-      }
+    if (
+      this.#continuityModeActive &&
+      this.#sessionId !== null &&
+      this.#retentionFailureReason(this.#sessionId) === null
+    ) {
+      return this.#healthResult("mounted", "ok", 1, this.#nativeGoalRejectionReason);
     }
-    const probe = this.#adapter.probe(this.#document);
-    const previousElement = host?.previousElementSibling as HTMLElement | null;
-    const retainedCandidate = this.#anchor ?? previousElement;
-    const retainedAnchor =
-      host &&
-      retainedCandidate?.isConnected === true &&
-      retainedCandidate.parentElement === host.parentElement
-        ? retainedCandidate
-        : null;
-    const anchor = probe.supported ? this.#adapter.findGoalAnchor(this.#document) : retainedAnchor;
-    if (!anchor?.parentElement) {
-      if (
-        host &&
-        this.#continuityModeActive &&
-        this.#sessionId !== null &&
-        this.#canRetainContinuity(host, this.#sessionId)
-      ) {
-        return this.#healthResult("mounted", "ok", 1, probe.rejectionReason);
+    if (this.#displayMode === "fallback") {
+      if (!host) {
+        return this.#healthResult("unmounted", "host-missing", 0, this.#nativeGoalRejectionReason);
       }
+      if (host.parentElement !== this.#document.body) {
+        return this.#healthResult("blocked", "host-misplaced", 1, this.#nativeGoalRejectionReason);
+      }
+      return this.#healthResult("mounted", "ok", 1, this.#nativeGoalRejectionReason);
+    }
+    const location = this.#nativeGoalLocator.locate(this.#document);
+    const anchor = location.target?.anchor ?? null;
+    if (!anchor?.parentElement) {
       return this.#healthResult(
         "unmounted",
         "anchor-unavailable",
         existingHosts.length,
-        probe.rejectionReason,
+        location.rejectionReason,
       );
     }
     if (!host) {
       return this.#healthResult("unmounted", "host-missing", 0, null);
     }
-    if (this.#anchor && this.#continuityIdentityFailure(anchor)) {
+    if (
+      this.#anchor &&
+      this.#continuityIdentityFailure(anchor, location.target?.goalIdentity ?? null)
+    ) {
       return this.#healthResult("blocked", "native-goal-changed", 1, null);
     }
     if (this.#viewportPortalActive) {
@@ -967,14 +1064,13 @@ export class SidecarMountController {
     }
   }
 
-  #adoptAnchor(anchor: HTMLElement): void {
+  #adoptAnchor(anchor: HTMLElement, goalIdentity: string | null): void {
     if (this.#anchor === anchor) {
       return;
     }
     this.#restoreAnchor();
     this.#anchor = anchor;
-    this.#validatedGoalIdentity = this.#adapter.readGoalIdentity?.(this.#document) ?? null;
-    this.#validatedComposer = anchor.closest<HTMLElement>("[data-codex-composer-root]");
+    this.#validatedGoalIdentity = goalIdentity;
     const expandedOffset = this.#host?.expandedLayoutOffset;
     this.#applyLayoutOffset(
       typeof expandedOffset === "number" && Number.isFinite(expandedOffset) ? expandedOffset : 0,
@@ -982,30 +1078,10 @@ export class SidecarMountController {
     this.#observeInlineConstraint();
   }
 
-  #canRetainContinuity(host: GoalProgressHostElement, sessionId: string): boolean {
-    const composer = this.#validatedComposer;
-    const hostRetained =
-      host.parentElement === composer ||
-      (this.#viewportPortalActive &&
-        host.parentElement === this.#document.body &&
-        this.#originMarker?.parentElement === composer);
-    if (
-      !composer?.isConnected ||
-      !hostRetained ||
-      this.#sessionId !== sessionId ||
-      host.viewModel?.sessionId !== sessionId
-    ) {
-      return false;
-    }
-    const composers = this.#document.querySelectorAll("[data-codex-composer-root]");
-    if (composers.length !== 1 || composers[0] !== composer) {
-      return false;
-    }
-    return composer.querySelectorAll('[role="textbox"][data-codex-composer]').length === 1;
-  }
-
-  #continuityIdentityFailure(anchor: HTMLElement): string | null {
-    const currentGoalIdentity = this.#adapter.readGoalIdentity?.(this.#document) ?? null;
+  #continuityIdentityFailure(
+    anchor: HTMLElement,
+    currentGoalIdentity: string | null,
+  ): string | null {
     if (anchor === this.#anchor) {
       if (this.#validatedGoalIdentity === null || currentGoalIdentity === null) {
         return null;
@@ -1059,7 +1135,7 @@ export class SidecarMountController {
     const width = anchorRect.width;
     const composerRect =
       anchor.closest<HTMLElement>("[data-codex-composer-root]")?.getBoundingClientRect() ?? null;
-    const controlArea = this.#adapter.findGoalControlArea?.(this.#document);
+    const controlArea = this.#controlArea;
     const controlRect = controlArea?.getBoundingClientRect() ?? null;
     this.#nativeGeometryFingerprint = [
       rectFingerprint(anchorRect),
@@ -1155,9 +1231,50 @@ export class SidecarMountController {
     }
   }
 
+  #applyFallbackLayout(): void {
+    const host = this.#host;
+    if (!host) {
+      return;
+    }
+    host.style.position = "fixed";
+    host.style.insetInlineEnd = "16px";
+    host.style.bottom = "96px";
+    host.style.left = "";
+    host.style.top = "";
+    host.style.width = "min(420px, calc(100vw - 32px))";
+    host.style.maxWidth = "calc(100vw - 32px)";
+    host.style.height = "";
+    host.style.zIndex = "30";
+    host.style.pointerEvents = "auto";
+    host.style.marginBlockStart = "";
+    this.#clearMeasuredInlineGeometry();
+    this.#layoutWriteCount += 1;
+  }
+
+  #clearFallbackLayout(): void {
+    const host = this.#host;
+    if (!host) {
+      return;
+    }
+    host.style.insetInlineEnd = "";
+    host.style.bottom = "";
+    host.style.maxWidth = "";
+    if (this.#displayMode === "fallback") {
+      host.style.position = "";
+      host.style.width = "";
+      host.style.zIndex = "";
+      host.style.pointerEvents = "";
+    }
+  }
+
   #syncPlacement(): void {
     const host = this.#host;
     if (!host) {
+      return;
+    }
+    if (this.#displayMode === "fallback") {
+      host.placement = "floating";
+      this.#applyFallbackLayout();
       return;
     }
     if (host.placement === "floating") {
@@ -1357,7 +1474,7 @@ export class SidecarMountController {
       !anchor?.parentElement ||
       !view ||
       host.parentElement !== anchor.parentElement ||
-      this.#continuityIdentityFailure(anchor)
+      this.#continuityIdentityFailure(anchor, this.#currentNativeTarget?.goalIdentity ?? null)
     ) {
       return;
     }
@@ -1523,7 +1640,7 @@ export class SidecarMountController {
   }
 
   #readFloatingObstacles(): readonly HTMLElement[] {
-    return (this.#adapter.findFloatingObstacles?.(this.#document) ?? []).filter(
+    return (this.#nativeGoalLocator.findFloatingObstacles?.(this.#document) ?? []).filter(
       (element) => element.isConnected,
     );
   }
@@ -1920,13 +2037,16 @@ export class SidecarMountController {
     host.floatingPanelConstrained = false;
     host.style.marginBlockStart = "";
     this.#clearInlineInsets();
+    this.#clearFallbackLayout();
     this.#clearFloatingLayout();
     this.#restoreAnchor();
     if (remove) {
       host.remove();
     }
     this.#host = null;
-    this.#validatedComposer = null;
+    this.#controlArea = null;
+    this.#currentNativeTarget = null;
+    this.#displayMode = "hidden";
     this.#continuityModeActive = false;
     this.#sessionId = null;
     this.#floatingFallbackActive = false;
@@ -1953,10 +2073,13 @@ export class SidecarMountController {
     return {
       action,
       reason,
-      adapterId: this.#adapter.id,
+      adapterId: this.#nativeGoalLocator.id,
       adapterRejectionReason,
       hostCount,
       threadChanged,
+      displayMode: this.#displayMode,
+      nativeAnchorMatched: this.#displayMode === "native" && this.#anchor?.isConnected === true,
+      visibleThreadStatus: this.#continuityModeActive ? "retained" : "matched",
     };
   }
 
@@ -1969,9 +2092,18 @@ export class SidecarMountController {
     return {
       status,
       reason,
-      adapterId: this.#adapter.id,
+      adapterId: this.#nativeGoalLocator.id,
       adapterRejectionReason,
       hostCount,
+      displayMode: this.#displayMode,
+      nativeAnchorMatched: this.#displayMode === "native" && this.#anchor?.isConnected === true,
+      visibleThreadStatus: this.#continuityModeActive ? "retained" : "matched",
+      componentVisible:
+        status === "mounted" && this.#host?.isConnected === true && this.#host.hidden !== true,
+      viewModelRevision:
+        this.#host?.viewModel && Number.isSafeInteger(this.#host.viewModel.revision)
+          ? this.#host.viewModel.revision
+          : null,
     };
   }
 }

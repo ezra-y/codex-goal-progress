@@ -2,26 +2,27 @@
 
 ## Report a vulnerability
 
-Use GitHub's private vulnerability reporting or a private Security Advisory for this repository.
-Do not open a public issue containing exploit details, credentials, private files, or user data.
-
-Include:
+Use GitHub private vulnerability reporting or a private Security Advisory. Include:
 
 - affected version and platform;
 - a minimal reproduction;
 - expected and observed behavior;
 - impact;
-- any temporary mitigation.
+- a temporary mitigation when available.
 
-## Security boundaries
+Private reporting keeps exploit details, credentials, local files, and user data within the
+security review.
 
-Goal Progress must not:
+## Security design
 
-- modify Codex application files or code signing;
-- read private React state or private JavaScript chunks;
-- expose its local IPC socket to the network;
-- trust a Token count that cannot be attributed to the current Goal;
-- write Hook trust for the user;
-- send Goal content to an external progress model.
+| Area | Design |
+|---|---|
+| Codex integration | Local Plugin, reviewable Hooks, and a verified loopback CDP connection |
+| State | Local application-support directory with one Helper writer |
+| IPC | User-local Unix socket with restricted permissions |
+| Goal identity | Exact task matching before ViewModel display and Token attribution |
+| Renderer | Isolated Web Component receiving a display-only ViewModel |
+| Hook trust | User review through Codex |
+| Recovery | Doctor, Verify, Repair, Disable, and Uninstall commands |
 
-The detailed model is in [THREAT-MODEL.md](docs/quality/THREAT-MODEL.md).
+See [Architecture](docs/ARCHITECTURE.md) for the complete data flow.

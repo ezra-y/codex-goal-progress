@@ -19,12 +19,13 @@
 
 | 能力 | 表现 |
 |---|---|
-| 规则驱动进度 | 根据已验证的 Checklist 计算小目标和总体进度，不根据 Token、耗时或猜测生成百分比。 |
+| 规则驱动进度 | 根据已验证的 Checklist 计算小目标和总体进度。 |
 | 可验证计算 | 模型只参与必要的目标理解与 Checklist 更新，进度计算和状态管理由本地 Helper 完成。 |
 | 原生主题适配 | 跟随 Codex 的浅色/深色主题和用户当前选择的强调色。 |
 | 字号适配 | 读取 Codex 当前 UI 字号，并由字号连续计算间距。 |
 | 布局适配 | 测量真实原生 Goal 和输入框尺寸，让固定布局与可拖动漂浮布局保持协调。 |
-| 语言适配 | 跟随 Codex 文档的语言和文字方向，不修改进度 Contract。 |
+| Codex 更新连续性 | 原生 Goal 行变化时使用受管兼容位置，恢复后自动回到原生位置。 |
+| 语言适配 | 跟随 Codex 文档的语言和文字方向，同时保持进度 Contract 稳定。 |
 
 ## 🚀 快速开始
 
@@ -53,7 +54,7 @@ Plugin 会话加载。
 * Apple Silicon Mac
 * Codex Desktop
 
-使用 macOS 安装包不需要 Node.js 或 pnpm。贡献者可以按
+macOS 安装包已经包含运行环境。贡献者可以按
 [CONTRIBUTING.md](CONTRIBUTING.md) 构建和验证源码。
 
 ## 🎯 如何使用
@@ -62,7 +63,7 @@ Plugin 会话加载。
 
 当前 Codex 模型会整理或复用该 Goal 的 Checklist，并创建本地进度记录。
 
-每个新 Goal 都需要单独启用一次。没有启用 Goal Progress 的普通 Goal 不受影响。
+每个新 Goal 都单独启用一次，进度记录始终绑定当前 Goal。
 
 ## 🌓 浅色与深色
 
@@ -90,9 +91,8 @@ Plugin 会话加载。
 - Renderer 只接收展示用 ViewModel。
 - 安装器使用自包含的 Node SEA Helper。
 
-更多信息见[技术架构](docs/decisions/CodexGoalProgress技术架构.md)、
-[权限范围](docs/architecture/PERMISSIONS.md)和
-[威胁模型](docs/quality/THREAT-MODEL.md)。
+更多信息见[技术架构](docs/ARCHITECTURE.md)和
+[兼容范围](docs/COMPATIBILITY.md)。
 
 ## 🔐 隐私与权限
 
@@ -104,7 +104,7 @@ Goal Progress 使用：
 - 由 launchd 注册的后台 Helper；
 - 三个可以审核的 Plugin Hook。
 
-完整范围和卸载步骤见 [PERMISSIONS.md](docs/architecture/PERMISSIONS.md)。
+信任和数据边界见[安全策略](SECURITY.md)。
 
 ## 许可证
 

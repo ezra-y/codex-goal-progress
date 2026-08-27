@@ -262,6 +262,10 @@ export interface GoalProgressDoctorResult {
       readonly capabilitySupported: boolean | null;
       readonly capabilityReason: string | null;
       readonly anchorMatched: boolean | null;
+      readonly displayMode: "native" | "fallback" | "hidden" | null;
+      readonly nativeAnchorMatched: boolean | null;
+      readonly componentVisible: boolean | null;
+      readonly visibleThreadStatus: "matched" | "retained" | "unknown" | "mismatch" | null;
       readonly componentCount: number | null;
       readonly bundleReleaseVersion: string | null;
       readonly bundlePageHostVersion: number | null;
@@ -287,6 +291,10 @@ function emptyDoctorRuntime(lastErrorCode: string | null): GoalProgressDoctorRes
       capabilitySupported: null,
       capabilityReason: null,
       anchorMatched: null,
+      displayMode: null,
+      nativeAnchorMatched: null,
+      componentVisible: null,
+      visibleThreadStatus: null,
       componentCount: null,
       bundleReleaseVersion: null,
       bundlePageHostVersion: null,
@@ -1336,12 +1344,16 @@ export class GoalProgressHelper {
     }
     try {
       const doctor = await this.#rendererDoctor(threadId);
+      const expectedRevision = this.#viewModelPublisher.currentRevision;
       return (
-        doctor.capabilitySupported === true &&
-        doctor.anchorMatched === true &&
+        doctor.componentVisible === true &&
         doctor.componentCount === 1 &&
         doctor.currentThreadMatched === true &&
-        doctor.latestViewModelRevision !== null
+        doctor.displayMode !== null &&
+        doctor.displayMode !== "hidden" &&
+        expectedRevision !== undefined &&
+        doctor.latestViewModelRevision === expectedRevision &&
+        this.#viewModelPublisher.deliveryCurrent
       );
     } catch {
       return false;
@@ -1359,11 +1371,13 @@ export class GoalProgressHelper {
     try {
       const doctor = await this.#rendererDoctor(threadId);
       if (
-        doctor.capabilitySupported === true &&
-        doctor.anchorMatched === true &&
+        doctor.componentVisible === true &&
         doctor.componentCount === 1 &&
         doctor.currentThreadMatched === true &&
-        doctor.latestViewModelRevision === resumed.revision
+        doctor.displayMode !== null &&
+        doctor.displayMode !== "hidden" &&
+        doctor.latestViewModelRevision === resumed.revision &&
+        this.#viewModelPublisher.deliveryCurrent
       ) {
         return "done";
       }
@@ -1549,6 +1563,10 @@ export class GoalProgressHelper {
         capabilitySupported: renderer?.capabilitySupported ?? null,
         capabilityReason: renderer?.capabilityReason ?? null,
         anchorMatched: renderer?.anchorMatched ?? null,
+        displayMode: renderer?.displayMode ?? null,
+        nativeAnchorMatched: renderer?.nativeAnchorMatched ?? null,
+        componentVisible: renderer?.componentVisible ?? null,
+        visibleThreadStatus: renderer?.visibleThreadStatus ?? null,
         componentCount: renderer?.componentCount ?? null,
         bundleReleaseVersion: renderer?.bundleReleaseVersion ?? null,
         bundlePageHostVersion: renderer?.bundlePageHostVersion ?? null,
