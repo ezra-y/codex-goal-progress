@@ -9,7 +9,6 @@ import {
   type GoalProgressIpcRequest,
   GoalProgressIpcRequestSchema,
   type GoalProgressIpcResponse,
-  isGoalProgressMcpClientVersionCompatible,
 } from "./protocol.js";
 
 const GOAL_PROGRESS_IPC_IDLE_TIMEOUT_MS = 10_000;
@@ -313,19 +312,6 @@ export class GoalProgressIpcServer {
                     request.requestId,
                     "HANDSHAKE_REQUIRED",
                     "IPC hello must be the first request",
-                  ),
-                );
-                return;
-              }
-              if (
-                request.params.clientKind === "mcp" &&
-                !isGoalProgressMcpClientVersionCompatible(request.params.clientVersion)
-              ) {
-                terminate(
-                  errorResponse(
-                    request.requestId,
-                    "CLIENT_RECONNECT_REQUIRED",
-                    "Goal Progress MCP client must reconnect to load the current release",
                   ),
                 );
                 return;
