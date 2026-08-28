@@ -14,9 +14,8 @@
 
 ### v0.2.1 — Event-driven recovery
 
-Got rid of that 2-second loop shitcode Codex wrote.
-
-- ⚡ Goal Progress now responds to real task changes instead of checking every two seconds.
+- 🪦 Got rid of that 2-second loop shitcode Codex wrote. Goal Progress now responds to real task
+  and connection events.
 - 🔄 Returning to a task after a page reload restores its progress automatically.
 - 🧭 New tasks work even while Codex is showing a temporary sidebar ID.
 - 🔌 Recovery starts immediately when the Codex page connection drops.
