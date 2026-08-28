@@ -204,7 +204,7 @@ export class GoalProgressElement extends LitElement {
   #publishLayoutOffset(): void {
     const content = this.renderRoot.querySelector<HTMLElement>(".content");
     const expandedOffset =
-      this.placement === "floating" || this.collapsed || this.spaceConstrained || !content
+      this.placement === "floating" || this.collapsed || !content
         ? 0
         : Math.ceil(content.getBoundingClientRect().height);
     if (expandedOffset === this.#lastLayoutOffset) {

@@ -1069,13 +1069,11 @@ export class GoalProgressHelper {
       return;
     }
     if (!usage?.goal) {
-      this.#runtime.setPollingMode(
-        contract?.nativeGoal.status === "complete" ? "collapsed-or-background" : "stopped",
-      );
+      this.#runtime.setPollingMode("stopped");
       return;
     }
     if (usage.goal.status === "complete") {
-      this.#runtime.setPollingMode("collapsed-or-background");
+      this.#runtime.setPollingMode("stopped");
       return;
     }
     if (
@@ -1106,6 +1104,13 @@ export class GoalProgressHelper {
   }
 
   async #publishVerified(threadId: string, viewModel: GoalProgressViewModel): Promise<void> {
+    if (viewModel.trackingPhase === "completed") {
+      if (this.#enableGoalWatch) {
+        this.#runtime.setPollingMode("stopped");
+      }
+      await this.#viewModelPublisher.clear(threadId);
+      return;
+    }
     if (this.#viewModelPublisher.visibleThreadAwarenessAvailable) {
       const visibleThreadId = await this.#viewModelPublisher.recoverVisibleThreadId();
       if (
@@ -1436,10 +1441,7 @@ export class GoalProgressHelper {
       }
       return;
     }
-    await this.#viewModelPublisher.publish(
-      snapshot.threadId,
-      this.#projectState(contract, overlay).viewModel,
-    );
+    await this.#publishVerified(snapshot.threadId, this.#projectState(contract, overlay).viewModel);
     if (!this.#viewModelPublisher.deliveryCurrent) {
       this.#scheduleVisibleThreadRecovery(0);
     }

@@ -16,15 +16,12 @@
 
 ## 🆕 Latest update
 
-### v0.2.1 — Event-driven recovery
+### v0.2.2 — Lifecycle and layout hardening
 
-- 🪦 Got rid of that 2-second loop shitcode Codex wrote. Goal Progress now responds to real task
-  and connection events.
-- 🔄 Returning to a task after a page reload restores its progress automatically.
-- 🧭 New tasks work even while Codex is showing a temporary sidebar ID.
-- 🔌 If the current Codex page reloads or briefly loses its connection, Goal Progress starts
-  restoring it immediately.
-- ✨ Paused and overall-progress labels now match Codex typography more naturally.
+- 🫥 Completed Goals clear their progress UI instead of leaving a 100% ghost card.
+- 📌 Long composer input keeps fixed progress at its verified native position.
+- 👀 Visibility diagnostics now match what is actually visible on screen.
+- 🧬 A replacement Goal can no longer inherit progress from the previous Goal.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 

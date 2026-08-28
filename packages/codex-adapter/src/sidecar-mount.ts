@@ -37,9 +37,6 @@ export const GOAL_PROGRESS_HOST_ATTRIBUTE = "data-codex-goal-progress-host";
 export const GOAL_PROGRESS_HOST_ATTRIBUTE_VALUE = "v1";
 export const GOAL_PROGRESS_FLOATING_FALLBACK_ATTRIBUTE =
   "data-codex-goal-progress-floating-fallback";
-export const GOAL_PROGRESS_VIEWPORT_PORTAL_ATTRIBUTE = "data-codex-goal-progress-viewport-portal";
-export const GOAL_PROGRESS_ORIGIN_MARKER_ATTRIBUTE = "data-codex-goal-progress-origin-marker";
-const GOAL_PROGRESS_PORTAL_ATTRIBUTE_VALUE = "v1";
 const GOAL_PROGRESS_ANCHOR_ORIGINAL_TRANSLATE_ATTRIBUTE =
   "data-codex-goal-progress-original-translate";
 const GOAL_PROGRESS_MAX_EXPANDED_OFFSET_PX = 1_200;
@@ -149,7 +146,7 @@ export interface SidecarVisibilityDiagnostics {
   readonly anchorConnected: boolean;
   readonly composerCount: number;
   readonly textboxCount: number;
-  readonly surface: "none" | "expanded" | "compact" | "portal";
+  readonly surface: "none" | "expanded" | "compact";
   readonly lastObserverReason:
     | "none"
     | "inline-resize"
@@ -269,11 +266,6 @@ export function removeManagedGoalProgressHosts(document: Document): number {
   for (const host of managedHosts) {
     host.viewModel = null;
     host.remove();
-  }
-  for (const marker of document.querySelectorAll(
-    `[${GOAL_PROGRESS_ORIGIN_MARKER_ATTRIBUTE}="${GOAL_PROGRESS_PORTAL_ATTRIBUTE_VALUE}"]`,
-  )) {
-    marker.remove();
   }
   return managedHosts.length;
 }
@@ -411,11 +403,11 @@ export class SidecarMountController {
   #host: GoalProgressHostElement | null = null;
   #anchor: HTMLElement | null = null;
   #controlArea: HTMLElement | null = null;
-  #currentNativeTarget: NativeGoalTarget | null = null;
   #displayMode: GoalProgressDisplayMode = "hidden";
   #nativeGoalRejectionReason: CodexAnchorRejectionReason | null = null;
   #validatedGoalIdentity: string | null = null;
   #continuityModeActive = false;
+  #fallbackInlineOriginRetained = false;
   #floatingActive = false;
   #floatingFallbackActive = false;
   #floatingFallbackRetryIndex = 0;
@@ -433,9 +425,6 @@ export class SidecarMountController {
   #inlineObservedSizeFingerprint: string | null = null;
   #observedTextbox: HTMLElement | null = null;
   #pendingInlineObserverReason: "inline-resize" | "textbox-input" | "textbox-scroll" | null = null;
-  #viewportPortalActive = false;
-  #originMarker: HTMLElement | null = null;
-  #lastExpandedOffset = 0;
   #requestedFloatingXRatio = 0.5;
   #requestedPlacement: "inline" | "floating" = "inline";
   #sessionId: string | null = null;
@@ -495,9 +484,6 @@ export class SidecarMountController {
       this.#lastPlacementTransition = placement === "floating" ? "user-floating" : "user-inline";
       this.#requestedPlacement = placement;
       if (this.#host) {
-        if (this.#viewportPortalActive && placement === "floating") {
-          this.#clearViewportPortal(true);
-        }
         const wasFallback = this.#floatingFallbackActive;
         if (placement === "floating") {
           this.#floatingFallbackActive = false;
@@ -557,9 +543,7 @@ export class SidecarMountController {
     if (this.#host?.placement === "floating") {
       this.#floatingViewportTop = null;
     }
-    if (!this.#viewportPortalActive) {
-      this.#syncInlineInsets();
-    }
+    this.#syncInlineInsets();
     this.#scheduleInlineConstraint();
     this.#scheduleFloatingLayout();
   };
@@ -569,9 +553,7 @@ export class SidecarMountController {
       this.#retryFloatingPlacement();
       return;
     }
-    if (!this.#viewportPortalActive) {
-      this.#syncInlineInsets();
-    }
+    this.#syncInlineInsets();
     this.#scheduleInlineConstraint();
     this.#scheduleFloatingLayout();
   };
@@ -582,9 +564,6 @@ export class SidecarMountController {
     }
     const expandedOffset = expandedOffsetDetail(event);
     if (expandedOffset !== null) {
-      if (expandedOffset > 0) {
-        this.#lastExpandedOffset = expandedOffset;
-      }
       this.#applyLayoutOffset(expandedOffset);
       this.#scheduleInlineConstraint();
     }
@@ -634,7 +613,7 @@ export class SidecarMountController {
     }
 
     const anchor = options.displayTarget.anchor;
-    if (existingHost && this.#anchor && anchor) {
+    if (existingHost && anchor && (this.#anchor || this.#displayMode === "fallback")) {
       const identityFailure = this.#continuityIdentityFailure(
         anchor,
         options.displayTarget.goalIdentity,
@@ -687,21 +666,13 @@ export class SidecarMountController {
       action === "updated" && this.#sessionId === viewModel.sessionId;
     const visibleCollapsed = host.collapsed;
 
-    if (
-      this.#viewportPortalActive &&
-      (!this.#originMarker?.isConnected ||
-        this.#originMarker.parentElement !== anchor.parentElement ||
-        anchor.nextSibling !== this.#originMarker)
-    ) {
-      this.#clearViewportPortal(false);
-    }
-    if (!this.#viewportPortalActive && anchor.nextSibling !== host) {
+    if (anchor.nextSibling !== host) {
       anchor.parentElement.insertBefore(host, anchor.nextSibling);
     }
     this.#clearFallbackLayout();
+    this.#fallbackInlineOriginRetained = false;
     this.#displayMode = "native";
     this.#controlArea = options.displayTarget.controlArea;
-    this.#currentNativeTarget = options.displayTarget;
     this.#syncNativeTitleFontWeight(options.displayTarget.goalTitleFontWeight ?? null);
     this.#adoptAnchor(anchor, options.displayTarget.goalIdentity);
 
@@ -725,9 +696,6 @@ export class SidecarMountController {
         : "preference-expanded";
       this.#lastPlacementTransition =
         uiPreference.placement === "floating" ? "preference-floating" : "preference-inline";
-      if (this.#viewportPortalActive && uiPreference.placement === "floating") {
-        this.#clearViewportPortal(true);
-      }
       if (!preserveFallback) {
         this.#floatingFallbackActive = false;
         host.removeAttribute(GOAL_PROGRESS_FLOATING_FALLBACK_ATTRIBUTE);
@@ -838,24 +806,33 @@ export class SidecarMountController {
     uiPreference: GoalProgressUiPreference | undefined,
     existingHost: GoalProgressHostElement | null,
   ): SidecarMountResult {
-    let host = existingHost;
-    let action: SidecarMountAction = "updated";
-    if (!host) {
-      this.#releaseHost(false);
-      host = this.#document.createElement(this.#elementName) as GoalProgressHostElement;
-      host.setAttribute(GOAL_PROGRESS_HOST_ATTRIBUTE, GOAL_PROGRESS_HOST_ATTRIBUTE_VALUE);
-      action = "mounted";
+    const threadChanged = this.#sessionId !== null && this.#sessionId !== viewModel.sessionId;
+    const nativeOriginWasVerified =
+      this.#displayMode === "native" || this.#displayMode === "fallback";
+    if (!existingHost || threadChanged || !nativeOriginWasVerified) {
+      if (existingHost) {
+        this.#adoptHost(existingHost);
+      }
+      this.#lastAnchorState = "unavailable";
+      this.#lastHostRemovalReason = "anchor-unavailable";
+      const action = existingHost || this.#host ? "unmounted" : "none";
+      this.#releaseHost(true);
+      return this.#result(
+        action,
+        "anchor-unavailable",
+        hosts(this.#document).length,
+        threadChanged,
+        this.#nativeGoalRejectionReason,
+      );
     }
+    const host = existingHost;
+    const action: SidecarMountAction = "updated";
     this.#adoptHost(host);
     this.#syncNativeTitleFontWeight(null);
     syncHostLocale(host, this.#document);
     const preserveVisibleCollapsed =
       action === "updated" && this.#sessionId === viewModel.sessionId;
     const visibleCollapsed = host.collapsed;
-    const threadChanged = this.#sessionId !== null && this.#sessionId !== viewModel.sessionId;
-    if (threadChanged) {
-      host.viewModel = null;
-    }
     host.viewModel = viewModel;
     if (uiPreference) {
       this.#requestedPlacement = uiPreference.placement;
@@ -870,17 +847,40 @@ export class SidecarMountController {
       host.requestedPlacement = uiPreference.placement;
       host.floatingXRatio = this.#requestedFloatingXRatio;
     }
-    host.placement = "floating";
+    const canRetainInlineOrigin =
+      this.#requestedPlacement === "inline" &&
+      !threadChanged &&
+      (this.#displayMode === "native" || this.#fallbackInlineOriginRetained);
+    host.placement = this.#requestedPlacement;
     host.spaceConstrained = false;
     host.floatingPanelConstrained = false;
-    this.#clearViewportPortal(false);
+    const retainInlineOrigin =
+      canRetainInlineOrigin &&
+      host.parentElement !== null &&
+      host.parentElement !== this.#document.body;
+    if (this.#requestedPlacement === "inline" && !retainInlineOrigin) {
+      this.#lastAnchorState = "unavailable";
+      this.#lastHostRemovalReason = "anchor-unavailable";
+      this.#releaseHost(true);
+      return this.#result(
+        "unmounted",
+        "anchor-unavailable",
+        hosts(this.#document).length,
+        false,
+        this.#nativeGoalRejectionReason,
+      );
+    }
     this.#clearInlineConstraintObserver();
     this.#clearFloatingLayout();
-    this.#restoreAnchor();
+    this.#restoreAnchor(true);
     this.#controlArea = null;
-    this.#currentNativeTarget = null;
-    this.#document.body.append(host);
-    this.#applyFallbackLayout();
+    this.#fallbackInlineOriginRetained = retainInlineOrigin;
+    if (retainInlineOrigin) {
+      this.#clearFallbackLayout();
+    } else {
+      this.#document.body.append(host);
+      this.#applyFallbackLayout();
+    }
     this.#lastAnchorState = "unavailable";
     this.#lastHostRemovalReason = null;
     this.#continuityModeActive = false;
@@ -933,7 +933,7 @@ export class SidecarMountController {
       if (!host) {
         return this.#healthResult("unmounted", "host-missing", 0, this.#nativeGoalRejectionReason);
       }
-      if (host.parentElement !== this.#document.body) {
+      if (!this.#fallbackInlineOriginRetained && host.parentElement !== this.#document.body) {
         return this.#healthResult("blocked", "host-misplaced", 1, this.#nativeGoalRejectionReason);
       }
       return this.#healthResult("mounted", "ok", 1, this.#nativeGoalRejectionReason);
@@ -956,16 +956,6 @@ export class SidecarMountController {
       this.#continuityIdentityFailure(anchor, location.target?.goalIdentity ?? null)
     ) {
       return this.#healthResult("blocked", "native-goal-changed", 1, null);
-    }
-    if (this.#viewportPortalActive) {
-      if (
-        this.#originMarker?.isConnected !== true ||
-        anchor.nextSibling !== this.#originMarker ||
-        host.parentElement !== this.#document.body
-      ) {
-        return this.#healthResult("blocked", "host-misplaced", 1, null);
-      }
-      return this.#healthResult("mounted", "ok", 1, null);
     }
     if (anchor.nextSibling !== host) {
       return this.#healthResult("blocked", "host-misplaced", 1, null);
@@ -1031,13 +1021,7 @@ export class SidecarMountController {
         textboxCount: this.#document.querySelectorAll('[role="textbox"][data-codex-composer]')
           .length,
         surface:
-          host === null
-            ? "none"
-            : this.#viewportPortalActive
-              ? "portal"
-              : host.collapsed || host.spaceConstrained
-                ? "compact"
-                : "expanded",
+          host === null ? "none" : host.collapsed || host.spaceConstrained ? "compact" : "expanded",
         lastObserverReason: this.#lastObserverReason,
       },
     };
@@ -1068,6 +1052,7 @@ export class SidecarMountController {
 
   #adoptAnchor(anchor: HTMLElement, goalIdentity: string | null): void {
     if (this.#anchor === anchor) {
+      this.#validatedGoalIdentity ??= goalIdentity;
       return;
     }
     this.#restoreAnchor();
@@ -1102,10 +1087,6 @@ export class SidecarMountController {
     if (!host || !anchor) {
       return;
     }
-    if (this.#viewportPortalActive) {
-      this.#scheduleInlineConstraint();
-      return;
-    }
     if (host.placement === "floating") {
       host.style.marginBlockStart = "";
       this.#clearInlineInsets();
@@ -1128,7 +1109,7 @@ export class SidecarMountController {
     const host = this.#host;
     const anchor = this.#anchor;
     const view = this.#document.defaultView;
-    if (!host || !anchor || !view || this.#viewportPortalActive) {
+    if (!host || !anchor || !view) {
       return;
     }
     this.#layoutReadCount += 1;
@@ -1149,7 +1130,6 @@ export class SidecarMountController {
     const valid =
       start >= 0 && end >= 0 && Number.isFinite(width) && width > 0 && start + end < width * 0.5;
     if (!valid) {
-      this.#clearMeasuredInlineGeometry();
       return;
     }
     this.#layoutWriteCount += 1;
@@ -1255,9 +1235,27 @@ export class SidecarMountController {
     if (!host) {
       return;
     }
+    const view = this.#document.defaultView;
+    const composers = this.#document.querySelectorAll<HTMLElement>("[data-codex-composer-root]");
+    const composer = composers.length === 1 ? (composers[0] ?? null) : null;
+    const composerRect =
+      composer && typeof composer.getBoundingClientRect === "function"
+        ? composer.getBoundingClientRect()
+        : null;
+    const surfaceHeight =
+      host.shadowRoot?.querySelector<HTMLElement>(".floating-chip")?.getBoundingClientRect()
+        .height ?? 38;
+    const fallbackBottom =
+      view && composerRect
+        ? Math.max(
+            8,
+            view.innerHeight -
+              Math.max(surfaceHeight + 8, Math.min(view.innerHeight - 8, composerRect.top - 8)),
+          )
+        : 96;
     host.style.position = "fixed";
     host.style.insetInlineEnd = "16px";
-    host.style.bottom = "96px";
+    host.style.bottom = `${fallbackBottom}px`;
     host.style.left = "";
     host.style.top = "";
     host.style.width = "min(420px, calc(100vw - 32px))";
@@ -1279,12 +1277,11 @@ export class SidecarMountController {
     host.style.insetInlineEnd = "";
     host.style.bottom = "";
     host.style.maxWidth = "";
-    if (this.#displayMode === "fallback") {
-      host.style.position = "";
-      host.style.width = "";
-      host.style.zIndex = "";
-      host.style.pointerEvents = "";
-    }
+    host.style.position = "";
+    host.style.left = "";
+    host.style.width = "";
+    host.style.zIndex = "";
+    host.style.pointerEvents = "";
   }
 
   #syncPlacement(): void {
@@ -1293,12 +1290,28 @@ export class SidecarMountController {
       return;
     }
     if (this.#displayMode === "fallback") {
-      host.placement = "floating";
+      host.placement = this.#requestedPlacement;
+      host.spaceConstrained = false;
+      if (
+        this.#fallbackInlineOriginRetained &&
+        this.#requestedPlacement === "inline" &&
+        host.parentElement !== this.#document.body
+      ) {
+        this.#clearFallbackLayout();
+        return;
+      }
+      if (this.#requestedPlacement === "inline") {
+        this.#releaseHost(true);
+        return;
+      }
+      this.#fallbackInlineOriginRetained = false;
+      if (host.parentElement !== this.#document.body) {
+        this.#document.body.append(host);
+      }
       this.#applyFallbackLayout();
       return;
     }
     if (host.placement === "floating") {
-      this.#clearViewportPortal(true);
       host.style.marginBlockStart = "";
       this.#clearInlineInsets();
       if (this.#anchor) {
@@ -1306,11 +1319,6 @@ export class SidecarMountController {
       }
       this.#observeFloatingLayout();
       this.#scheduleFloatingLayout();
-      return;
-    }
-    if (this.#viewportPortalActive) {
-      this.#observeInlineConstraint();
-      this.#scheduleInlineConstraint();
       return;
     }
     host.floatingPanelConstrained = false;
@@ -1371,9 +1379,7 @@ export class SidecarMountController {
         }
         this.#inlineObservedSizeFingerprint = nextSizeFingerprint;
         this.#pendingInlineObserverReason ??= "inline-resize";
-        if (!this.#viewportPortalActive) {
-          this.#syncInlineInsets();
-        }
+        this.#syncInlineInsets();
         this.#scheduleInlineConstraint();
       });
       this.#inlineResizeObserver.disconnect();
@@ -1394,200 +1400,19 @@ export class SidecarMountController {
         this.#lastObserverReason = this.#pendingInlineObserverReason;
         this.#pendingInlineObserverReason = null;
       }
-      if (!this.#viewportPortalActive) {
-        this.#syncInlineInsets();
-      }
+      this.#syncInlineInsets();
       this.#syncInlineConstraint();
     });
   }
 
   #syncInlineConstraint(): void {
     const host = this.#host;
-    const anchor = this.#anchor;
-    const view = this.#document.defaultView;
-    if (!host || !anchor || !view || host.placement !== "inline") {
+    if (host?.placement !== "inline" || !host.spaceConstrained) {
       return;
     }
-    this.#layoutReadCount += 1;
-    const composer = anchor.closest<HTMLElement>("[data-codex-composer-root]");
-    if (!composer) {
-      return;
-    }
-
-    if (this.#viewportPortalActive) {
-      if (this.#originCanShowHost()) {
-        this.#clearViewportPortal(true);
-      } else {
-        this.#positionViewportPortal();
-        return;
-      }
-    }
-
-    if (host.collapsed) {
-      const changed = host.spaceConstrained;
-      host.spaceConstrained = false;
-      if (changed) {
-        this.#layoutWriteCount += 1;
-        this.#lastConstraintTransition = "exited";
-      }
-      if (!this.#inlineSurfaceIsFullyVisible(host)) {
-        this.#activateViewportPortal();
-      }
-      return;
-    }
-    const expandedOffset = Math.max(this.#lastExpandedOffset, host.expandedLayoutOffset ?? 0);
-    if (expandedOffset <= 0) {
-      return;
-    }
-    const composerTop = composer.getBoundingClientRect().top;
-    const projectedExpandedTop = composerTop - (host.spaceConstrained ? expandedOffset : 0);
-    const next = projectedExpandedTop < 8;
-    if (next !== host.spaceConstrained) {
-      host.spaceConstrained = next;
-      this.#layoutWriteCount += 1;
-      this.#lastConstraintTransition = next ? "entered" : "exited";
-      this.#scheduleInlineConstraint();
-      return;
-    }
-    if (!this.#inlineSurfaceIsFullyVisible(host)) {
-      this.#activateViewportPortal();
-    }
-  }
-
-  #inlineSurfaceIsFullyVisible(element: HTMLElement): boolean {
-    const view = this.#document.defaultView;
-    if (!view) {
-      return false;
-    }
-    const rect = element.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
-      return false;
-    }
-    const visibleHeight =
-      Math.max(0, Math.min(rect.bottom, view.innerHeight) - Math.max(rect.top, 0)) / rect.height;
-    const clipping = clippingAncestors(element, view);
-    const ancestorRatio =
-      clipping.length === 0
-        ? 1
-        : intersectionRatio(
-            rect,
-            clipping.map((element) => element.getBoundingClientRect()),
-          );
-    return visibleHeight >= 0.99 && ancestorRatio >= 0.99;
-  }
-
-  #originCanShowHost(): boolean {
-    const marker = this.#originMarker;
-    if (!marker?.isConnected) {
-      return false;
-    }
-    return this.#inlineSurfaceIsFullyVisible(marker);
-  }
-
-  #activateViewportPortal(): void {
-    const host = this.#host;
-    const anchor = this.#anchor;
-    const view = this.#document.defaultView;
-    if (
-      this.#viewportPortalActive ||
-      !host ||
-      !anchor?.parentElement ||
-      !view ||
-      host.parentElement !== anchor.parentElement ||
-      this.#continuityIdentityFailure(anchor, this.#currentNativeTarget?.goalIdentity ?? null)
-    ) {
-      return;
-    }
-    const hostRect = host.getBoundingClientRect();
-    if (hostRect.width <= 0 || hostRect.height <= 0) {
-      return;
-    }
-    const marker = this.#document.createElement("div");
-    marker.setAttribute(
-      GOAL_PROGRESS_ORIGIN_MARKER_ATTRIBUTE,
-      GOAL_PROGRESS_PORTAL_ATTRIBUTE_VALUE,
-    );
-    Object.assign(marker.style, {
-      boxSizing: "border-box",
-      display: "block",
-      flex: "none",
-      height: `${hostRect.height}px`,
-      marginBlockStart: host.style.marginBlockStart,
-      marginInlineEnd: host.style.marginInlineEnd,
-      marginInlineStart: host.style.marginInlineStart,
-      pointerEvents: "none",
-      visibility: "hidden",
-    });
-    anchor.parentElement.insertBefore(marker, host);
-    this.#document.body.append(host);
-    this.#originMarker = marker;
-    this.#viewportPortalActive = true;
-    host.setAttribute(
-      GOAL_PROGRESS_VIEWPORT_PORTAL_ATTRIBUTE,
-      GOAL_PROGRESS_PORTAL_ATTRIBUTE_VALUE,
-    );
-    host.spaceConstrained = true;
-    host.style.marginBlockStart = "";
-    host.style.marginInlineStart = "";
-    host.style.marginInlineEnd = "";
-    host.style.position = "fixed";
-    host.style.zIndex = "30";
+    host.spaceConstrained = false;
     this.#layoutWriteCount += 1;
-    this.#lastConstraintTransition = "entered";
-    this.#positionViewportPortal();
-  }
-
-  #positionViewportPortal(): void {
-    const host = this.#host;
-    const marker = this.#originMarker;
-    const view = this.#document.defaultView;
-    if (!this.#viewportPortalActive || !host || !marker?.isConnected || !view) {
-      return;
-    }
-    const markerRect = marker.getBoundingClientRect();
-    const left = Math.max(8, Math.min(markerRect.left, view.innerWidth - 8));
-    const right = Math.max(left, Math.min(markerRect.right, view.innerWidth - 8));
-    const width = Math.max(0, right - left);
-    if (width <= 0) {
-      return;
-    }
-    const initialTop = Math.max(8, Math.min(markerRect.top, view.innerHeight - 8));
-    this.#positionFloatingHost(host, left, initialTop, width);
-    const hostRect = host.getBoundingClientRect();
-    const top = Math.max(8, Math.min(initialTop, view.innerHeight - hostRect.height - 8));
-    if (Math.abs(top - hostRect.top) >= 0.5) {
-      this.#positionFloatingHost(host, left, top, width);
-    }
-    this.#layoutWriteCount += 1;
-  }
-
-  #clearViewportPortal(restoreInline: boolean): void {
-    const host = this.#host;
-    const marker = this.#originMarker;
-    if (!this.#viewportPortalActive && !marker) {
-      return;
-    }
-    if (restoreInline && host && marker?.isConnected) {
-      marker.replaceWith(host);
-    } else {
-      marker?.remove();
-    }
-    if (host) {
-      host.removeAttribute(GOAL_PROGRESS_VIEWPORT_PORTAL_ATTRIBUTE);
-      host.style.position = "";
-      host.style.left = "";
-      host.style.top = "";
-      host.style.width = "";
-      host.style.height = "";
-      host.style.zIndex = "";
-      host.style.pointerEvents = "";
-    }
-    this.#originMarker = null;
-    this.#viewportPortalActive = false;
-    this.#layoutWriteCount += 1;
-    if (restoreInline) {
-      this.#syncInlineInsets();
-    }
+    this.#lastConstraintTransition = "exited";
   }
 
   #clearInlineConstraintObserver(): void {
@@ -2009,15 +1834,16 @@ export class SidecarMountController {
     this.#floatingActive = false;
   }
 
-  #restoreAnchor(): void {
+  #restoreAnchor(preserveGoalIdentity = false): void {
     const anchor = this.#anchor;
-    if (!anchor) {
-      return;
+    if (anchor) {
+      this.#resetAnchorTranslate(anchor);
+      this.#clearInlineConstraintObserver();
     }
-    this.#resetAnchorTranslate(anchor);
-    this.#clearInlineConstraintObserver();
     this.#anchor = null;
-    this.#validatedGoalIdentity = null;
+    if (!preserveGoalIdentity) {
+      this.#validatedGoalIdentity = null;
+    }
   }
 
   #resetAnchorTranslate(anchor: HTMLElement): void {
@@ -2051,7 +1877,6 @@ export class SidecarMountController {
       host.removeEventListener(GOAL_PROGRESS_REQUEST_RETRY_EVENT, this.#onRetry);
       host.removeEventListener(GOAL_PROGRESS_REQUEST_DETACH_EVENT, this.#onDetach);
     }
-    this.#clearViewportPortal(!remove);
     host.viewModel = null;
     host.spaceConstrained = false;
     host.floatingPanelConstrained = false;
@@ -2065,9 +1890,9 @@ export class SidecarMountController {
     }
     this.#host = null;
     this.#controlArea = null;
-    this.#currentNativeTarget = null;
     this.#displayMode = "hidden";
     this.#continuityModeActive = false;
+    this.#fallbackInlineOriginRetained = false;
     this.#sessionId = null;
     this.#floatingFallbackActive = false;
     this.#cancelFloatingFallbackRetry(true);
@@ -2075,7 +1900,6 @@ export class SidecarMountController {
     this.#requestedFloatingXRatio = 0.5;
     this.#floatingPreviewRatio = null;
     this.#lastFloatingPanelHeight = 0;
-    this.#lastExpandedOffset = 0;
     if (this.#userClickTimer) {
       clearTimeout(this.#userClickTimer);
       this.#userClickTimer = null;
@@ -2118,12 +1942,29 @@ export class SidecarMountController {
       displayMode: this.#displayMode,
       nativeAnchorMatched: this.#displayMode === "native" && this.#anchor?.isConnected === true,
       visibleThreadStatus: this.#continuityModeActive ? "retained" : "matched",
-      componentVisible:
-        status === "mounted" && this.#host?.isConnected === true && this.#host.hidden !== true,
+      componentVisible: status === "mounted" && this.#componentIsVisible(),
       viewModelRevision:
         this.#host?.viewModel && Number.isSafeInteger(this.#host.viewModel.revision)
           ? this.#host.viewModel.revision
           : null,
     };
+  }
+
+  #componentIsVisible(): boolean {
+    const host = this.#host;
+    const view = this.#document.defaultView;
+    if (!host?.isConnected || host.hidden) {
+      return false;
+    }
+    if (!view) {
+      return true;
+    }
+    const rect = host.getBoundingClientRect();
+    return (
+      intersectionRatio(rect, [
+        new DOMRect(0, 0, Math.max(0, view.innerWidth), Math.max(0, view.innerHeight)),
+        ...clippingAncestors(host, view).map((element) => element.getBoundingClientRect()),
+      ]) >= 0.99
+    );
   }
 }
