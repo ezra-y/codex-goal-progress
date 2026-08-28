@@ -89,7 +89,6 @@ export {
 export const HELPER_VISIBLE_THREAD_RECOVERY_DELAYS_MS = [
   0, 1_000, 2_000, 5_000, 10_000, 30_000,
 ] as const;
-export const HELPER_VISIBLE_THREAD_WATCH_INTERVAL_MS = 2_000;
 
 export interface GoalProgressHelperOptions {
   readonly paths?: GoalProgressPaths;
@@ -104,7 +103,6 @@ export interface GoalProgressHelperOptions {
     expectedThreadId?: string,
   ) => Promise<GoalProgressRendererBridgeDoctor>;
   readonly visibleThreadRecoveryDelaysMs?: readonly number[];
-  readonly visibleThreadWatchIntervalMs?: number;
 }
 
 export interface TrustedNativeGoal {
@@ -653,7 +651,7 @@ function methodIsAllowed(
       "store.initialize",
       "store.apply",
     ],
-    cdp: ["view.get", "ui.intent"],
+    cdp: ["view.get", "renderer.disconnected", "renderer.visible-thread", "ui.intent"],
     doctor: ["doctor"],
   };
   return allowed[context.clientKind].includes(method);
@@ -842,7 +840,6 @@ export class GoalProgressHelper {
   readonly #viewModelPublisher: ViewModelPublisher;
   readonly #enableGoalWatch: boolean;
   readonly #visibleThreadRecoveryDelaysMs: readonly number[];
-  readonly #visibleThreadWatchIntervalMs: number;
   readonly #goalUsage = new Map<string, GoalUsageSnapshot>();
   readonly #preparingObjectives = new Map<string, string>();
   #lock: HelperInstanceLock | undefined;
@@ -872,8 +869,6 @@ export class GoalProgressHelper {
     this.#rendererDoctor = options.rendererDoctor;
     this.#visibleThreadRecoveryDelaysMs =
       options.visibleThreadRecoveryDelaysMs ?? HELPER_VISIBLE_THREAD_RECOVERY_DELAYS_MS;
-    this.#visibleThreadWatchIntervalMs =
-      options.visibleThreadWatchIntervalMs ?? HELPER_VISIBLE_THREAD_WATCH_INTERVAL_MS;
   }
 
   async #log(input: GoalProgressLogInput): Promise<void> {
@@ -1125,6 +1120,9 @@ export class GoalProgressHelper {
     await this.#viewModelPublisher.activateThread(threadId);
     await this.#viewModelPublisher.setUiPreference(await readGoalProgressUiPreference(this.paths));
     await this.#viewModelPublisher.publish(threadId, viewModel);
+    if (!this.#viewModelPublisher.deliveryCurrent) {
+      this.#scheduleVisibleThreadRecovery(0);
+    }
   }
 
   async #syncNativeGoalStatus(snapshot: GoalUsageSnapshot): Promise<GoalContractAny | null> {
@@ -1393,7 +1391,6 @@ export class GoalProgressHelper {
       return;
     }
     if (attempt >= this.#visibleThreadRecoveryDelaysMs.length) {
-      this.#scheduleVisibleThreadWatch();
       return;
     }
     const delay = this.#visibleThreadRecoveryDelaysMs[attempt];
@@ -1406,42 +1403,12 @@ export class GoalProgressHelper {
         .then((result) => {
           if (result === "retry") {
             this.#scheduleVisibleThreadRecovery(attempt + 1);
-          } else {
-            this.#scheduleVisibleThreadWatch();
           }
         })
         .catch(() => {
           this.#scheduleVisibleThreadRecovery(attempt + 1);
         });
     }, delay);
-    this.#visibleThreadRecoveryTimer.unref?.();
-  }
-
-  #scheduleVisibleThreadWatch(): void {
-    if (
-      !this.#server ||
-      this.#visibleThreadRecoveryTimer ||
-      !this.#viewModelPublisher.visibleThreadAwarenessAvailable ||
-      !Number.isInteger(this.#visibleThreadWatchIntervalMs) ||
-      this.#visibleThreadWatchIntervalMs < 1 ||
-      this.#visibleThreadWatchIntervalMs > 60_000
-    ) {
-      return;
-    }
-    this.#visibleThreadRecoveryTimer = setTimeout(() => {
-      this.#visibleThreadRecoveryTimer = undefined;
-      void this.#recoverVisibleThread()
-        .then((result) => {
-          if (result === "retry") {
-            this.#scheduleVisibleThreadRecovery(0);
-          } else {
-            this.#scheduleVisibleThreadWatch();
-          }
-        })
-        .catch(() => {
-          this.#scheduleVisibleThreadRecovery(0);
-        });
-    }, this.#visibleThreadWatchIntervalMs);
     this.#visibleThreadRecoveryTimer.unref?.();
   }
 
@@ -1473,6 +1440,9 @@ export class GoalProgressHelper {
       snapshot.threadId,
       this.#projectState(contract, overlay).viewModel,
     );
+    if (!this.#viewModelPublisher.deliveryCurrent) {
+      this.#scheduleVisibleThreadRecovery(0);
+    }
   }
 
   async #refreshUsage(threadId: string): Promise<GoalUsageSnapshot | undefined> {
@@ -2076,6 +2046,34 @@ export class GoalProgressHelper {
             },
           };
         }
+        if (request.method === "renderer.visible-thread") {
+          const threadId = request.params.threadId;
+          if (threadId === null) {
+            return {
+              revision: null,
+              result: { status: "unknown" },
+            };
+          }
+          const result = await this.#restoreVisibleThread(threadId);
+          if (result === "retry") {
+            this.#scheduleVisibleThreadRecovery(0);
+          }
+          return {
+            revision:
+              this.#viewModelPublisher.currentThreadId === threadId
+                ? (this.#viewModelPublisher.currentRevision ?? null)
+                : null,
+            result: { status: result },
+          };
+        }
+        if (request.method === "renderer.disconnected") {
+          await this.#viewModelPublisher.handleDisconnect(request.params.code);
+          this.#scheduleVisibleThreadRecovery(0);
+          return {
+            revision: this.#viewModelPublisher.currentRevision ?? null,
+            result: { status: "scheduled", code: request.params.code },
+          };
+        }
         if (request.method === "view.get") {
           const loaded = await this.#store.load(request.params.sessionId);
           if (!loaded.contract) {
@@ -2536,8 +2534,6 @@ export class GoalProgressHelper {
       );
       if (restored === "retry") {
         this.#scheduleVisibleThreadRecovery(0);
-      } else {
-        this.#scheduleVisibleThreadWatch();
       }
     } else {
       this.#scheduleVisibleThreadRecovery(0);

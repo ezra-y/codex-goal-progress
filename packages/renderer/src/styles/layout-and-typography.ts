@@ -122,7 +122,7 @@ export const layoutAndTypographyStyles = css`
     .current-summary strong {
       flex: none;
       color: var(--gp-text);
-      font-weight: 650;
+      font-weight: var(--gp-native-title-font-weight, 400);
     }
 
     .current-summary-text {

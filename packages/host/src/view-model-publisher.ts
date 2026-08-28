@@ -2,6 +2,7 @@ import type { GoalProgressUiPreference, GoalProgressViewModel } from "../../cont
 
 export interface ViewModelPublisherSink {
   clear(): Promise<void>;
+  handleDisconnect?(code: string): Promise<void> | void;
   publish(viewModel: GoalProgressViewModel): Promise<void>;
   recoverVisibleThreadId?(): Promise<string | undefined>;
   setUiPreference?(uiPreference: GoalProgressUiPreference): Promise<void>;
@@ -69,6 +70,13 @@ export class ViewModelPublisher {
   async markDeliveryStale(): Promise<void> {
     return this.#enqueue(async () => {
       this.#deliveredFingerprint = undefined;
+    });
+  }
+
+  async handleDisconnect(code: string): Promise<void> {
+    return this.#enqueue(async () => {
+      this.#deliveredFingerprint = undefined;
+      await this.#sink?.handleDisconnect?.(code);
     });
   }
 

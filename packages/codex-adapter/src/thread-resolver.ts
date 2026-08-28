@@ -79,6 +79,15 @@ function uniqueNewestSessionTreeId(
   return newestIds.length === 1 && newestIds[0] === sessionTreeId ? sessionTreeId : undefined;
 }
 
+function isUnavailableSessionTreeCandidate(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    /^GOAL_PROGRESS_APP_SERVER_REQUEST_FAILED: thread\/turns\/list: (?:invalid thread id|thread not loaded)(?:\b|:)/iu.test(
+      error.message,
+    )
+  );
+}
+
 export function createCurrentThreadResolver(catalog: ThreadCatalog): CurrentThreadResolver {
   const cache = new Map<string, RuntimeIdentity>();
 
@@ -105,7 +114,23 @@ export function createCurrentThreadResolver(catalog: ThreadCatalog): CurrentThre
       }
 
       const loadedIds = uniqueThreadIds(await catalog.listLoadedThreads());
-      let matches = await matchingThreadIds(loadedIds, input.turnId);
+      let matches: string[] = [];
+      try {
+        const sessionTreeTurnIds = await catalog.listTurnIds(input.sessionTreeId);
+        if (sessionTreeTurnIds.includes(input.turnId)) {
+          matches.push(input.sessionTreeId);
+        }
+      } catch (error) {
+        if (!isUnavailableSessionTreeCandidate(error)) {
+          throw error;
+        }
+      }
+      matches.push(
+        ...(await matchingThreadIds(
+          loadedIds.filter((threadId) => threadId !== input.sessionTreeId),
+          input.turnId,
+        )),
+      );
 
       if (matches.length === 0) {
         const listed = await catalog.listThreads({ cwd: input.cwd });

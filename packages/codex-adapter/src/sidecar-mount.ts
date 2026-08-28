@@ -702,6 +702,7 @@ export class SidecarMountController {
     this.#displayMode = "native";
     this.#controlArea = options.displayTarget.controlArea;
     this.#currentNativeTarget = options.displayTarget;
+    this.#syncNativeTitleFontWeight(options.displayTarget.goalTitleFontWeight ?? null);
     this.#adoptAnchor(anchor, options.displayTarget.goalIdentity);
 
     const threadChanged = this.#sessionId !== null && this.#sessionId !== viewModel.sessionId;
@@ -846,6 +847,7 @@ export class SidecarMountController {
       action = "mounted";
     }
     this.#adoptHost(host);
+    this.#syncNativeTitleFontWeight(null);
     syncHostLocale(host, this.#document);
     const preserveVisibleCollapsed =
       action === "updated" && this.#sessionId === viewModel.sessionId;
@@ -1211,6 +1213,23 @@ export class SidecarMountController {
     this.#host.style.marginInlineEnd = "";
   }
 
+  #syncNativeTitleFontWeight(fontWeight: number | null): void {
+    const host = this.#host;
+    if (!host) {
+      return;
+    }
+    if (
+      fontWeight !== null &&
+      Number.isFinite(fontWeight) &&
+      fontWeight >= 1 &&
+      fontWeight <= 1_000
+    ) {
+      host.style.setProperty("--gp-native-title-font-weight", String(fontWeight));
+      return;
+    }
+    host.style.removeProperty("--gp-native-title-font-weight");
+  }
+
   #clearMeasuredInlineGeometry(): void {
     const host = this.#host;
     if (!host) {
@@ -1247,6 +1266,7 @@ export class SidecarMountController {
     host.style.zIndex = "30";
     host.style.pointerEvents = "auto";
     host.style.marginBlockStart = "";
+    host.style.removeProperty("--gp-native-title-font-weight");
     this.#clearMeasuredInlineGeometry();
     this.#layoutWriteCount += 1;
   }

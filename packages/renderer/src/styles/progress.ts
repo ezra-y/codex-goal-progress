@@ -31,7 +31,7 @@ export const progressStyles = css`
       gap: 5px;
       color: var(--gp-text);
       font-size: var(--gp-font-size);
-      font-weight: 500;
+      font-weight: var(--gp-native-title-font-weight, 400);
       white-space: nowrap;
     }
 

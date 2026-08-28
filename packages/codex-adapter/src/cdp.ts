@@ -221,6 +221,7 @@ export class CdpProtocolClient {
   readonly #requestTimeoutMs: number;
   readonly #eventMethods: string[] = [];
   readonly #eventListeners = new Map<string, Set<(params: unknown) => void>>();
+  readonly #failureListeners = new Set<(error: Error) => void>();
   #nextId = 1;
   #closed = false;
   #failed: Error | undefined;
@@ -288,6 +289,20 @@ export class CdpProtocolClient {
       if (listeners.size === 0) {
         this.#eventListeners.delete(method);
       }
+    };
+  }
+
+  onFailure(listener: (error: Error) => void): () => void {
+    this.#failureListeners.add(listener);
+    if (this.#failed) {
+      try {
+        listener(this.#failed);
+      } catch {
+        // Failure observers cannot change the existing transport failure.
+      }
+    }
+    return () => {
+      this.#failureListeners.delete(listener);
     };
   }
 
@@ -454,6 +469,13 @@ export class CdpProtocolClient {
     }
     this.#pending.clear();
     this.#ignoredResponseIds.clear();
+    for (const listener of this.#failureListeners) {
+      try {
+        listener(error);
+      } catch {
+        // Failure observers cannot break transport cleanup.
+      }
+    }
     this.#socket.close();
   }
 }
@@ -603,6 +625,139 @@ const VisibleGoalProgressThreadResultSchema = z
   .passthrough();
 
 const visibleGoalProgressThreadExpression = `(${resolveCurrentMacosVisibleThreadId.toString()})(document)`;
+
+const GOAL_PROGRESS_VISIBLE_THREAD_WATCHER_KEY = "__CODEX_GOAL_PROGRESS_VISIBLE_THREAD_WATCHER__";
+
+export function createGoalProgressVisibleThreadWatcherSource(
+  bindingName: string,
+  bridgeNonce: string,
+): string {
+  if (
+    !/^__CODEX_GOAL_PROGRESS_VISIBLE_THREAD_[A-Za-z0-9_-]{32}$/u.test(bindingName) ||
+    !/^[A-Za-z0-9_-]{32}$/u.test(bridgeNonce)
+  ) {
+    throw cdpError("GOAL_PROGRESS_VISIBLE_THREAD_WATCHER_IDENTITY_INVALID");
+  }
+  return `(() => {
+    const key = ${JSON.stringify(GOAL_PROGRESS_VISIBLE_THREAD_WATCHER_KEY)};
+    const previous = globalThis[key];
+    if (previous && typeof previous.disconnect === "function") {
+      previous.disconnect();
+    }
+    const bindingName = ${JSON.stringify(bindingName)};
+    const bridgeNonce = ${JSON.stringify(bridgeNonce)};
+    const readVisibleThreadId = ${resolveCurrentMacosVisibleThreadId.toString()};
+    let initialized = false;
+    let lastThreadId = null;
+    let scheduled = false;
+    const report = () => {
+      scheduled = false;
+      const threadId = readVisibleThreadId(document);
+      if (initialized && threadId === lastThreadId) {
+        return;
+      }
+      initialized = true;
+      lastThreadId = threadId;
+      const binding = globalThis[bindingName];
+      if (typeof binding === "function") {
+        binding(JSON.stringify({
+          protocolVersion: 1,
+          bridgeNonce,
+          type: "visibleThreadChanged",
+          threadId
+        }));
+      }
+    };
+    const relevant = (record) => {
+      const target = record.target;
+      if (target instanceof Element && target.closest("[data-app-action-sidebar-thread-row]")) {
+        return true;
+      }
+      if (
+        target instanceof Element &&
+        target.matches("[data-response-annotation-conversation]")
+      ) {
+        return true;
+      }
+      return Array.from(record.addedNodes || []).some(
+        (node) =>
+          node instanceof Element &&
+          (node.matches("[data-app-action-sidebar-thread-row]") ||
+            node.querySelector("[data-app-action-sidebar-thread-row]") ||
+            node.matches("[data-response-annotation-conversation]") ||
+            node.querySelector("[data-response-annotation-conversation]"))
+      );
+    };
+    let observer = null;
+    const start = () => {
+      if (observer || !document.documentElement) {
+        return;
+      }
+      observer = new MutationObserver((records) => {
+        if (!records.some(relevant) || scheduled) {
+          return;
+        }
+        scheduled = true;
+        queueMicrotask(report);
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: [
+          "aria-current",
+          "data-app-action-sidebar-thread-active",
+          "data-app-action-sidebar-thread-host-id",
+          "data-app-action-sidebar-thread-id",
+          "data-app-action-sidebar-thread-selected",
+          "data-response-annotation-conversation"
+        ],
+        childList: true,
+        subtree: true
+      });
+      report();
+    };
+    const onReady = () => start();
+    Object.defineProperty(globalThis, key, {
+      configurable: true,
+      value: Object.freeze({
+        disconnect() {
+          removeEventListener("DOMContentLoaded", onReady);
+          observer?.disconnect();
+        }
+      })
+    });
+    if (document.documentElement) {
+      start();
+    } else {
+      addEventListener("DOMContentLoaded", onReady, { once: true });
+    }
+  })();`;
+}
+
+export async function installGoalProgressVisibleThreadWatcher(
+  sender: CdpCommandSender,
+  bindingName: string,
+  bridgeNonce: string,
+): Promise<void> {
+  const source = createGoalProgressVisibleThreadWatcherSource(bindingName, bridgeNonce);
+  await sender.send("Page.enable");
+  await sender.send("Runtime.enable");
+  await sender.send("Page.addScriptToEvaluateOnNewDocument", { source });
+  await refreshGoalProgressVisibleThreadWatcher(sender, bindingName, bridgeNonce);
+}
+
+export async function refreshGoalProgressVisibleThreadWatcher(
+  sender: CdpCommandSender,
+  bindingName: string,
+  bridgeNonce: string,
+): Promise<void> {
+  const source = createGoalProgressVisibleThreadWatcherSource(bindingName, bridgeNonce);
+  await sender.send("Runtime.addBinding", { name: bindingName });
+  await sender.send("Runtime.evaluate", {
+    expression: source,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+}
 
 export async function readGoalProgressVisibleThreadId(
   sender: CdpCommandSender,

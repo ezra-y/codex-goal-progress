@@ -82,6 +82,18 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
     return this.#enqueue(() => this.#requireOperation("clear", (bridge) => bridge.clear()));
   }
 
+  async handleDisconnect(code: string): Promise<void> {
+    return this.#enqueue(async () => {
+      await this.#dropBridge();
+      if (retryableBridgeError(code)) {
+        this.#recordRetryableFailure(code);
+        return;
+      }
+      this.#blocked = true;
+      this.#lastErrorCode = code;
+    });
+  }
+
   async publish(viewModel: GoalProgressViewModel): Promise<void> {
     return this.#enqueue(() =>
       this.#requireOperation("publish", (bridge) => bridge.publish(viewModel)),
