@@ -9,6 +9,13 @@ const outputDirectory = resolve(root, "dist/renderer");
 const bundlePath = resolve(outputDirectory, "goal-progress.js");
 const manifestPath = resolve(outputDirectory, "goal-progress.manifest.json");
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+const pageHostVersionManifest = JSON.parse(
+  await readFile(resolve(root, "packages/codex-adapter/src/page-host-version.json"), "utf8"),
+);
+const pageHostVersion = pageHostVersionManifest.pageHostVersion;
+if (!Number.isSafeInteger(pageHostVersion) || pageHostVersion < 1) {
+  throw new Error("GOAL_PROGRESS_PAGE_HOST_VERSION_INVALID");
+}
 
 await rm(outputDirectory, { recursive: true, force: true });
 await mkdir(outputDirectory, { recursive: true });
@@ -28,7 +35,7 @@ const bundle = await readFile(bundlePath);
 const manifest = {
   schemaVersion: 1,
   releaseVersion: packageJson.version,
-  pageHostVersion: 58,
+  pageHostVersion,
   file: "goal-progress.js",
   bytes: bundle.byteLength,
   sha256: createHash("sha256").update(bundle).digest("hex"),

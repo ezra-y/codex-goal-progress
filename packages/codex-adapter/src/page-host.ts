@@ -17,6 +17,7 @@ import {
   createDefaultCodexNativeGoalLocatorRegistry,
   matchCurrentVisibleThread,
 } from "./anchor-adapter.js";
+import pageHostVersionManifest from "./page-host-version.json" with { type: "json" };
 import {
   GOAL_PROGRESS_ELEMENT_NAME,
   removeManagedGoalProgressHosts,
@@ -27,7 +28,7 @@ import {
 } from "./sidecar-mount.js";
 
 export const GOAL_PROGRESS_PAGE_HOST_GLOBAL = "__CODEX_GOAL_PROGRESS__";
-export const GOAL_PROGRESS_PAGE_HOST_VERSION = 58;
+export const GOAL_PROGRESS_PAGE_HOST_VERSION = pageHostVersionManifest.pageHostVersion;
 export const GOAL_PROGRESS_OBSERVER_DEBOUNCE_MS = 150;
 export const GOAL_PROGRESS_OBSERVER_RETRY_DELAYS_MS = Object.freeze([
   250, 500, 1_000, 2_000, 4_000,
