@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1
+
+- Resolve the current Goal thread when a Hook session candidate is invalid or not loaded.
+- Match Current, Paused, and Overall progress label weights to the live native Goal title.
+- Follow task switches through page events instead of a permanent two-second Helper timer.
+- Recover Renderer delivery immediately from WebSocket close events with bounded retries.
+- Keep idle Goal Progress installations free of periodic visible-thread checks.
+
 ## 0.2.0
 
 - Keep Goal Progress visible across Codex Desktop version changes.

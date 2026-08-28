@@ -56,8 +56,9 @@ When `code` is `INSTALL_RESTART_PENDING`, wait for Codex to reopen, then run:
 
 ## Review the Hook
 
-When `hookReviewRequired` is `true`, ask the user to open `/hooks` in Codex and approve the
-Goal Progress Hook. Continue after the user confirms the review.
+When Codex itself shows a Goal Progress Hook review prompt, ask the user to inspect and approve it.
+Do not infer Hook review state from the installer result. Continue after the user confirms the
+review.
 
 ## Verify
 

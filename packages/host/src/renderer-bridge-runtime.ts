@@ -100,6 +100,8 @@ export async function connectHelperRendererBridge(
       platform: "macos",
       appVersion: app.shortVersion,
       onUiIntent: (threadId, intent) => viewClient.applyUiIntent(threadId, intent),
+      onVisibleThreadChange: (threadId) => viewClient.reportVisibleThread(threadId),
+      onDisconnected: (code) => viewClient.reportDisconnected(code),
       environment: {
         appPath: app.realAppPath,
         appSignatureValid: app.signatureValid,

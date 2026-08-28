@@ -199,6 +199,37 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
   z
     .object({
       ...RequestEnvelopeFields,
+      method: z.literal("renderer.visible-thread"),
+      params: z
+        .object({
+          threadId: z
+            .string()
+            .trim()
+            .min(1)
+            .max(256)
+            .refine((value) => !value.startsWith("client-new-thread:"))
+            .nullable(),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...RequestEnvelopeFields,
+      method: z.literal("renderer.disconnected"),
+      params: z
+        .object({
+          code: z
+            .string()
+            .trim()
+            .regex(/^[A-Z][A-Z0-9_]{2,127}$/u),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...RequestEnvelopeFields,
       method: z.literal("ui.intent"),
       params: z
         .object({

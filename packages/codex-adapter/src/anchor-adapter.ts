@@ -43,6 +43,7 @@ export interface NativeGoalTarget {
   readonly anchor: HTMLElement;
   readonly controlArea: HTMLElement | null;
   readonly goalIdentity: string | null;
+  readonly goalTitleFontWeight?: number | null;
 }
 
 export interface NativeGoalLocationResult {
@@ -112,6 +113,16 @@ function readGoalButtonIdentity(goalButton: HTMLElement): string | null {
     .replace(/\s*•\s*$/u, "")
     .trim();
   return normalized || null;
+}
+
+function readGoalTitleFontWeight(document: Document, goalButton: HTMLElement): number | null {
+  const title = goalButton.children[0];
+  const view = document.defaultView;
+  if (!view || !(title instanceof view.HTMLElement)) {
+    return null;
+  }
+  const fontWeight = Number.parseFloat(view.getComputedStyle(title).fontWeight);
+  return Number.isFinite(fontWeight) && fontWeight >= 1 && fontWeight <= 1_000 ? fontWeight : null;
 }
 
 function findNativeStepSurfaces(document: Document): readonly HTMLElement[] {
@@ -437,6 +448,7 @@ export const macosGoalRowV1Locator: CodexNativeGoalLocator = {
             anchor: located.located.anchor,
             controlArea: located.located.controlArea,
             goalIdentity: readGoalButtonIdentity(located.located.goalButton),
+            goalTitleFontWeight: readGoalTitleFontWeight(document, located.located.goalButton),
           }
         : null,
       rejectionReason: located.probe.rejectionReason,

@@ -60,6 +60,20 @@ export class GoalProgressCdpViewClient {
     return parseGoalProgressViewState(response.result);
   }
 
+  async reportVisibleThread(threadId: string | null): Promise<void> {
+    await this.#client.request({
+      method: "renderer.visible-thread",
+      params: { threadId },
+    });
+  }
+
+  async reportDisconnected(code: string): Promise<void> {
+    await this.#client.request({
+      method: "renderer.disconnected",
+      params: { code },
+    });
+  }
+
   async applyUiIntent(
     sessionId: string,
     intent: GoalProgressUiIntent,

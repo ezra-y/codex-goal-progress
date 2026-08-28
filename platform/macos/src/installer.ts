@@ -1976,15 +1976,14 @@ export function createMacosCommandHandlers(
               : "UPGRADE_ALREADY_CURRENT",
         changed,
         nextStep: codexSessionReconnectRequired
-          ? "Review and trust the Goal Progress Hook, then close and reopen the current Codex session so MCP loads this release."
-          : "Review and trust the Goal Progress Hook in Codex.",
+          ? "Close and reopen the current Codex session so MCP loads this release."
+          : null,
         details: {
           releaseVersion: release.releaseVersion,
           applicationSupportRoot: layout.applicationSupportRoot,
           launchAgentLabel: layout.launchAgentLabel,
           codexAppPath: codex.realAppPath,
           pluginInstalled: true,
-          hookReviewRequired: true,
           codexSessionReconnectRequired,
           hookSha256,
           cdpReady: true,
@@ -1995,7 +1994,6 @@ export function createMacosCommandHandlers(
           states: changed
             ? [
                 "installed",
-                "hook_review_required",
                 ...(codexSessionReconnectRequired ? ["session_reconnect_required"] : []),
               ]
             : ["already_current"],
@@ -2507,7 +2505,6 @@ export function createMacosCommandHandlers(
         details: {
           doctorCodeBefore: current.code,
           doctorCodes,
-          hookReviewRequired: false,
           contractPreserved: true,
           tokenPreserved: true,
         },
@@ -2558,7 +2555,6 @@ export function createMacosCommandHandlers(
           nextStep: "Run doctor --json and inspect the reported Repair code cycle.",
           details: {
             doctorCodes,
-            hookReviewRequired: false,
             contractPreserved: true,
             tokenPreserved: true,
           },
@@ -2603,7 +2599,6 @@ export function createMacosCommandHandlers(
               ...installedAgain.details,
               doctorCodeBefore: doctorCodes[0],
               doctorCodes,
-              hookReviewRequired: false,
               contractPreserved: true,
               tokenPreserved: true,
             },
@@ -2638,7 +2633,6 @@ export function createMacosCommandHandlers(
             details: {
               doctorCodeBefore: doctorCodes[0],
               doctorCodes,
-              hookReviewRequired: false,
               contractPreserved: true,
               tokenPreserved: true,
             },
@@ -2654,7 +2648,6 @@ export function createMacosCommandHandlers(
           details: {
             doctorCodes,
             errorCode,
-            hookReviewRequired: false,
             contractPreserved: true,
             tokenPreserved: true,
           },
@@ -2672,7 +2665,6 @@ export function createMacosCommandHandlers(
             doctorCodeBefore: doctorCodes[0],
             doctorCodeAfter: current.code,
             doctorCodes,
-            hookReviewRequired: false,
             contractPreserved: true,
             tokenPreserved: true,
           },
@@ -2690,7 +2682,6 @@ export function createMacosCommandHandlers(
             doctorCodeBefore: doctorCodes[0],
             doctorCodeAfter: current.code,
             doctorCodes,
-            hookReviewRequired: false,
             contractPreserved: true,
             tokenPreserved: true,
           },
@@ -2706,7 +2697,6 @@ export function createMacosCommandHandlers(
         nextStep: "Run doctor --json and inspect the reported Repair code cycle.",
         details: {
           doctorCodes,
-          hookReviewRequired: false,
           contractPreserved: true,
           tokenPreserved: true,
         },
@@ -2719,7 +2709,6 @@ export function createMacosCommandHandlers(
       nextStep: "Run doctor --json; automatic Repair reached its five-round limit.",
       details: {
         doctorCodes,
-        hookReviewRequired: false,
         contractPreserved: true,
         tokenPreserved: true,
       },
