@@ -18,12 +18,15 @@
 
 ### v0.2.2 — Lifecycle and layout hardening
 
+- 🧩 Updated for the latest Codex Goal row, sidebar task, and composer structure.
 - 🫥 Completed Goals clear their progress UI instead of leaving a 100% ghost card.
 - 📌 Long composer input keeps fixed progress at its verified native position.
 - 👀 Visibility diagnostics now match what is actually visible on screen.
 - 🧬 A replacement Goal can no longer inherit progress from the previous Goal.
 - ⏱️ Status labels and elapsed time no longer make the current Goal look like a replacement.
 - 📐 Fixed progress follows the live left and right boundaries of the native Goal.
+- 🧹 Updates remove stale Plugin caches instead of leaving old Hook and Skill files behind.
+- 🔌 Compatible updates keep active Goal Progress sessions working without restarting Codex.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 
