@@ -4,6 +4,10 @@
     Codex Goal Progress
   </h1>
   <p>A native progress bar for Codex Goals, powered by verified checklists and local progress tracking.</p>
+  <p>
+    <strong>English</strong> ·
+    <a href="https://github.com/Ezra-Y/codex-goal-progress/blob/main/README.zh-CN.md">简体中文</a>
+  </p>
 </div>
 
 <p align="center">
@@ -18,7 +22,8 @@
   and connection events.
 - 🔄 Returning to a task after a page reload restores its progress automatically.
 - 🧭 New tasks work even while Codex is showing a temporary sidebar ID.
-- 🔌 Recovery starts immediately when the Codex page connection drops.
+- 🔌 If the current Codex page reloads or briefly loses its connection, Goal Progress starts
+  restoring it immediately.
 - ✨ Paused and overall-progress labels now match Codex typography more naturally.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
