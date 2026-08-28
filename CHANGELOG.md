@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2
+
+- Remove Goal Progress as soon as the native Goal completes instead of leaving a 100% card.
+- Keep fixed progress at its verified native position during arbitrarily long composer input.
+- Report component visibility from its real viewport and clipping intersections.
+- Preserve the verified Goal identity through fallback so old progress cannot attach to a
+  replacement Goal.
+
 ## 0.2.1
 
 - Resolve the current Goal thread when a Hook session candidate is invalid or not loaded.

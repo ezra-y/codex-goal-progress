@@ -74,14 +74,13 @@ export function renderTrackingView(
       </div>
     `;
   }
-  const compact = options.collapsed || options.spaceConstrained;
+  const compact = options.collapsed;
   return html`
     ${
       compact
         ? renderOverallProgress(viewModel, {
             compact: true,
             collapsed: options.collapsed,
-            toggleDisabled: options.spaceConstrained && !options.collapsed,
             onToggleCollapsed: options.onToggleCollapsed,
             messages: options.messages,
           })

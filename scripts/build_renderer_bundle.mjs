@@ -28,7 +28,7 @@ const bundle = await readFile(bundlePath);
 const manifest = {
   schemaVersion: 1,
   releaseVersion: packageJson.version,
-  pageHostVersion: 53,
+  pageHostVersion: 58,
   file: "goal-progress.js",
   bytes: bundle.byteLength,
   sha256: createHash("sha256").update(bundle).digest("hex"),
