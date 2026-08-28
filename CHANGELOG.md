@@ -2,6 +2,7 @@
 
 ## 0.2.2
 
+- Support the latest Codex Goal row, sidebar task, and composer structure.
 - Remove Goal Progress as soon as the native Goal completes instead of leaving a 100% card.
 - Keep fixed progress at its verified native position during arbitrarily long composer input.
 - Report component visibility from its real viewport and clipping intersections.
@@ -9,6 +10,8 @@
   replacement Goal.
 - Read Goal identity only from the stable objective text, excluding dynamic status and elapsed time.
 - Follow the live native Goal left and right boundaries for fixed progress width.
+- Remove stale Plugin cache versions after successful installs and upgrades.
+- Keep active MCP sessions working across compatible updates without restarting Codex.
 
 ## 0.2.1
 
