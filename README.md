@@ -22,6 +22,8 @@
 - 📌 Long composer input keeps fixed progress at its verified native position.
 - 👀 Visibility diagnostics now match what is actually visible on screen.
 - 🧬 A replacement Goal can no longer inherit progress from the previous Goal.
+- ⏱️ Status labels and elapsed time no longer make the current Goal look like a replacement.
+- 📐 Fixed progress follows the live left and right boundaries of the native Goal.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 

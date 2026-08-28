@@ -7,6 +7,8 @@
 - Report component visibility from its real viewport and clipping intersections.
 - Preserve the verified Goal identity through fallback so old progress cannot attach to a
   replacement Goal.
+- Read Goal identity only from the stable objective text, excluding dynamic status and elapsed time.
+- Follow the live native Goal left and right boundaries for fixed progress width.
 
 ## 0.2.1
 

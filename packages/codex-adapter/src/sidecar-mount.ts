@@ -1115,9 +1115,17 @@ export class SidecarMountController {
     this.#layoutReadCount += 1;
     const style = view.getComputedStyle(anchor);
     const anchorRect = anchor.getBoundingClientRect();
-    const width = anchorRect.width;
-    const composerRect =
-      anchor.closest<HTMLElement>("[data-codex-composer-root]")?.getBoundingClientRect() ?? null;
+    const composer = anchor.closest<HTMLElement>("[data-codex-composer-root]");
+    const composerRect = composer?.getBoundingClientRect() ?? null;
+    const hostRect = host.getBoundingClientRect();
+    const hostCssWidth = Number.parseFloat(view.getComputedStyle(host).width);
+    const scale =
+      Number.isFinite(hostCssWidth) &&
+      hostCssWidth > 0 &&
+      Number.isFinite(hostRect.width) &&
+      hostRect.width > 0
+        ? hostRect.width / hostCssWidth
+        : 1;
     const controlArea = this.#controlArea;
     const controlRect = controlArea?.getBoundingClientRect() ?? null;
     this.#nativeGeometryFingerprint = [
@@ -1125,10 +1133,52 @@ export class SidecarMountController {
       rectFingerprint(composerRect),
       rectFingerprint(controlRect),
     ].join("|");
-    const start = Number.parseFloat(style.paddingInlineStart) || 0;
-    const end = Number.parseFloat(style.paddingInlineEnd) || 0;
+    const direction = style.direction === "rtl" ? "rtl" : "ltr";
+    const composerStyle = composer ? view.getComputedStyle(composer) : null;
+    const composerContentLeft =
+      composerRect === null
+        ? null
+        : composerRect.left +
+          ((Number.parseFloat(composerStyle?.borderLeftWidth ?? "0") || 0) +
+            (Number.parseFloat(composerStyle?.paddingLeft ?? "0") || 0)) *
+            scale;
+    const composerContentRight =
+      composerRect === null
+        ? null
+        : composerRect.right -
+          ((Number.parseFloat(composerStyle?.borderRightWidth ?? "0") || 0) +
+            (Number.parseFloat(composerStyle?.paddingRight ?? "0") || 0)) *
+            scale;
+    const startBoundaryGap =
+      composerContentLeft === null || composerContentRight === null
+        ? 0
+        : direction === "rtl"
+          ? composerContentRight - anchorRect.right
+          : anchorRect.left - composerContentLeft;
+    const endBoundaryGap =
+      composerContentLeft === null || composerContentRight === null
+        ? 0
+        : direction === "rtl"
+          ? anchorRect.left - composerContentLeft
+          : composerContentRight - anchorRect.right;
+    const start =
+      Math.max(0, startBoundaryGap / scale) + (Number.parseFloat(style.paddingInlineStart) || 0);
+    const end =
+      Math.max(0, endBoundaryGap / scale) + (Number.parseFloat(style.paddingInlineEnd) || 0);
+    const availableWidth =
+      composerContentLeft === null || composerContentRight === null
+        ? anchorRect.width / scale
+        : (composerContentRight - composerContentLeft) / scale;
     const valid =
-      start >= 0 && end >= 0 && Number.isFinite(width) && width > 0 && start + end < width * 0.5;
+      Number.isFinite(scale) &&
+      scale > 0 &&
+      Number.isFinite(start) &&
+      Number.isFinite(end) &&
+      start >= 0 &&
+      end >= 0 &&
+      Number.isFinite(availableWidth) &&
+      availableWidth > 0 &&
+      start + end < availableWidth * 0.5;
     if (!valid) {
       return;
     }

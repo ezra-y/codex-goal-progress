@@ -104,7 +104,11 @@ function textSignals(element: HTMLElement): CodexAnchorSignal[] {
 }
 
 function readGoalButtonIdentity(goalButton: HTMLElement): string | null {
-  const objective = goalButton.children[1];
+  const content = goalButton.children[1];
+  if (!content) {
+    return null;
+  }
+  const objective = content.children.length >= 3 ? content.children[1] : content;
   if (!objective) {
     return null;
   }
