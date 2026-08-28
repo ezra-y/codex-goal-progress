@@ -10,6 +10,20 @@
   <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
 </p>
 
+## 🆕 Latest update
+
+### v0.2.1 — Event-driven recovery
+
+Got rid of that 2-second loop shitcode Codex wrote.
+
+- ⚡ Goal Progress now responds to real task changes instead of checking every two seconds.
+- 🔄 Returning to a task after a page reload restores its progress automatically.
+- 🧭 New tasks work even while Codex is showing a temporary sidebar ID.
+- 🔌 Recovery starts immediately when the Codex page connection drops.
+- ✨ Paused and overall-progress labels now match Codex typography more naturally.
+
+This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
+
 ## ✨ Features
 
 Displays a progress view beside the native Codex Goal, bringing together current objective
