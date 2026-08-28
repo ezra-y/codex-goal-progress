@@ -891,6 +891,40 @@ export function createPluginController(options: {
   readonly codexCommand: string;
 }): PluginController {
   const command = options.codexCommand;
+  const pluginCacheRoot = resolve(
+    options.codexHomeDirectory,
+    "plugins/cache",
+    MARKETPLACE_NAME,
+    PLUGIN_NAME,
+  );
+  const removeStalePluginCaches = async (currentVersion: string): Promise<void> => {
+    let entries: string[];
+    try {
+      entries = await readdir(pluginCacheRoot);
+    } catch (error) {
+      if (isNotFound(error)) {
+        return;
+      }
+      throw error;
+    }
+    await Promise.all(
+      entries
+        .filter((entry) => entry !== currentVersion)
+        .map((entry) => rm(resolve(pluginCacheRoot, entry), { recursive: true, force: true })),
+    );
+  };
+  const removePluginCache = async (): Promise<boolean> => {
+    try {
+      await lstat(pluginCacheRoot);
+    } catch (error) {
+      if (isNotFound(error)) {
+        return false;
+      }
+      throw error;
+    }
+    await rm(pluginCacheRoot, { recursive: true, force: true });
+    return true;
+  };
   const pluginList = () =>
     listedRecords(
       runCodexJson(command, ["plugin", "list", "--json"], options.codexHomeDirectory),
@@ -980,6 +1014,12 @@ export function createPluginController(options: {
   return {
     async ensure(archivePath, marketplaceRoot, reinstall, expectedTreeManifestSha256) {
       if (!reinstall && (await verifyInstalled(undefined, expectedTreeManifestSha256))) {
+        const currentPlugin = pluginList().find(
+          (candidate) => candidate.pluginId === PLUGIN_ID && candidate.installed === true,
+        );
+        if (typeof currentPlugin?.version === "string") {
+          await removeStalePluginCaches(currentPlugin.version);
+        }
         return false;
       }
       await rm(marketplaceRoot, { recursive: true, force: true });
@@ -1064,9 +1104,7 @@ export function createPluginController(options: {
         if (!(await verifyInstalled(pluginManifest.version, expectedTreeManifestSha256))) {
           throw new Error("GOAL_PROGRESS_PLUGIN_INSTALL_VERIFY_FAILED");
         }
-        if (previousCacheRoot) {
-          await rm(previousCacheRoot, { recursive: true, force: true });
-        }
+        await removeStalePluginCaches(pluginManifest.version);
         installedCurrentVersion = true;
       } finally {
         if (!installedCurrentVersion && previousCacheRoot && retainedCacheRoot) {
@@ -1100,6 +1138,7 @@ export function createPluginController(options: {
         );
         changed = true;
       }
+      changed = (await removePluginCache()) || changed;
       return changed;
     },
     async verify(releaseVersion, expectedTreeManifestSha256) {

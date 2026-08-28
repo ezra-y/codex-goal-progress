@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   GOAL_NATIVE_OBJECTIVE_MAX_LENGTH,
-  GOAL_PROGRESS_RELEASE_VERSION,
   GoalContractInitializationSchema,
   GoalProgressCommandSchema,
   GoalProgressViewModelSchema,
@@ -11,13 +10,6 @@ import {
 
 export const GOAL_PROGRESS_IPC_PROTOCOL_VERSION = 4 as const;
 export const GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES = 1_048_576;
-export const GOAL_PROGRESS_MCP_COMPATIBLE_CLIENT_VERSIONS: readonly string[] = Object.freeze([
-  GOAL_PROGRESS_RELEASE_VERSION,
-]);
-
-export function isGoalProgressMcpClientVersionCompatible(clientVersion: string): boolean {
-  return GOAL_PROGRESS_MCP_COMPATIBLE_CLIENT_VERSIONS.includes(clientVersion);
-}
 
 export const GoalProgressActivationResumeResultSchema = z.discriminatedUnion("status", [
   z
