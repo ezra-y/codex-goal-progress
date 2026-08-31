@@ -16,7 +16,7 @@
 
 ## 🆕 Latest update
 
-### 🚀 v0.3.0 — Restart recovery, multi-window support, and in-app updates
+### 🚀 v0.3.1 — Restart recovery, multi-window support, and in-app updates
 
 - 🔌 **Start from the official Codex icon.** Goal Progress sets up the required CDP connection
   automatically. No extra command or manual setup is needed.
