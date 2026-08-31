@@ -304,6 +304,9 @@ export class MacosStartupHandoffController {
         eventResponse(event, "continue", "STARTUP_EVENT_PROCESS_MISMATCH"),
       );
     }
+    if (original.parentPid === process.pid) {
+      return this.#remember(key, eventResponse(event, "continue", "STARTUP_EVENT_HELPER_LAUNCH"));
+    }
     if (commandHasCdp(original.command)) {
       return this.#remember(key, eventResponse(event, "continue", "STARTUP_EVENT_ALREADY_CDP"));
     }

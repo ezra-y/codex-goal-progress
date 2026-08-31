@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Fix a startup fallback loop that could repeatedly open and close Codex.
+
 ## 0.3.0
 
 - 🔌 **Start from the official Codex icon.** Goal Progress sets up the required CDP connection
