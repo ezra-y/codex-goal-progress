@@ -315,7 +315,8 @@ export function createPluginController(options: {
         return false;
       }
       for (const launcher of ["bin/goal-progress-mcp", "bin/goal-progress-hook"]) {
-        if (((await stat(resolve(legacyCacheRoot, launcher))).mode & 0o777) !== 0o700) {
+        const mode = (await stat(resolve(legacyCacheRoot, launcher))).mode & 0o777;
+        if ((mode & 0o500) !== 0o500 || (mode & 0o022) !== 0) {
           return false;
         }
       }
