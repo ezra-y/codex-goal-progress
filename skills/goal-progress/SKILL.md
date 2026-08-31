@@ -42,6 +42,14 @@ If activation returns `NATIVE_GOAL_REQUIRED`, create a native Goal from the mark
 with Codex `create_goal`, then call empty `goal_progress_activate` once more. If the body is empty,
 ask the user for the Goal instead of creating an empty one.
 
+## Checklist
+
+Before generating a Checklist for the first time, changing the acceptance scope, or replacing a
+Contract, read [Checklist organization and scope changes](references/checklist-and-scope.md).
+
+When restoring existing progress or updating completion status, continue using the existing
+Checklist, IDs, and weights.
+
 ## Work Loop
 
 Keep `update_plan` as an execution plan. Never turn its steps into the Goal denominator.
@@ -58,7 +66,6 @@ the trusted current native Goal after that change.
 When the trusted native Goal changes, classify the change as minor or major in the current model.
 Do not use text similarity, another model, or another thread.
 Do not ask the user to invoke Goal Progress again.
-Read [Checklist and scope](references/checklist-and-scope.md) before rescope or replacement.
 A wording-only change keeps the existing Checklist. A minor scope change keeps the Contract and
 uses `goal_progress_rescope` for affected results only.
 A major change prepares a fresh Contract and uses `goal_progress_initialize`.

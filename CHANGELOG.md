@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Progress is calculated from a structured checklist that breaks the goal into weighted, measurable steps.
+
 ## 0.3.1
 
 - Fix a startup fallback loop that could repeatedly open and close Codex.
