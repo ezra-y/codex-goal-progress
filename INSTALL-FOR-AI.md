@@ -54,12 +54,6 @@ When `code` is `INSTALL_RESTART_PENDING`, wait for Codex to reopen, then run:
 ./bin/goal-progress install --json
 ```
 
-## Review the Hook
-
-When Codex itself shows a Goal Progress Hook review prompt, ask the user to inspect and approve it.
-Do not infer Hook review state from the installer result. Continue after the user confirms the
-review.
-
 ## Verify
 
 Run:
@@ -82,4 +76,3 @@ Tell the user:
 - the Doctor code
 - the Verify code
 - whether Codex restarted
-- whether Hook review completed

@@ -26,9 +26,32 @@ export interface GoalProgressMessages {
   readonly placementSettingsTriggerLabel: string;
   readonly placementSettingsLabel: string;
   readonly displaySettings: string;
+  readonly versionSection: string;
+  readonly effects: string;
   readonly animationEffects: string;
   readonly fixedDisplay: string;
   readonly floatingDisplay: string;
+  readonly currentVersion: string;
+  readonly checkUpdates: string;
+  readonly upToDate: string;
+  readonly checkingUpdates: string;
+  readonly newVersion: (version: string) => string;
+  readonly checkFailed: string;
+  readonly restartPending: (version: string) => string;
+  readonly viewUpdateNotes: string;
+  readonly updateAvailable: string;
+  readonly updateNow: string;
+  readonly preparingUpdate: string;
+  readonly downloading: string;
+  readonly downloadingUnknown: string;
+  readonly verifyingUpdate: string;
+  readonly installingUpdate: string;
+  readonly downloadFailed: string;
+  readonly updateFailed: string;
+  readonly restartReady: string;
+  readonly restartingUpdate: string;
+  readonly restartNow: string;
+  readonly restartLater: string;
   readonly overallLabel: string;
   readonly overallProgress: string;
   readonly composerShorterAutoExpand: string;
@@ -84,12 +107,35 @@ const zhCN: GoalProgressMessages = {
   goalCompleted: "目标已完成",
   waitingNativeGoalRecovery: "等待原生 Goal 恢复",
   completionCount: (completed, total) => `${completed}/${total} 个小目标完成`,
-  placementSettingsTriggerLabel: "显示位置设置",
-  placementSettingsLabel: "Goal Progress 显示设置",
-  displaySettings: "显示设置",
+  placementSettingsTriggerLabel: "更多",
+  placementSettingsLabel: "Goal Progress 更多菜单",
+  displaySettings: "显示",
+  versionSection: "版本",
+  effects: "效果",
   animationEffects: "动画效果",
   fixedDisplay: "固定显示",
   floatingDisplay: "浮动显示",
+  currentVersion: "当前版本",
+  checkUpdates: "检查更新",
+  upToDate: "已是最新",
+  checkingUpdates: "检查中…",
+  newVersion: (version) => `有新版本 · v${version}`,
+  checkFailed: "检查失败",
+  restartPending: (version) => `待重启 · v${version}`,
+  viewUpdateNotes: "查看更新说明",
+  updateAvailable: "有更新可用",
+  updateNow: "立即更新",
+  preparingUpdate: "正在准备更新…",
+  downloading: "下载中",
+  downloadingUnknown: "正在下载…",
+  verifyingUpdate: "正在校验更新…",
+  installingUpdate: "正在安装更新…",
+  downloadFailed: "下载失败",
+  updateFailed: "更新失败",
+  restartReady: "下载成功 · 重启后生效",
+  restartingUpdate: "正在重启…",
+  restartNow: "立即重启",
+  restartLater: "稍后重启",
   overallLabel: "总进度",
   overallProgress: "总体进度",
   composerShorterAutoExpand: "输入框缩短后自动展开",
@@ -145,12 +191,35 @@ const en: GoalProgressMessages = {
   goalCompleted: "Goal completed",
   waitingNativeGoalRecovery: "Waiting for the native Goal to resume",
   completionCount: (completed, total) => `${completed}/${total} objectives completed`,
-  placementSettingsTriggerLabel: "Display position settings",
-  placementSettingsLabel: "Goal Progress display settings",
-  displaySettings: "Display settings",
+  placementSettingsTriggerLabel: "More",
+  placementSettingsLabel: "Goal Progress more menu",
+  displaySettings: "Display",
+  versionSection: "Version",
+  effects: "Effects",
   animationEffects: "Animation effects",
   fixedDisplay: "Fixed display",
   floatingDisplay: "Floating display",
+  currentVersion: "Current version",
+  checkUpdates: "Check for updates",
+  upToDate: "Up to date",
+  checkingUpdates: "Checking…",
+  newVersion: (version) => `New version · v${version}`,
+  checkFailed: "Check failed",
+  restartPending: (version) => `Restart pending · v${version}`,
+  viewUpdateNotes: "View release notes",
+  updateAvailable: "Update available",
+  updateNow: "Update now",
+  preparingUpdate: "Preparing update…",
+  downloading: "Downloading",
+  downloadingUnknown: "Downloading…",
+  verifyingUpdate: "Verifying update…",
+  installingUpdate: "Installing update…",
+  downloadFailed: "Download failed",
+  updateFailed: "Update failed",
+  restartReady: "Downloaded · restart to apply",
+  restartingUpdate: "Restarting…",
+  restartNow: "Restart now",
+  restartLater: "Restart later",
   overallLabel: "Overall progress",
   overallProgress: "Overall progress",
   composerShorterAutoExpand: "Expands when the composer becomes shorter",
@@ -206,12 +275,35 @@ const isIS: GoalProgressMessages = {
   goalCompleted: "Markmiði lokið",
   waitingNativeGoalRecovery: "Bíður eftir að upprunalegt Goal haldi áfram",
   completionCount: (completed, total) => `${completed}/${total} undirmarkmiðum lokið`,
-  placementSettingsTriggerLabel: "Stillingar skjástöðu",
-  placementSettingsLabel: "Skjástillingar Goal Progress",
-  displaySettings: "Skjástillingar",
+  placementSettingsTriggerLabel: "Meira",
+  placementSettingsLabel: "Fleiri valkostir Goal Progress",
+  displaySettings: "Sýning",
+  versionSection: "Útgáfa",
+  effects: "Áhrif",
   animationEffects: "Hreyfingar",
   fixedDisplay: "Föst sýn",
   floatingDisplay: "Fljótandi sýn",
+  currentVersion: "Núverandi útgáfa",
+  checkUpdates: "Leita að uppfærslu",
+  upToDate: "Nýjasta útgáfa",
+  checkingUpdates: "Leitar…",
+  newVersion: (version) => `Ný útgáfa · v${version}`,
+  checkFailed: "Leit mistókst",
+  restartPending: (version) => `Endurræsing bíður · v${version}`,
+  viewUpdateNotes: "Skoða útgáfulýsingu",
+  updateAvailable: "Uppfærsla í boði",
+  updateNow: "Uppfæra núna",
+  preparingUpdate: "Undirbýr uppfærslu…",
+  downloading: "Sækir",
+  downloadingUnknown: "Sækir…",
+  verifyingUpdate: "Staðfestir uppfærslu…",
+  installingUpdate: "Setur upp uppfærslu…",
+  downloadFailed: "Niðurhal mistókst",
+  updateFailed: "Uppfærsla mistókst",
+  restartReady: "Niðurhal lokið · endurræstu til að virkja",
+  restartingUpdate: "Endurræsir…",
+  restartNow: "Endurræsa núna",
+  restartLater: "Endurræsa síðar",
   overallLabel: "Heildarframvinda",
   overallProgress: "Heildarframvinda",
   composerShorterAutoExpand: "Opnast þegar innsláttarsvæðið styttist",
@@ -267,12 +359,35 @@ const ar: GoalProgressMessages = {
   goalCompleted: "اكتمل الهدف",
   waitingNativeGoalRecovery: "بانتظار استئناف هدف Goal الأصلي",
   completionCount: (completed, total) => `${completed}/${total} من الأهداف الفرعية مكتملة`,
-  placementSettingsTriggerLabel: "إعدادات موضع العرض",
-  placementSettingsLabel: "إعدادات عرض Goal Progress",
-  displaySettings: "إعدادات العرض",
+  placementSettingsTriggerLabel: "المزيد",
+  placementSettingsLabel: "قائمة Goal Progress الإضافية",
+  displaySettings: "العرض",
+  versionSection: "الإصدار",
+  effects: "التأثيرات",
   animationEffects: "تأثيرات الحركة",
   fixedDisplay: "عرض ثابت",
   floatingDisplay: "عرض عائم",
+  currentVersion: "الإصدار الحالي",
+  checkUpdates: "التحقق من التحديثات",
+  upToDate: "أحدث إصدار",
+  checkingUpdates: "جارٍ التحقق…",
+  newVersion: (version) => `إصدار جديد · v${version}`,
+  checkFailed: "فشل التحقق",
+  restartPending: (version) => `إعادة تشغيل مطلوبة · v${version}`,
+  viewUpdateNotes: "عرض ملاحظات الإصدار",
+  updateAvailable: "تحديث متاح",
+  updateNow: "تحديث الآن",
+  preparingUpdate: "جارٍ إعداد التحديث…",
+  downloading: "جارٍ التنزيل",
+  downloadingUnknown: "جارٍ التنزيل…",
+  verifyingUpdate: "جارٍ التحقق من التحديث…",
+  installingUpdate: "جارٍ تثبيت التحديث…",
+  downloadFailed: "فشل التنزيل",
+  updateFailed: "فشل التحديث",
+  restartReady: "اكتمل التنزيل · أعد التشغيل للتطبيق",
+  restartingUpdate: "جارٍ إعادة التشغيل…",
+  restartNow: "إعادة التشغيل الآن",
+  restartLater: "إعادة التشغيل لاحقًا",
   overallLabel: "التقدم الإجمالي",
   overallProgress: "التقدم الإجمالي",
   composerShorterAutoExpand: "يتمدد عند تقلص مربع الإدخال",

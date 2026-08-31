@@ -582,7 +582,6 @@ export const GoalContractInitializationSchema = z
     contractId: GoalContractIdSchema,
     source: GoalProgressSourceSchema,
     objectives: z.array(GoalObjectiveSchema).max(100),
-    preparedForObjective: NonEmptyTextSchema.max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH),
   })
   .strict();
 

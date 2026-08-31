@@ -389,7 +389,7 @@ if (manifest) {
       "PreToolUse",
       "^(?:goal_progress_|.*[^A-Za-z0-9]goal_progress[^A-Za-z0-9]+goal_progress_)(?:activate|initialize|get|update|rescope|set_phase)$",
       undefined,
-      1,
+      3,
     );
     validateHookEvent(hookEvents, "PostToolUse", "^update_goal$", 64, 2, true);
   }

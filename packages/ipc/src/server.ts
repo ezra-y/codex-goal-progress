@@ -19,6 +19,7 @@ const GOAL_PROGRESS_IPC_MAX_IN_FLIGHT = 256;
 export interface GoalProgressIpcHandlerResult {
   readonly revision: number | null;
   readonly result: unknown;
+  readonly afterResponse?: () => Promise<void> | void;
 }
 
 export interface GoalProgressIpcConnectionContext {
@@ -361,9 +362,11 @@ export class GoalProgressIpcServer {
                 revision: handled.revision,
                 result: handled.result,
               });
+              const responseIsSuccess =
+                Buffer.byteLength(successLine) <= GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES;
               await writeSocketLine(
                 socket,
-                Buffer.byteLength(successLine) <= GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES
+                responseIsSuccess
                   ? successLine
                   : responseLine(
                       errorResponse(
@@ -374,6 +377,16 @@ export class GoalProgressIpcServer {
                       ),
                     ),
               );
+              if (responseIsSuccess && handled.afterResponse) {
+                try {
+                  const afterResponse = Promise.resolve(handled.afterResponse()).catch(
+                    () => undefined,
+                  );
+                  this.#trackInFlight(afterResponse);
+                } catch {
+                  // The successful response is already visible to the client.
+                }
+              }
             } catch (error) {
               const handledError =
                 error instanceof GoalProgressIpcHandlerError

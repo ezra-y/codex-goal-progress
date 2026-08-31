@@ -12,6 +12,11 @@ export {
   GOAL_PROGRESS_SET_MOTION_PAUSED_EVENT,
   GOAL_PROGRESS_SET_PLACEMENT_EVENT,
 } from "../../contracts/src/renderer-events.js";
+export type {
+  GoalProgressUpdateIntent,
+  GoalProgressUpdateState,
+} from "../../contracts/src/update-state.js";
+export { GOAL_PROGRESS_UPDATE_INTENT_EVENT } from "../../contracts/src/update-state-runtime.js";
 export { GoalProgressElement } from "./goal-progress-element.js";
 
 declare global {

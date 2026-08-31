@@ -79,19 +79,9 @@ export const GoalProgressToolOutputSchema = z
     summary: z.string().max(500),
     nextStep: z.string().max(200),
     duplicate: z.boolean().nullable(),
-    branch: z.enum(["A", "B", "C", "D", "E"]).optional(),
-    nativeGoalAction: z
-      .enum([
-        "create",
-        "attach",
-        "report-conflict",
-        "wait-for-verified-replacement",
-        "request-objective",
-      ])
-      .optional(),
-    progressAction: z.enum(["initialize", "get", "none"]).optional(),
+    progressAction: z.enum(["initialize", "get", "rescope-or-replace", "none"]).optional(),
     preparing: z.boolean().optional(),
-    preparedForObjective: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).optional(),
+    currentNativeGoal: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).optional(),
   })
   .strict();
 
@@ -101,25 +91,18 @@ export const GoalProgressInitializeInputSchema = z
     contractId: businessTransportField(GoalContractIdSchema),
     source: businessTransportField(GoalProgressSourceSchema),
     objectives: businessTransportField(z.array(GoalObjectiveSchema).max(100)),
-    preparedForObjective: businessTransportField(
-      z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH),
-    ),
     _runtimeContext: RuntimeContextTransportSchema,
     _runtimeProof: RuntimeProofTransportSchema,
   })
   .passthrough()
-  .meta({ required: ["contractId", "source", "objectives", "preparedForObjective"] });
+  .meta({ required: ["contractId", "source", "objectives"] });
 
 export const GoalProgressActivateInputSchema = z
   .object({
-    objectiveBody: businessTransportField(
-      z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).nullable(),
-    ),
-    replacementRequested: businessTransportField(z.boolean()),
     _runtimeContext: RuntimeContextTransportSchema,
     _runtimeProof: RuntimeProofTransportSchema,
   })
-  .passthrough();
+  .strict();
 
 export const GoalProgressGetInputSchema = z
   .object({
@@ -176,22 +159,9 @@ const GoalProgressUpdateBusinessSchema = z
   })
   .strict();
 
-const GoalProgressInitializeBusinessSchema = GoalContractInitializationSchema.extend({
-  preparedForObjective: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH),
-}).strict();
+const GoalProgressInitializeBusinessSchema = GoalContractInitializationSchema;
 
-const GoalProgressActivateBusinessSchema = z
-  .object({
-    objectiveBody: z
-      .string()
-      .trim()
-      .min(1)
-      .max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH)
-      .nullable()
-      .optional(),
-    replacementRequested: z.boolean().optional(),
-  })
-  .strict();
+const GoalProgressActivateBusinessSchema = z.object({}).strict();
 
 const GoalProgressRescopeBusinessSchema = z
   .object({
@@ -236,26 +206,18 @@ const IpcLoadResultSchema = z
     eventCount: z.number().int().nonnegative(),
     previousContractId: GoalContractIdSchema.optional(),
     previousRevision: z.number().int().nonnegative().optional(),
-    preparedForObjective: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).optional(),
+    currentNativeGoal: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).optional(),
   })
   .passthrough();
 
 const IpcActivationResultSchema = z
   .object({
-    branch: z.enum(["A", "B", "C", "D", "E"]),
-    nativeGoalAction: z.enum([
-      "create",
-      "attach",
-      "report-conflict",
-      "wait-for-verified-replacement",
-      "request-objective",
-    ]),
-    progressAction: z.enum(["initialize", "get", "none"]),
+    progressAction: z.enum(["initialize", "get", "rescope-or-replace", "none"]),
     preparing: z.boolean(),
     code: z.string().trim().min(1).max(128),
     contractId: GoalContractIdSchema.nullable(),
     revision: z.number().int().nonnegative().nullable(),
-    preparedForObjective: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).optional(),
+    currentNativeGoal: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).optional(),
   })
   .strict();
 
@@ -524,14 +486,12 @@ function errorNextStep(code: string): string {
     case "CORRECTION_REASON_REQUIRED":
       return "Add correctionReason, then retry the progress decrease.";
     case "CONTRACT_MISMATCH":
-    case "SESSION_MISMATCH":
+    case "THREAD_MISMATCH":
       return "Call goal_progress_get in the current Goal session.";
     case "STORE_NOT_INITIALIZED":
       return "Call goal_progress_initialize after the checklist is ready.";
     case "STORE_ALREADY_INITIALIZED":
       return "Call goal_progress_get and reuse the existing Contract.";
-    case "PREPARATION_OBJECTIVE_STALE":
-      return "Call goal_progress_get again and prepare the Checklist for preparedForObjective.";
     case "ACTIVATION_CANCELLED":
       return "Wait until the user explicitly selects Goal Progress again.";
     case "RUNTIME_PROOF_INVALID":
@@ -549,7 +509,7 @@ function errorNextStep(code: string): string {
     case "CURRENT_THREAD_AMBIGUOUS":
     case "CURRENT_THREAD_UNAVAILABLE":
       return "Stay in the current Goal thread and retry after the host identity is unique.";
-    case "NATIVE_GOAL_UNAVAILABLE":
+    case "NATIVE_GOAL_READ_UNAVAILABLE":
       return "Run doctor and verify the current native Goal, then retry.";
     case "NATIVE_GOAL_DETACHED":
       return "The native Goal ended or is missing; do not keep writing the previous Contract.";
@@ -630,20 +590,14 @@ function successContent(
 }
 
 function activationNextStep(result: z.infer<typeof IpcActivationResultSchema>): string {
-  if (result.nativeGoalAction === "create") {
-    return "Create the native Goal with the objective body, verify it, then initialize.";
+  if (result.code === "NATIVE_GOAL_REQUIRED") {
+    return "Create a native Goal with Codex, then call goal_progress_activate again.";
   }
-  if (result.nativeGoalAction === "request-objective") {
-    return "Ask the user to write the Goal below the Goal Progress marker.";
-  }
-  if (result.nativeGoalAction === "report-conflict") {
-    return "Report the objective conflict and recommend attaching to the current Goal.";
-  }
-  if (result.nativeGoalAction === "wait-for-verified-replacement") {
-    return "Wait for the user to replace the native Goal through verified controls.";
+  if (result.progressAction === "rescope-or-replace") {
+    return "Compare the existing Checklist with the current native Goal. Rescope only affected objectives, or initialize a new Contract for a major change.";
   }
   return result.progressAction === "get"
-    ? "Preparing Contract: read and reuse the existing Goal Contract."
+    ? "Call goal_progress_get and continue with the existing Contract."
     : "Preparing Contract: build and initialize one Goal Contract.";
 }
 
@@ -700,8 +654,6 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         const response = await getIpcClient().request({
           method: "activation.plan",
           params: {
-            objectiveBody: business.data.objectiveBody ?? null,
-            replacementRequested: business.data.replacementRequested ?? false,
             runtimeContext: context.data,
             runtimeProof: proof.data,
           },
@@ -714,16 +666,19 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
           revision: result.revision,
           currentRevision: null,
           ...progressOutput(),
-          summary: `Activation planned: branch ${result.branch} will ${result.nativeGoalAction}.`,
+          summary:
+            result.code === "NATIVE_GOAL_REQUIRED"
+              ? "A native Goal is required before Goal Progress can start."
+              : result.code === "NATIVE_GOAL_UPDATED"
+                ? "The native Goal changed. Goal Progress is waiting for Checklist adjustment."
+                : result.progressAction === "get"
+                  ? "The current native Goal already has an active Goal Progress Contract."
+                  : "The current native Goal is ready for Goal Progress initialization.",
           nextStep: activationNextStep(result),
           duplicate: null,
-          branch: result.branch,
-          nativeGoalAction: result.nativeGoalAction,
           progressAction: result.progressAction,
           preparing: result.preparing,
-          ...(result.preparedForObjective
-            ? { preparedForObjective: result.preparedForObjective }
-            : {}),
+          ...(result.currentNativeGoal ? { currentNativeGoal: result.currentNativeGoal } : {}),
         });
       } catch (error) {
         return requestError(error);
@@ -842,20 +797,21 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
           if (
             result.previousContractId &&
             result.previousRevision !== undefined &&
-            result.preparedForObjective
+            result.currentNativeGoal
           ) {
             return toolContent({
               ok: true,
-              code: "PREPARING_REPLACEMENT",
+              code: "NATIVE_GOAL_UPDATED",
               contractId: result.previousContractId,
               revision: result.previousRevision,
               currentRevision: null,
               ...progressOutput(),
-              summary: "Preparing Contract for the changed native Goal.",
+              summary:
+                "The native Goal changed. Goal Progress is waiting for Checklist adjustment.",
               nextStep:
-                "Use this Contract and revision for minor rescope, or initialize a major replacement for preparedForObjective.",
+                "Compare the existing Checklist with the current native Goal. Rescope only affected objectives, or initialize a new Contract for a major change.",
               duplicate: null,
-              preparedForObjective: result.preparedForObjective,
+              currentNativeGoal: result.currentNativeGoal,
             });
           }
           return toolContent({

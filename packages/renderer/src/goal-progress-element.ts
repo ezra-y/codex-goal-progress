@@ -1,5 +1,10 @@
 import { html, LitElement, nothing, type PropertyValues } from "lit";
-import type { GoalProgressPlacement, GoalProgressViewModel } from "../../contracts/src/index.js";
+import type {
+  GoalProgressPlacement,
+  GoalProgressUpdateIntent,
+  GoalProgressUpdateState,
+  GoalProgressViewModel,
+} from "../../contracts/src/index.js";
 import {
   GOAL_PROGRESS_FLOATING_LAYOUT_EVENT,
   GOAL_PROGRESS_LAYOUT_OFFSET_EVENT,
@@ -7,11 +12,14 @@ import {
   GOAL_PROGRESS_REQUEST_RETRY_EVENT,
   GOAL_PROGRESS_SET_COLLAPSED_EVENT,
   GOAL_PROGRESS_SET_FLOATING_X_RATIO_EVENT,
-  GOAL_PROGRESS_SET_MOTION_PAUSED_EVENT,
-  GOAL_PROGRESS_SET_PLACEMENT_EVENT,
 } from "../../contracts/src/renderer-events.js";
+import {
+  GOAL_PROGRESS_UPDATE_INTENT_EVENT,
+  isGoalProgressUpdateVersion,
+} from "../../contracts/src/update-state-runtime.js";
 import { renderErrorView, renderPreparingView } from "./components/states.js";
 import { renderTrackingView } from "./components/tracking.js";
+import { DisplaySettingsMenuController } from "./display-settings-menu-controller.js";
 import { resolveGoalProgressLocale } from "./locale.js";
 import { ObjectiveScrollController } from "./objective-scroll-controller.js";
 import { codexThemeTokenStyles } from "./styles/codex-theme-tokens.js";
@@ -22,6 +30,7 @@ import { objectiveStyles } from "./styles/objectives.js";
 import { placementStyles } from "./styles/placement.js";
 import { progressStyles } from "./styles/progress.js";
 import { stateStyles } from "./styles/states.js";
+import { updateStyles } from "./styles/updates.js";
 
 type RendererTheme = "auto" | "dark" | "light";
 
@@ -38,6 +47,7 @@ function activeObjectiveId(viewModel: GoalProgressViewModel | null | undefined):
 export class GoalProgressElement extends LitElement {
   static override properties = {
     viewModel: { attribute: false },
+    updateState: { attribute: false },
     collapsed: { type: Boolean, reflect: true },
     motionPaused: { type: Boolean, attribute: "motion-paused", reflect: true },
     placement: { type: String, reflect: true },
@@ -61,6 +71,7 @@ export class GoalProgressElement extends LitElement {
     _scrollThumbSize: { state: true },
     _scrollThumbOffset: { state: true },
     _settingsOpen: { state: true },
+    _updateSeenVersion: { state: true },
   };
 
   static override styles = [
@@ -72,9 +83,11 @@ export class GoalProgressElement extends LitElement {
     progressStyles,
     stateStyles,
     motionStyles,
+    updateStyles,
   ];
 
   declare viewModel: GoalProgressViewModel | null;
+  declare updateState: GoalProgressUpdateState | null;
   declare collapsed: boolean;
   declare motionPaused: boolean;
   declare placement: GoalProgressPlacement;
@@ -89,7 +102,8 @@ export class GoalProgressElement extends LitElement {
   protected declare _scrollable: boolean;
   protected declare _scrollThumbSize: number;
   protected declare _scrollThumbOffset: number;
-  protected declare _settingsOpen: boolean;
+  declare _settingsOpen: boolean;
+  protected declare _updateSeenVersion: string | null;
   #lastLayoutOffset = -1;
   #floatingPointerId: number | null = null;
   #floatingPointerMoved = false;
@@ -107,10 +121,12 @@ export class GoalProgressElement extends LitElement {
     this._scrollThumbSize = state.thumbSize;
     this._scrollThumbOffset = state.thumbOffset;
   });
+  readonly #displaySettingsMenu = new DisplaySettingsMenuController(this);
 
   constructor() {
     super();
     this.viewModel = null;
+    this.updateState = null;
     this.collapsed = false;
     this.motionPaused = false;
     this.placement = "inline";
@@ -126,6 +142,7 @@ export class GoalProgressElement extends LitElement {
     this._scrollThumbSize = 0;
     this._scrollThumbOffset = 0;
     this._settingsOpen = false;
+    this._updateSeenVersion = null;
   }
 
   override connectedCallback(): void {
@@ -153,6 +170,9 @@ export class GoalProgressElement extends LitElement {
   }
 
   protected override updated(changedProperties: PropertyValues<this>): void {
+    if (changedProperties.has("_settingsOpen")) {
+      this.toggleAttribute("settings-open", this._settingsOpen);
+    }
     const identity = objectiveScrollIdentity(this.viewModel);
     this.#scrollController.bind(this.renderRoot, identity);
     if (changedProperties.has("viewModel")) {
@@ -196,7 +216,7 @@ export class GoalProgressElement extends LitElement {
             previous.sessionId !== next.sessionId ||
             next.trackingPhase === "detached"))
       ) {
-        this._settingsOpen = false;
+        this.#displaySettingsMenu.close();
       }
     }
   }
@@ -222,7 +242,7 @@ export class GoalProgressElement extends LitElement {
 
   #setCollapsed(collapsed: boolean, restoreFocus: boolean): void {
     this.collapsed = collapsed;
-    this._settingsOpen = false;
+    this.#displaySettingsMenu.close();
     this.dispatchEvent(
       new CustomEvent(GOAL_PROGRESS_SET_COLLAPSED_EVENT, {
         detail: { collapsed: this.collapsed },
@@ -242,10 +262,9 @@ export class GoalProgressElement extends LitElement {
   };
 
   readonly #onDocumentPointerDown = (event: PointerEvent): void => {
-    if (event.composedPath().includes(this)) {
+    if (this.#displaySettingsMenu.handleDocumentPointerDown(event)) {
       return;
     }
-    this._settingsOpen = false;
     if (this.placement === "floating" && !this.collapsed) {
       this.#setCollapsed(true, false);
     }
@@ -255,12 +274,7 @@ export class GoalProgressElement extends LitElement {
     if (event.key !== "Escape") {
       return;
     }
-    if (this._settingsOpen) {
-      event.preventDefault();
-      this._settingsOpen = false;
-      void this.updateComplete.then(() =>
-        this.renderRoot.querySelector<HTMLButtonElement>(".placement-settings-trigger")?.focus(),
-      );
+    if (this.#displaySettingsMenu.handleDocumentKeyDown(event)) {
       return;
     }
     if (this.placement === "floating" && !this.collapsed) {
@@ -376,38 +390,6 @@ export class GoalProgressElement extends LitElement {
     this.#publishFloatingXRatio(true);
   };
 
-  #togglePlacementSettings = (event: MouseEvent): void => {
-    if (!event.isTrusted) {
-      this._settingsOpen = false;
-      return;
-    }
-    this._settingsOpen = !this._settingsOpen;
-  };
-
-  #selectPlacement = (placement: GoalProgressPlacement): void => {
-    this.requestedPlacement = placement;
-    this.placement = placement;
-    this._settingsOpen = false;
-    this.dispatchEvent(
-      new CustomEvent(GOAL_PROGRESS_SET_PLACEMENT_EVENT, {
-        detail: { placement },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  };
-
-  #toggleMotionPaused = (): void => {
-    this.motionPaused = !this.motionPaused;
-    this.dispatchEvent(
-      new CustomEvent(GOAL_PROGRESS_SET_MOTION_PAUSED_EVENT, {
-        detail: { motionPaused: this.motionPaused },
-        bubbles: true,
-        composed: true,
-      }),
-    );
-  };
-
   #requestRetry = (): void => {
     this.dispatchEvent(
       new CustomEvent(GOAL_PROGRESS_REQUEST_RETRY_EVENT, {
@@ -424,6 +406,80 @@ export class GoalProgressElement extends LitElement {
         composed: true,
       }),
     );
+  };
+
+  markUpdateSeen(): void {
+    const latestVersion = this.updateState?.latestVersion;
+    if (isGoalProgressUpdateVersion(latestVersion)) {
+      this._updateSeenVersion = latestVersion;
+    }
+  }
+
+  #dispatchUpdateIntent(intent: GoalProgressUpdateIntent): void {
+    if ("version" in intent && !isGoalProgressUpdateVersion(intent.version)) {
+      return;
+    }
+    this.dispatchEvent(
+      new CustomEvent(GOAL_PROGRESS_UPDATE_INTENT_EVENT, {
+        detail: intent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  #checkUpdate = (): void => {
+    if (!this.updateState || this.updateState.phase === "checking") {
+      return;
+    }
+    this.#dispatchUpdateIntent({ type: "check" });
+  };
+
+  #openCurrentRelease = (): void => {
+    const version = this.updateState?.currentVersion;
+    if (isGoalProgressUpdateVersion(version)) {
+      this.#dispatchUpdateIntent({ type: "open-release", version });
+    }
+  };
+
+  #openLatestRelease = (): void => {
+    const version = this.updateState?.latestVersion;
+    if (isGoalProgressUpdateVersion(version)) {
+      this.#dispatchUpdateIntent({ type: "open-release", version });
+    }
+  };
+
+  #startUpdate = (): void => {
+    const version = this.updateState?.latestVersion;
+    if (!this.updateState || !isGoalProgressUpdateVersion(version)) {
+      return;
+    }
+    this.markUpdateSeen();
+    this.#dispatchUpdateIntent({ type: "start", version });
+  };
+
+  #retryUpdate = (): void => {
+    const version = this.updateState?.latestVersion;
+    if (!this.updateState || !isGoalProgressUpdateVersion(version)) {
+      return;
+    }
+    this.#dispatchUpdateIntent({ type: "retry", version });
+  };
+
+  #restartNow = (): void => {
+    const version = this.updateState?.latestVersion;
+    if (isGoalProgressUpdateVersion(version)) {
+      this.#dispatchUpdateIntent({ type: "restart-now", version });
+    }
+  };
+
+  #restartLater = (): void => {
+    const version = this.updateState?.latestVersion;
+    if (!isGoalProgressUpdateVersion(version)) {
+      return;
+    }
+    this.markUpdateSeen();
+    this.#dispatchUpdateIntent({ type: "restart-later", version });
   };
 
   override render() {
@@ -447,6 +503,15 @@ export class GoalProgressElement extends LitElement {
     if (viewModel.trackingPhase === "detached") {
       return nothing;
     }
+    const latestVersion = this.updateState?.latestVersion;
+    const updateUnread =
+      this.updateState?.phase === "available" &&
+      isGoalProgressUpdateVersion(latestVersion) &&
+      latestVersion !== this.updateState.lastSeenUpdateVersion &&
+      latestVersion !== this._updateSeenVersion;
+    const updatePromptDismissed =
+      isGoalProgressUpdateVersion(latestVersion) &&
+      latestVersion === this.updateState?.promptDismissedForVersion;
     return html`<section class="panel phase-${viewModel.trackingPhase} placement-${this.placement}">
       ${renderTrackingView(viewModel, {
         collapsed: this.collapsed,
@@ -467,10 +532,20 @@ export class GoalProgressElement extends LitElement {
         onFloatingKeyDown: this.#moveFloatingWithKeyboard,
         onFloatingPointerMove: this.#moveFloatingPointerEvent,
         onFloatingPointerUp: this.#endFloatingPointer,
-        onSelectPlacement: this.#selectPlacement,
-        onToggleMotionPaused: this.#toggleMotionPaused,
-        onTogglePlacementSettings: this.#togglePlacementSettings,
+        onSelectPlacement: this.#displaySettingsMenu.selectPlacement,
+        onCheckUpdate: this.#checkUpdate,
+        onOpenCurrentRelease: this.#openCurrentRelease,
+        onOpenLatestRelease: this.#openLatestRelease,
+        onStartUpdate: this.#startUpdate,
+        onRetryUpdate: this.#retryUpdate,
+        onRestartNow: this.#restartNow,
+        onRestartLater: this.#restartLater,
+        onToggleMotionPaused: this.#displaySettingsMenu.toggleMotionPaused,
+        onTogglePlacementSettings: this.#displaySettingsMenu.toggle,
         onToggleCollapsed: this.#toggleCollapsed,
+        updateState: this.updateState,
+        updateUnread,
+        updatePromptDismissed,
       })}
     </section>`;
   }

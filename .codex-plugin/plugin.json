@@ -1,6 +1,6 @@
 {
   "name": "codex-goal-progress",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "Explicitly attach deterministic progress tracking to one native Codex Goal.",
   "author": {
     "name": "Codex Goal Progress Contributors"
@@ -14,6 +14,7 @@
     "longDescription": "Adds an explicit, checklist-based progress Contract to the current native Codex Goal while local Core code computes every percentage.",
     "developerName": "Codex Goal Progress Contributors",
     "category": "Productivity",
+    "logo": "./assets/codex-goal-progress-plugin-logo.png",
     "capabilities": ["Read", "Write"],
     "defaultPrompt": ["$codex-goal-progress:goal-progress"]
   }

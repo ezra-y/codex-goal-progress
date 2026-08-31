@@ -1,15 +1,21 @@
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
+  classifyGoalProgressUpdateState,
   DEFAULT_GOAL_PROGRESS_UI_PREFERENCE,
   GOAL_PROGRESS_UI_INTENT_BINDING_PREFIX,
   GOAL_PROGRESS_UI_INTENT_MAX_BYTES,
   GOAL_PROGRESS_UI_INTENT_MAX_PER_SECOND,
   GOAL_PROGRESS_UI_INTENT_PROTOCOL_VERSION,
+  GOAL_PROGRESS_UPDATE_INTENT_MAX_BYTES,
   GoalContractIdSchema,
   type GoalProgressUiIntent,
   GoalProgressUiIntentSchema,
   type GoalProgressUiPreference,
+  type GoalProgressUpdateIntent,
+  GoalProgressUpdateIntentEnvelopeSchema,
+  type GoalProgressUpdateState,
+  GoalProgressUpdateStateSchema,
   type GoalProgressViewModel,
 } from "../../contracts/src/index.js";
 import type { CodexHostPlatform } from "./anchor-adapter.js";
@@ -17,6 +23,7 @@ import {
   type CdpCommandSender,
   CdpProtocolClient,
   type CdpProtocolClientOptions,
+  type CodexCdpTarget,
   discoverCodexCdp,
   evaluateGoalProgressPageBundle,
   type FetchLike,
@@ -46,7 +53,15 @@ export interface GoalProgressRendererBridgeOptions {
     threadId: string,
     intent: GoalProgressUiIntent,
   ) => Promise<GoalProgressRendererUiIntentResult>;
-  readonly onVisibleThreadChange?: (threadId: string | null) => Promise<void> | void;
+  readonly onUpdateIntent?: (
+    threadId: string,
+    intent: GoalProgressUpdateIntent,
+  ) => Promise<GoalProgressRendererUpdateIntentResult>;
+  readonly onVisibleThreadChange?: (
+    threadId: string | null,
+    sequence?: number,
+    lifecycleId?: string,
+  ) => Promise<void> | void;
   readonly onDisconnected?: (code: string) => Promise<void> | void;
   readonly environment?: {
     readonly appPath?: string;
@@ -61,6 +76,10 @@ export interface GoalProgressRendererUiIntentResult {
   readonly viewModel: GoalProgressViewModel;
   readonly uiPreference: GoalProgressUiPreference;
   readonly dismissed?: boolean;
+}
+
+export interface GoalProgressRendererUpdateIntentResult {
+  readonly updateState: GoalProgressUpdateState;
 }
 
 export interface ConnectGoalProgressRendererBridgeOptions
@@ -113,6 +132,7 @@ export class GoalProgressRendererBridge {
   readonly #appVersion: string;
   readonly #closeSender: (() => Promise<void>) | undefined;
   readonly #onUiIntent: GoalProgressRendererBridgeOptions["onUiIntent"];
+  readonly #onUpdateIntent: GoalProgressRendererBridgeOptions["onUpdateIntent"];
   readonly #onVisibleThreadChange: GoalProgressRendererBridgeOptions["onVisibleThreadChange"];
   readonly #onDisconnected: GoalProgressRendererBridgeOptions["onDisconnected"];
   readonly #environment: GoalProgressRendererBridgeOptions["environment"];
@@ -123,9 +143,11 @@ export class GoalProgressRendererBridge {
   readonly #uiIntentTimestamps: number[] = [];
   #queue: Promise<void> = Promise.resolve();
   #latestViewModel: GoalProgressViewModel | undefined;
+  #latestUpdateState: GoalProgressUpdateState | null = null;
   #uiPreference: GoalProgressUiPreference = DEFAULT_GOAL_PROGRESS_UI_PREFERENCE;
   #bindingRegistered = false;
   #visibleThreadWatcherRegistered = false;
+  #visibleThreadLifecycleId = randomBytes(24).toString("base64url");
   #scriptRegistered = false;
   #installed = false;
   #configured = false;
@@ -138,6 +160,7 @@ export class GoalProgressRendererBridge {
     this.#appVersion = options.appVersion;
     this.#closeSender = options.closeSender;
     this.#onUiIntent = options.onUiIntent;
+    this.#onUpdateIntent = options.onUpdateIntent;
     this.#onVisibleThreadChange = options.onVisibleThreadChange;
     this.#onDisconnected = options.onDisconnected;
     this.#environment = options.environment;
@@ -150,10 +173,12 @@ export class GoalProgressRendererBridge {
           this.#installed = false;
           this.#configured = false;
           if (this.#onVisibleThreadChange && this.#visibleThreadWatcherRegistered) {
+            this.#visibleThreadLifecycleId = randomBytes(24).toString("base64url");
             await refreshGoalProgressVisibleThreadWatcher(
               this.#sender,
               this.#visibleThreadBindingName,
               this.#bridgeNonce,
+              this.#visibleThreadLifecycleId,
             );
           }
           await this.#ensureInstalled();
@@ -170,7 +195,9 @@ export class GoalProgressRendererBridge {
               return;
             }
             try {
-              void Promise.resolve(this.#onVisibleThreadChange(threadId)).catch(() => undefined);
+              void Promise.resolve(
+                this.#onVisibleThreadChange(threadId, undefined, this.#visibleThreadLifecycleId),
+              ).catch(() => undefined);
             } catch {
               // Page load only schedules Helper restore after the Bridge queue is free.
             }
@@ -180,6 +207,9 @@ export class GoalProgressRendererBridge {
       options.sender.onEvent?.("Runtime.bindingCalled", (params) => {
         void this.#enqueue(async () => {
           if (await this.#handleVisibleThreadSignal(params)) {
+            return;
+          }
+          if (await this.#handleUpdateIntent(params)) {
             return;
           }
           await this.#handleUiIntent(params);
@@ -195,6 +225,14 @@ export class GoalProgressRendererBridge {
         }
       }),
     ].filter((unsubscribe): unsubscribe is () => void => unsubscribe !== undefined);
+  }
+
+  get currentUpdateState(): GoalProgressUpdateState | null {
+    return this.#latestUpdateState;
+  }
+
+  get visibleThreadLifecycleId(): string {
+    return this.#visibleThreadLifecycleId;
   }
 
   async publish(viewModel: GoalProgressViewModel): Promise<void> {
@@ -229,6 +267,20 @@ export class GoalProgressRendererBridge {
       await this.#ensureInstalled();
       await invokeGoalProgressPageApi(this.#sender, "unmount");
       this.#configured = false;
+    });
+  }
+
+  async setUpdateState(updateState: GoalProgressUpdateState | null): Promise<void> {
+    return this.#enqueue(async () => {
+      const incoming = GoalProgressUpdateStateSchema.nullable().parse(updateState);
+      if (
+        incoming === null ||
+        classifyGoalProgressUpdateState(incoming, this.#latestUpdateState) !== "accept"
+      ) {
+        return;
+      }
+      this.#latestUpdateState = incoming;
+      await this.#writeLatestUpdateStateToPage();
     });
   }
 
@@ -330,8 +382,9 @@ export class GoalProgressRendererBridge {
         platform: this.#platform,
         appVersion: this.#appVersion,
         viewModel,
+        updateState: this.#latestUpdateState,
         uiPreference: this.#uiPreference,
-        ...(this.#onUiIntent
+        ...(this.#onUiIntent || this.#onUpdateIntent
           ? {
               bridgeNonce: this.#bridgeNonce,
               bridgeBindingName: this.#bindingName,
@@ -351,10 +404,11 @@ export class GoalProgressRendererBridge {
         this.#sender,
         this.#visibleThreadBindingName,
         this.#bridgeNonce,
+        this.#visibleThreadLifecycleId,
       );
       this.#visibleThreadWatcherRegistered = true;
     }
-    if (this.#onUiIntent && !this.#bindingRegistered) {
+    if ((this.#onUiIntent || this.#onUpdateIntent) && !this.#bindingRegistered) {
       await this.#sender.send("Runtime.enable");
       await this.#sender.send("Runtime.addBinding", {
         name: this.#bindingName,
@@ -401,6 +455,10 @@ export class GoalProgressRendererBridge {
       .object({
         protocolVersion: z.literal(1),
         bridgeNonce: z.string().regex(/^[A-Za-z0-9_-]{32}$/u),
+        lifecycleId: z
+          .string()
+          .regex(/^[A-Za-z0-9_-]{32}$/u)
+          .optional(),
         type: z.literal("visibleThreadChanged"),
         threadId: z
           .string()
@@ -409,16 +467,27 @@ export class GoalProgressRendererBridge {
           .max(256)
           .refine((value) => !value.startsWith("client-new-thread:"))
           .nullable(),
+        sequence: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
       })
       .strict()
       .safeParse(payload);
     if (!signal.success || signal.data.bridgeNonce !== this.#bridgeNonce) {
       return true;
     }
+    if (
+      signal.data.lifecycleId !== undefined &&
+      signal.data.lifecycleId !== this.#visibleThreadLifecycleId
+    ) {
+      return true;
+    }
     try {
-      void Promise.resolve(this.#onVisibleThreadChange(signal.data.threadId)).catch(
-        () => undefined,
-      );
+      void Promise.resolve(
+        this.#onVisibleThreadChange(
+          signal.data.threadId,
+          signal.data.sequence,
+          signal.data.lifecycleId ?? this.#visibleThreadLifecycleId,
+        ),
+      ).catch(() => undefined);
     } catch {
       // A page signal only schedules Helper work; it never owns the Bridge queue.
     }
@@ -501,6 +570,91 @@ export class GoalProgressRendererBridge {
     await this.#mount(result.viewModel);
   }
 
+  async #handleUpdateIntent(params: unknown): Promise<boolean> {
+    if (!this.#onUpdateIntent) {
+      return false;
+    }
+    const binding = z
+      .object({
+        name: z.string(),
+        payload: z.string(),
+      })
+      .passthrough()
+      .safeParse(params);
+    if (!binding.success || binding.data.name !== this.#bindingName) {
+      return false;
+    }
+    if (Buffer.byteLength(binding.data.payload) > GOAL_PROGRESS_UPDATE_INTENT_MAX_BYTES) {
+      return true;
+    }
+    let payload: unknown;
+    try {
+      payload = JSON.parse(binding.data.payload);
+    } catch {
+      return true;
+    }
+    const envelope = GoalProgressUpdateIntentEnvelopeSchema.safeParse(payload);
+    if (!envelope.success) {
+      return false;
+    }
+    const current = this.#latestViewModel;
+    if (
+      !current ||
+      envelope.data.bridgeNonce !== this.#bridgeNonce ||
+      envelope.data.contractId !== current.contractId ||
+      envelope.data.threadId !== current.sessionId ||
+      !envelope.data.userActivated
+    ) {
+      return true;
+    }
+    const now = Date.now();
+    while (
+      this.#uiIntentTimestamps[0] !== undefined &&
+      this.#uiIntentTimestamps[0] <= now - 1_000
+    ) {
+      this.#uiIntentTimestamps.shift();
+    }
+    if (this.#uiIntentTimestamps.length >= GOAL_PROGRESS_UI_INTENT_MAX_PER_SECOND) {
+      return true;
+    }
+    this.#uiIntentTimestamps.push(now);
+    const result = await this.#onUpdateIntent(envelope.data.threadId, envelope.data.intent);
+    const incoming = GoalProgressUpdateStateSchema.parse(result.updateState);
+    if (classifyGoalProgressUpdateState(incoming, this.#latestUpdateState) !== "accept") {
+      return true;
+    }
+    this.#latestUpdateState = incoming;
+    await this.#writeLatestUpdateStateToPage();
+    return true;
+  }
+
+  async #writeLatestUpdateStateToPage(): Promise<void> {
+    const viewModel = this.#latestViewModel;
+    if (!viewModel || !this.#configured) {
+      return;
+    }
+    const pageResult = await invokeGoalProgressPageApi(
+      this.#sender,
+      "setUpdateState",
+      this.#latestUpdateState,
+    );
+    const parsed = GoalProgressPageMutationResultSchema.safeParse(pageResult);
+    if (!parsed.success) {
+      this.#configured = false;
+      throw new Error("GOAL_PROGRESS_PAGE_HOST_UPDATE_STATE_FAILED");
+    }
+    const result = parsed.data;
+    if (result.reason === "ok" && result.hostCount === 1) {
+      return;
+    }
+    this.#configured = false;
+    if (result.reason === "not-configured") {
+      await this.#mount(viewModel);
+      return;
+    }
+    throw new Error("GOAL_PROGRESS_PAGE_HOST_UPDATE_STATE_FAILED");
+  }
+
   #enqueue<T>(work: () => Promise<T>): Promise<T> {
     const run = this.#queue.then(work, work).catch((error: unknown) => {
       this.#lastErrorCode = stableBridgeErrorCode(error);
@@ -540,6 +694,13 @@ export async function connectGoalProgressRendererBridge(
   if (!target) {
     throw new Error("GOAL_PROGRESS_CDP_APP_RENDERER_NOT_FOUND");
   }
+  return connectGoalProgressRendererBridgeTarget(options, target);
+}
+
+export async function connectGoalProgressRendererBridgeTarget(
+  options: ConnectGoalProgressRendererBridgeOptions,
+  target: CodexCdpTarget,
+): Promise<ConnectedGoalProgressRendererBridge> {
   const client = await CdpProtocolClient.connect(
     target.webSocketDebuggerUrl,
     options.clientOptions,
@@ -552,6 +713,7 @@ export async function connectGoalProgressRendererBridge(
       appVersion: options.appVersion,
       closeSender: () => client.close(),
       ...(options.onUiIntent === undefined ? {} : { onUiIntent: options.onUiIntent }),
+      ...(options.onUpdateIntent === undefined ? {} : { onUpdateIntent: options.onUpdateIntent }),
       ...(options.onVisibleThreadChange === undefined
         ? {}
         : { onVisibleThreadChange: options.onVisibleThreadChange }),

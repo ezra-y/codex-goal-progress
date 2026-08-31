@@ -32,7 +32,6 @@ These are actions or generic phases. They do not say what accepted result exists
 {
   "contractId": "gp_importer01",
   "source": "model-generated",
-  "preparedForObjective": "Publish a working command-line importer",
   "objectives": [
     {
       "id": "C1",

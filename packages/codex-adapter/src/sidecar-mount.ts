@@ -16,12 +16,32 @@ import type {
   GoalProgressUiPreference,
 } from "../../contracts/src/ui-preference.js";
 import type {
+  GoalProgressUpdateIntent,
+  GoalProgressUpdateState,
+} from "../../contracts/src/update-state.js";
+import {
+  GOAL_PROGRESS_UPDATE_INTENT_EVENT,
+  parseGoalProgressUpdateIntent,
+} from "../../contracts/src/update-state-runtime.js";
+import type {
   CodexAnchorRejectionReason,
   CodexNativeGoalLocator,
   CodexVisibleThreadRejectionReason,
   NativeGoalTarget,
 } from "./anchor-adapter.js";
 import { projectFloatingCenter } from "./floating-placement.js";
+import {
+  type GoalProgressDisplayMode,
+  projectSidecarDiagnostics,
+  projectSidecarHealth,
+  rectFingerprint,
+  type SidecarHealthReason,
+  type SidecarHealthResult,
+  type SidecarHealthStatus,
+  type SidecarLayoutDiagnostics,
+  type SidecarVisibilityDiagnostics,
+} from "./sidecar-diagnostics.js";
+import { parseExpandedLayoutOffset, parseSidecarUiIntent } from "./sidecar-ui-intent-adapter.js";
 
 export {
   GOAL_PROGRESS_ELEMENT_NAME,
@@ -32,6 +52,14 @@ export {
   GOAL_PROGRESS_SET_MOTION_PAUSED_EVENT,
   GOAL_PROGRESS_SET_PLACEMENT_EVENT,
 } from "../../contracts/src/renderer-events.js";
+export type {
+  GoalProgressDisplayMode,
+  SidecarHealthReason,
+  SidecarHealthResult,
+  SidecarHealthStatus,
+  SidecarLayoutDiagnostics,
+  SidecarVisibilityDiagnostics,
+} from "./sidecar-diagnostics.js";
 
 export const GOAL_PROGRESS_HOST_ATTRIBUTE = "data-codex-goal-progress-host";
 export const GOAL_PROGRESS_HOST_ATTRIBUTE_VALUE = "v1";
@@ -39,7 +67,6 @@ export const GOAL_PROGRESS_FLOATING_FALLBACK_ATTRIBUTE =
   "data-codex-goal-progress-floating-fallback";
 const GOAL_PROGRESS_ANCHOR_ORIGINAL_TRANSLATE_ATTRIBUTE =
   "data-codex-goal-progress-original-translate";
-const GOAL_PROGRESS_MAX_EXPANDED_OFFSET_PX = 1_200;
 const GOAL_PROGRESS_FLOATING_FALLBACK_RETRY_DELAYS_MS = [250, 500, 1_000, 2_000, 4_000] as const;
 
 export type GoalProgressLocalUiIntent = GoalProgressUiIntent;
@@ -49,7 +76,6 @@ export interface GoalProgressLocalUiIntentContext {
 }
 
 export type SidecarMountAction = "mounted" | "updated" | "unmounted" | "none";
-export type GoalProgressDisplayMode = "native" | "fallback" | "hidden";
 
 export type GoalProgressDisplayTarget =
   | ({ readonly kind: "native" } & NativeGoalTarget)
@@ -76,90 +102,15 @@ export interface SidecarMountResult {
   readonly visibleThreadStatus: "matched" | "retained";
 }
 
-export type SidecarHealthStatus = "mounted" | "unmounted" | "blocked";
-
-export type SidecarHealthReason =
-  | "ok"
-  | "anchor-unavailable"
-  | "native-goal-changed"
-  | "host-missing"
-  | "host-misplaced"
-  | "host-ambiguous"
-  | "host-unmanaged"
-  | CodexVisibleThreadRejectionReason;
-
-export interface SidecarHealthResult {
-  readonly status: SidecarHealthStatus;
-  readonly reason: SidecarHealthReason;
-  readonly adapterId: string;
-  readonly adapterRejectionReason: CodexAnchorRejectionReason | null;
-  readonly hostCount: number;
-  readonly displayMode: GoalProgressDisplayMode;
-  readonly nativeAnchorMatched: boolean;
-  readonly visibleThreadStatus: "matched" | "retained";
-  readonly componentVisible: boolean;
-  readonly viewModelRevision: number | null;
-}
-
-export interface SidecarLayoutDiagnostics {
-  readonly lastAnchorState: "none" | "live" | "unavailable";
-  readonly lastConstraintTransition: "none" | "entered" | "exited";
-  readonly lastCollapsedTransition:
-    | "none"
-    | "preference-collapsed"
-    | "preference-expanded"
-    | "user-collapsed"
-    | "user-expanded";
-  readonly lastPlacementTransition:
-    | "none"
-    | "preference-inline"
-    | "preference-floating"
-    | "user-inline"
-    | "user-floating"
-    | "fallback-inline";
-  readonly layoutReadCount: number;
-  readonly layoutWriteCount: number;
-  readonly nativeGeometryFingerprint: string | null;
-  readonly sidecarGeometryFingerprint: string | null;
-  readonly continuityModeActive: boolean;
-  readonly requestedPlacement: "inline" | "floating";
-  readonly effectivePlacement: "none" | "inline" | "floating";
-  readonly floatingFallbackReason: "insufficient-space" | null;
-  readonly lastHostRemovalReason: string | null;
-  readonly visibility: SidecarVisibilityDiagnostics;
-}
-
-export interface SidecarVisibilityDiagnostics {
-  readonly composerRectFingerprint: string | null;
-  readonly textboxRectFingerprint: string | null;
-  readonly hostRectFingerprint: string | null;
-  readonly textboxClientHeight: number | null;
-  readonly textboxScrollHeight: number | null;
-  readonly textboxScrollTop: number | null;
-  readonly textboxOverflowY: string | null;
-  readonly composerClassTokenCount: number;
-  readonly composerInlineStylePropertyCount: number;
-  readonly clippingAncestorFingerprint: string | null;
-  readonly clippingOverflow: string | null;
-  readonly hostViewportIntersectionRatio: number;
-  readonly hostClippedIntersectionRatio: number;
-  readonly anchorConnected: boolean;
-  readonly composerCount: number;
-  readonly textboxCount: number;
-  readonly surface: "none" | "expanded" | "compact";
-  readonly lastObserverReason:
-    | "none"
-    | "inline-resize"
-    | "floating-resize"
-    | "textbox-input"
-    | "textbox-scroll";
-}
-
 export interface SidecarMountControllerOptions {
   readonly nativeGoalLocator: CodexNativeGoalLocator;
   readonly elementName?: string;
   readonly onUiIntent?: (
     intent: GoalProgressLocalUiIntent,
+    context: GoalProgressLocalUiIntentContext,
+  ) => void;
+  readonly onUpdateIntent?: (
+    intent: GoalProgressUpdateIntent,
     context: GoalProgressLocalUiIntentContext,
   ) => void;
 }
@@ -168,49 +119,12 @@ export interface SidecarEnsureMountedOptions {
   readonly displayTarget: GoalProgressDisplayTarget;
   readonly environmentChanged?: boolean;
   readonly nativeGoalRejectionReason?: CodexAnchorRejectionReason | null;
-}
-
-function rectFingerprint(rect: DOMRect | null): string {
-  if (!rect) {
-    return "none";
-  }
-  const bounded = [rect.left, rect.top, rect.right, rect.bottom, rect.width, rect.height].map(
-    (value) => (Number.isFinite(value) ? Math.round(value * 10) / 10 : null),
-  );
-  return bounded.join(",");
-}
-
-function intersectionRatio(rect: DOMRect | null, bounds: readonly DOMRect[]): number {
-  if (!rect || rect.width <= 0 || rect.height <= 0) {
-    return 0;
-  }
-  let left = rect.left;
-  let top = rect.top;
-  let right = rect.right;
-  let bottom = rect.bottom;
-  for (const bound of bounds) {
-    left = Math.max(left, bound.left);
-    top = Math.max(top, bound.top);
-    right = Math.min(right, bound.right);
-    bottom = Math.min(bottom, bound.bottom);
-  }
-  const visibleArea = Math.max(0, right - left) * Math.max(0, bottom - top);
-  return Math.round((visibleArea / (rect.width * rect.height)) * 10_000) / 10_000;
-}
-
-function clippingAncestors(element: HTMLElement, view: Window): HTMLElement[] {
-  const ancestors: HTMLElement[] = [];
-  for (let current = element.parentElement; current; current = current.parentElement) {
-    const style = view.getComputedStyle(current);
-    if (/(auto|clip|hidden|scroll)/u.test(`${style.overflowX} ${style.overflowY}`)) {
-      ancestors.push(current);
-    }
-  }
-  return ancestors;
+  readonly updateState?: GoalProgressUpdateState | null;
 }
 
 interface GoalProgressHostElement extends HTMLElement {
   viewModel: GoalProgressViewModel | null;
+  updateState: GoalProgressUpdateState | null;
   collapsed: boolean;
   readonly expandedLayoutOffset?: number;
   floatingCenterAvailable: boolean;
@@ -265,56 +179,24 @@ export function removeManagedGoalProgressHosts(document: Document): number {
   const managedHosts = hosts(document).filter(isManagedHost);
   for (const host of managedHosts) {
     host.viewModel = null;
+    host.updateState = null;
     host.remove();
   }
   return managedHosts.length;
 }
 
-function eventDetail(event: Event): unknown {
-  return "detail" in event ? (event as CustomEvent<unknown>).detail : undefined;
-}
-
-function booleanDetail(event: Event, key: "collapsed" | "motionPaused"): boolean | null {
-  const detail = eventDetail(event);
-  if (detail === null || typeof detail !== "object" || Array.isArray(detail)) {
-    return null;
+function preparingViewMatchesGoalIdentity(
+  viewModel: GoalProgressViewModel,
+  goalIdentity: string | null,
+): boolean {
+  if (viewModel.trackingPhase !== "preparing" || goalIdentity === null) {
+    return false;
   }
-  const value = (detail as Record<string, unknown>)[key];
-  return typeof value === "boolean" ? value : null;
-}
-
-function expandedOffsetDetail(event: Event): number | null {
-  const detail = eventDetail(event);
-  if (detail === null || typeof detail !== "object" || Array.isArray(detail)) {
-    return null;
-  }
-  const value = (detail as Record<string, unknown>).expandedOffset;
-  return typeof value === "number" &&
-    Number.isFinite(value) &&
-    value >= 0 &&
-    value <= GOAL_PROGRESS_MAX_EXPANDED_OFFSET_PX
-    ? Math.ceil(value)
-    : null;
-}
-
-function placementDetail(event: Event): "inline" | "floating" | null {
-  const detail = eventDetail(event);
-  if (detail === null || typeof detail !== "object" || Array.isArray(detail)) {
-    return null;
-  }
-  const value = (detail as Record<string, unknown>).placement;
-  return value === "inline" || value === "floating" ? value : null;
-}
-
-function floatingXRatioDetail(event: Event): number | null {
-  const detail = eventDetail(event);
-  if (detail === null || typeof detail !== "object" || Array.isArray(detail)) {
-    return null;
-  }
-  const value = (detail as Record<string, unknown>).floatingXRatio;
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1
-    ? value
-    : null;
+  const objective = viewModel.objective
+    .replace(/\s+/gu, " ")
+    .replace(/\s*•\s*$/u, "")
+    .trim();
+  return objective.length > 0 && objective === goalIdentity;
 }
 
 function findFloatingObstacle(
@@ -400,6 +282,9 @@ export class SidecarMountController {
   readonly #onUiIntent:
     | ((intent: GoalProgressLocalUiIntent, context: GoalProgressLocalUiIntentContext) => void)
     | undefined;
+  readonly #onUpdateIntent:
+    | ((intent: GoalProgressUpdateIntent, context: GoalProgressLocalUiIntentContext) => void)
+    | undefined;
   #host: GoalProgressHostElement | null = null;
   #anchor: HTMLElement | null = null;
   #controlArea: HTMLElement | null = null;
@@ -464,23 +349,25 @@ export class SidecarMountController {
   };
 
   readonly #onCollapsed = (event: Event): void => {
-    const collapsed = booleanDetail(event, "collapsed");
-    if (collapsed !== null) {
+    const parsed = parseSidecarUiIntent(event);
+    if (parsed?.intent.type === "setCollapsed") {
+      const { collapsed } = parsed.intent;
       this.#lastCollapsedTransition = collapsed ? "user-collapsed" : "user-expanded";
-      this.#emitUiIntent({ type: "setCollapsed", collapsed });
+      this.#emitUiIntent(parsed.intent);
     }
   };
 
   readonly #onMotionPaused = (event: Event): void => {
-    const motionPaused = booleanDetail(event, "motionPaused");
-    if (motionPaused !== null) {
-      this.#emitUiIntent({ type: "setMotionPaused", motionPaused });
+    const parsed = parseSidecarUiIntent(event);
+    if (parsed?.intent.type === "setMotionPaused") {
+      this.#emitUiIntent(parsed.intent);
     }
   };
 
   readonly #onPlacement = (event: Event): void => {
-    const placement = placementDetail(event);
-    if (placement !== null) {
+    const parsed = parseSidecarUiIntent(event);
+    if (parsed?.intent.type === "setPlacement") {
+      const { placement } = parsed.intent;
       this.#lastPlacementTransition = placement === "floating" ? "user-floating" : "user-inline";
       this.#requestedPlacement = placement;
       if (this.#host) {
@@ -501,20 +388,16 @@ export class SidecarMountController {
           this.#host.removeAttribute(GOAL_PROGRESS_FLOATING_FALLBACK_ATTRIBUTE);
         }
       }
-      this.#emitUiIntent({ type: "setPlacement", placement });
+      this.#emitUiIntent(parsed.intent);
     }
   };
 
   readonly #onFloatingXRatio = (event: Event): void => {
-    const floatingXRatio = floatingXRatioDetail(event);
-    if (floatingXRatio !== null) {
+    const parsed = parseSidecarUiIntent(event);
+    if (parsed?.intent.type === "setFloatingXRatio") {
+      const { floatingXRatio } = parsed.intent;
       const ratio = clampFloatingDockRatio(floatingXRatio);
-      const detail = eventDetail(event);
-      const commit =
-        detail === null ||
-        typeof detail !== "object" ||
-        Array.isArray(detail) ||
-        (detail as Record<string, unknown>).commit !== false;
+      const commit = "commit" in parsed ? parsed.commit : true;
       if (commit) {
         this.#requestedFloatingXRatio = ratio;
         this.#floatingPreviewRatio = null;
@@ -526,7 +409,7 @@ export class SidecarMountController {
         this.#scheduleFloatingLayout();
       }
       if (commit) {
-        this.#emitUiIntent({ type: "setFloatingXRatio", floatingXRatio: ratio });
+        this.#emitUiIntent({ ...parsed.intent, floatingXRatio: ratio });
       }
     }
   };
@@ -562,7 +445,7 @@ export class SidecarMountController {
     if (event.target !== this.#host) {
       return;
     }
-    const expandedOffset = expandedOffsetDetail(event);
+    const expandedOffset = parseExpandedLayoutOffset(event);
     if (expandedOffset !== null) {
       this.#applyLayoutOffset(expandedOffset);
       this.#scheduleInlineConstraint();
@@ -577,11 +460,24 @@ export class SidecarMountController {
     this.#emitUiIntent({ type: "requestDetach" });
   };
 
+  readonly #onUpdate = (event: Event): void => {
+    const intent = parseGoalProgressUpdateIntent(
+      "detail" in event ? (event as CustomEvent<unknown>).detail : undefined,
+    );
+    if (!intent) {
+      return;
+    }
+    this.#onUpdateIntent?.(intent, {
+      userActivated: this.#userClickActive,
+    });
+  };
+
   constructor(document: Document, options: SidecarMountControllerOptions) {
     this.#document = document;
     this.#nativeGoalLocator = options.nativeGoalLocator;
     this.#elementName = options.elementName ?? GOAL_PROGRESS_ELEMENT_NAME;
     this.#onUiIntent = options.onUiIntent;
+    this.#onUpdateIntent = options.onUpdateIntent;
   }
 
   ensureMounted(
@@ -609,7 +505,12 @@ export class SidecarMountController {
 
     this.#nativeGoalRejectionReason = options.nativeGoalRejectionReason ?? null;
     if (options.displayTarget.kind === "fallback") {
-      return this.#ensureFallbackMounted(viewModel, uiPreference, existingHost);
+      return this.#ensureFallbackMounted(
+        viewModel,
+        uiPreference,
+        existingHost,
+        options.updateState ?? null,
+      );
     }
 
     const anchor = options.displayTarget.anchor;
@@ -618,7 +519,10 @@ export class SidecarMountController {
         anchor,
         options.displayTarget.goalIdentity,
       );
-      if (identityFailure) {
+      if (
+        identityFailure &&
+        !preparingViewMatchesGoalIdentity(viewModel, options.displayTarget.goalIdentity)
+      ) {
         this.#lastAnchorState = "unavailable";
         this.#lastHostRemovalReason = identityFailure;
         this.#adoptHost(existingHost);
@@ -681,13 +585,14 @@ export class SidecarMountController {
       host.viewModel = null;
     }
     host.viewModel = viewModel;
+    host.updateState = options.updateState ?? null;
     if (uiPreference) {
-      const preserveFallback =
-        this.#floatingFallbackActive && uiPreference.placement === "floating";
+      const requestedPlacement = uiPreference.placement;
+      const preserveFallback = this.#floatingFallbackActive && requestedPlacement === "floating";
       if (this.#floatingFallbackActive && !preserveFallback) {
         this.#clearFloatingLayout();
       }
-      this.#requestedPlacement = uiPreference.placement;
+      this.#requestedPlacement = requestedPlacement;
       const requestedFloatingXRatio = clampFloatingDockRatio(uiPreference.floatingXRatio);
       this.#requestedFloatingXRatio = requestedFloatingXRatio;
       this.#floatingPreviewRatio = null;
@@ -695,7 +600,7 @@ export class SidecarMountController {
         ? "preference-collapsed"
         : "preference-expanded";
       this.#lastPlacementTransition =
-        uiPreference.placement === "floating" ? "preference-floating" : "preference-inline";
+        requestedPlacement === "floating" ? "preference-floating" : "preference-inline";
       if (!preserveFallback) {
         this.#floatingFallbackActive = false;
         host.removeAttribute(GOAL_PROGRESS_FLOATING_FALLBACK_ATTRIBUTE);
@@ -703,9 +608,10 @@ export class SidecarMountController {
       host.collapsed = preserveVisibleCollapsed ? visibleCollapsed : uiPreference.collapsed;
       host.motionPaused = uiPreference.motionPaused;
       host.hidden = uiPreference.hidden;
-      host.requestedPlacement = this.#requestedPlacement;
-      host.placement = preserveFallback ? "inline" : this.#requestedPlacement;
-      host.floatingXRatio = this.#requestedFloatingXRatio;
+      host.requestedPlacement = requestedPlacement;
+      host.placement =
+        preserveFallback || viewModel.trackingPhase === "preparing" ? "inline" : requestedPlacement;
+      host.floatingXRatio = requestedFloatingXRatio;
     }
     if (host.placement !== "inline" || host.collapsed) {
       host.spaceConstrained = false;
@@ -735,6 +641,7 @@ export class SidecarMountController {
   retainCurrentSession(
     viewModel: GoalProgressViewModel,
     uiPreference?: GoalProgressUiPreference,
+    updateState?: GoalProgressUpdateState | null,
   ): SidecarMountResult {
     const retentionFailure = this.#retentionFailureReason(viewModel.sessionId);
     if (retentionFailure) {
@@ -767,6 +674,7 @@ export class SidecarMountController {
     }
     syncHostLocale(host, this.#document);
     host.viewModel = viewModel;
+    host.updateState = updateState ?? null;
     if (uiPreference) {
       host.motionPaused = uiPreference.motionPaused;
       host.hidden = uiPreference.hidden;
@@ -805,6 +713,7 @@ export class SidecarMountController {
     viewModel: GoalProgressViewModel,
     uiPreference: GoalProgressUiPreference | undefined,
     existingHost: GoalProgressHostElement | null,
+    updateState: GoalProgressUpdateState | null,
   ): SidecarMountResult {
     const threadChanged = this.#sessionId !== null && this.#sessionId !== viewModel.sessionId;
     const nativeOriginWasVerified =
@@ -834,6 +743,7 @@ export class SidecarMountController {
       action === "updated" && this.#sessionId === viewModel.sessionId;
     const visibleCollapsed = host.collapsed;
     host.viewModel = viewModel;
+    host.updateState = updateState;
     if (uiPreference) {
       this.#requestedPlacement = uiPreference.placement;
       this.#requestedFloatingXRatio = clampFloatingDockRatio(uiPreference.floatingXRatio);
@@ -913,6 +823,23 @@ export class SidecarMountController {
     return this.#result(action, "ok", hosts(this.#document).length, false, null);
   }
 
+  setUpdateState(updateState: GoalProgressUpdateState | null): SidecarMountResult {
+    const existingHosts = hosts(this.#document);
+    if (existingHosts.length > 1) {
+      return this.#result("none", "host-ambiguous", existingHosts.length, false, null);
+    }
+    const host = existingHosts[0] ?? null;
+    if (!host) {
+      return this.#result("none", "host-missing", 0, false, null);
+    }
+    if (!isManagedHost(host)) {
+      return this.#result("none", "host-unmanaged", 1, false, null);
+    }
+    this.#adoptHost(host);
+    host.updateState = updateState;
+    return this.#result("updated", "ok", 1, false, this.#nativeGoalRejectionReason);
+  }
+
   health(): SidecarHealthResult {
     const existingHosts = hosts(this.#document);
     if (existingHosts.length > 1) {
@@ -964,22 +891,10 @@ export class SidecarMountController {
   }
 
   diagnostics(): SidecarLayoutDiagnostics {
-    const host = this.#host;
-    const anchor = this.#anchor;
-    const view = this.#document.defaultView;
-    const composer = anchor?.closest<HTMLElement>("[data-codex-composer-root]") ?? null;
-    const textbox =
-      composer?.querySelector<HTMLElement>('[role="textbox"][data-codex-composer]') ?? null;
-    const hostRect = host?.getBoundingClientRect() ?? null;
-    const clipping = host && view ? clippingAncestors(host, view) : [];
-    const viewport =
-      view === null
-        ? []
-        : [new DOMRect(0, 0, Math.max(0, view.innerWidth), Math.max(0, view.innerHeight))];
-    const nearestClipping = clipping[0] ?? null;
-    const nearestClippingStyle =
-      nearestClipping && view ? view.getComputedStyle(nearestClipping) : null;
-    return {
+    return projectSidecarDiagnostics({
+      host: this.#host,
+      anchor: this.#anchor,
+      document: this.#document,
       lastAnchorState: this.#lastAnchorState,
       lastConstraintTransition: this.#lastConstraintTransition,
       lastCollapsedTransition: this.#lastCollapsedTransition,
@@ -990,41 +905,10 @@ export class SidecarMountController {
       sidecarGeometryFingerprint: this.#sidecarGeometryFingerprint,
       continuityModeActive: this.#continuityModeActive,
       requestedPlacement: this.#requestedPlacement,
-      effectivePlacement: host?.placement ?? "none",
-      floatingFallbackReason: this.#floatingFallbackActive ? "insufficient-space" : null,
+      floatingFallbackActive: this.#floatingFallbackActive,
       lastHostRemovalReason: this.#lastHostRemovalReason,
-      visibility: {
-        composerRectFingerprint: composer
-          ? rectFingerprint(composer.getBoundingClientRect())
-          : null,
-        textboxRectFingerprint: textbox ? rectFingerprint(textbox.getBoundingClientRect()) : null,
-        hostRectFingerprint: hostRect ? rectFingerprint(hostRect) : null,
-        textboxClientHeight: textbox?.clientHeight ?? null,
-        textboxScrollHeight: textbox?.scrollHeight ?? null,
-        textboxScrollTop: textbox?.scrollTop ?? null,
-        textboxOverflowY: textbox && view ? view.getComputedStyle(textbox).overflowY : null,
-        composerClassTokenCount: composer?.classList.length ?? 0,
-        composerInlineStylePropertyCount: composer?.style.length ?? 0,
-        clippingAncestorFingerprint: nearestClipping
-          ? rectFingerprint(nearestClipping.getBoundingClientRect())
-          : null,
-        clippingOverflow: nearestClippingStyle
-          ? `${nearestClippingStyle.overflowX}/${nearestClippingStyle.overflowY}`
-          : null,
-        hostViewportIntersectionRatio: intersectionRatio(hostRect, viewport),
-        hostClippedIntersectionRatio: intersectionRatio(hostRect, [
-          ...viewport,
-          ...clipping.map((element) => element.getBoundingClientRect()),
-        ]),
-        anchorConnected: anchor?.isConnected === true,
-        composerCount: this.#document.querySelectorAll("[data-codex-composer-root]").length,
-        textboxCount: this.#document.querySelectorAll('[role="textbox"][data-codex-composer]')
-          .length,
-        surface:
-          host === null ? "none" : host.collapsed || host.spaceConstrained ? "compact" : "expanded",
-        lastObserverReason: this.#lastObserverReason,
-      },
-    };
+      lastObserverReason: this.#lastObserverReason,
+    });
   }
 
   #adoptHost(host: GoalProgressHostElement): void {
@@ -1047,6 +931,10 @@ export class SidecarMountController {
       host.addEventListener(GOAL_PROGRESS_SET_MOTION_PAUSED_EVENT, this.#onMotionPaused);
       host.addEventListener(GOAL_PROGRESS_REQUEST_RETRY_EVENT, this.#onRetry);
       host.addEventListener(GOAL_PROGRESS_REQUEST_DETACH_EVENT, this.#onDetach);
+    }
+    if (this.#onUpdateIntent) {
+      this.#document.addEventListener("click", this.#onDocumentClick, true);
+      host.addEventListener(GOAL_PROGRESS_UPDATE_INTENT_EVENT, this.#onUpdate);
     }
   }
 
@@ -1927,7 +1815,12 @@ export class SidecarMountController {
       host.removeEventListener(GOAL_PROGRESS_REQUEST_RETRY_EVENT, this.#onRetry);
       host.removeEventListener(GOAL_PROGRESS_REQUEST_DETACH_EVENT, this.#onDetach);
     }
+    if (this.#onUpdateIntent) {
+      this.#document.removeEventListener("click", this.#onDocumentClick, true);
+      host.removeEventListener(GOAL_PROGRESS_UPDATE_INTENT_EVENT, this.#onUpdate);
+    }
     host.viewModel = null;
+    host.updateState = null;
     host.spaceConstrained = false;
     host.floatingPanelConstrained = false;
     host.style.marginBlockStart = "";
@@ -1983,38 +1876,17 @@ export class SidecarMountController {
     hostCount: number,
     adapterRejectionReason: CodexAnchorRejectionReason | null,
   ): SidecarHealthResult {
-    return {
+    return projectSidecarHealth({
       status,
       reason,
       adapterId: this.#nativeGoalLocator.id,
       adapterRejectionReason,
       hostCount,
       displayMode: this.#displayMode,
-      nativeAnchorMatched: this.#displayMode === "native" && this.#anchor?.isConnected === true,
-      visibleThreadStatus: this.#continuityModeActive ? "retained" : "matched",
-      componentVisible: status === "mounted" && this.#componentIsVisible(),
-      viewModelRevision:
-        this.#host?.viewModel && Number.isSafeInteger(this.#host.viewModel.revision)
-          ? this.#host.viewModel.revision
-          : null,
-    };
-  }
-
-  #componentIsVisible(): boolean {
-    const host = this.#host;
-    const view = this.#document.defaultView;
-    if (!host?.isConnected || host.hidden) {
-      return false;
-    }
-    if (!view) {
-      return true;
-    }
-    const rect = host.getBoundingClientRect();
-    return (
-      intersectionRatio(rect, [
-        new DOMRect(0, 0, Math.max(0, view.innerWidth), Math.max(0, view.innerHeight)),
-        ...clippingAncestors(host, view).map((element) => element.getBoundingClientRect()),
-      ]) >= 0.99
-    );
+      anchor: this.#anchor,
+      continuityModeActive: this.#continuityModeActive,
+      host: this.#host,
+      document: this.#document,
+    });
   }
 }

@@ -110,6 +110,11 @@ export const placementStyles = css`
       transform: none;
     }
 
+    .floating-chip .collapse-toggle {
+      position: relative;
+      inset: auto;
+    }
+
     .floating-panel {
       position: absolute;
       z-index: 2;

@@ -1,5 +1,9 @@
 import { html } from "lit";
-import type { GoalProgressPlacement, GoalProgressViewModel } from "../../../contracts/src/index.js";
+import type {
+  GoalProgressPlacement,
+  GoalProgressUpdateState,
+  GoalProgressViewModel,
+} from "../../../contracts/src/index.js";
 import { renderCompletionFooter } from "./completion-footer.js";
 import { renderCurrentSummary } from "./current-summary.js";
 import { renderNotices } from "./notices.js";
@@ -21,14 +25,36 @@ export interface TrackingRenderOptions extends ObjectiveListRenderOptions {
   readonly onFloatingPointerMove: (event: PointerEvent) => void;
   readonly onFloatingPointerUp: (event: PointerEvent) => void;
   readonly onSelectPlacement: (placement: GoalProgressPlacement) => void;
+  readonly onCheckUpdate: () => void;
+  readonly onOpenCurrentRelease: () => void;
+  readonly onOpenLatestRelease: () => void;
+  readonly onRestartLater: () => void;
+  readonly onRestartNow: () => void;
+  readonly onRetryUpdate: () => void;
+  readonly onStartUpdate: () => void;
   readonly onToggleMotionPaused: () => void;
   readonly onTogglePlacementSettings: (event: MouseEvent) => void;
   readonly onToggleCollapsed: () => void;
+  readonly updatePromptDismissed: boolean;
+  readonly updateState: GoalProgressUpdateState | null;
+  readonly updateUnread: boolean;
 }
 
 function renderDetails(viewModel: GoalProgressViewModel, options: TrackingRenderOptions) {
+  const externalUpdatePhase =
+    options.updateState &&
+    [
+      "available",
+      "preparing",
+      "downloading",
+      "verifying",
+      "download-failed",
+      "update-failed",
+      "restart-required",
+    ].includes(options.updateState.phase) &&
+    !options.updatePromptDismissed;
   return html`
-    <div class="content">
+    <div class="content ${externalUpdatePhase ? "has-update-prompt" : ""}">
       ${renderCurrentSummary(viewModel, options.messages)}
       ${renderObjectiveLists(viewModel, options)}
       ${renderNotices(viewModel, options.messages)}
@@ -68,6 +94,8 @@ export function renderTrackingView(
             toggleDisabled: options.floatingPanelConstrained && !options.collapsed,
             toggleDisabledLabel: options.messages.spaceRestoredAutoExpand,
             onToggleCollapsed: options.onToggleCollapsed,
+            showUpdateUnread:
+              options.updateUnread && (options.collapsed || options.floatingPanelConstrained),
             messages: options.messages,
           })}
         </div>
@@ -82,6 +110,7 @@ export function renderTrackingView(
             compact: true,
             collapsed: options.collapsed,
             onToggleCollapsed: options.onToggleCollapsed,
+            showUpdateUnread: options.updateUnread,
             messages: options.messages,
           })
         : html`
