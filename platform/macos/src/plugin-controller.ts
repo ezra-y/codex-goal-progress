@@ -1,18 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import {
-  access,
-  chmod,
-  cp,
-  lstat,
-  readdir,
-  readFile,
-  realpath,
-  rm,
-  rmdir,
-  stat,
-} from "node:fs/promises";
+import { access, chmod, cp, lstat, readFile, realpath, rm, rmdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { ensurePrivateDirectory } from "../../../packages/store/src/index.js";
 import {
@@ -22,7 +11,11 @@ import {
 } from "./hook-configuration.js";
 import { isNotFound } from "./macos-errors.js";
 import { assertPluginTreeHasNoSymlinks, verifyPluginTreeManifest } from "./plugin-integrity.js";
-import { GOAL_PROGRESS_STABLE_HOOK_COMMAND } from "./plugin-release.js";
+import {
+  GOAL_PROGRESS_STABLE_HOOK_COMMAND,
+  GOAL_PROGRESS_STABLE_HOOK_LAUNCHER,
+  GOAL_PROGRESS_STABLE_MCP_LAUNCHER,
+} from "./plugin-release.js";
 import {
   type CodexInstallIdentity,
   fileSha256,
@@ -31,6 +24,86 @@ import {
 
 const PLUGIN_NAME = "codex-goal-progress";
 const MARKETPLACE_NAME = "codex-goal-progress-local";
+const REQUIRED_HOOK_EVENTS = ["SessionStart", "PreToolUse", "PostToolUse"] as const;
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  const allowedKeys = new Set(allowed);
+  return Object.keys(value).every((key) => allowedKeys.has(key));
+}
+
+function isSupportedMcpConfiguration(value: unknown): boolean {
+  const document = record(value);
+  const server = record(document?.goal_progress);
+  if (
+    !document ||
+    !server ||
+    !hasOnlyKeys(document, ["goal_progress"]) ||
+    !hasOnlyKeys(server, ["command", "args", "cwd", "env"]) ||
+    server.command !== "./bin/goal-progress-mcp" ||
+    !Array.isArray(server.args) ||
+    server.args.length !== 0 ||
+    server.cwd !== "."
+  ) {
+    return false;
+  }
+  if (server.env === undefined) {
+    return true;
+  }
+  const environment = record(server.env);
+  return (
+    environment !== null &&
+    hasOnlyKeys(environment, ["GOAL_PROGRESS_PLUGIN_DATA"]) &&
+    environment.GOAL_PROGRESS_PLUGIN_DATA === "$" + "{PLUGIN_DATA}"
+  );
+}
+
+function isSupportedHookConfiguration(value: unknown): boolean {
+  const document = record(value);
+  const hooks = record(document?.hooks);
+  if (!document || !hooks || "UserPromptSubmit" in hooks) {
+    return false;
+  }
+  for (const event of REQUIRED_HOOK_EVENTS) {
+    if (!Array.isArray(hooks[event]) || hooks[event].length === 0) {
+      return false;
+    }
+  }
+  for (const groups of Object.values(hooks)) {
+    if (!Array.isArray(groups)) {
+      return false;
+    }
+    for (const groupValue of groups) {
+      const group = record(groupValue);
+      if (!group || !Array.isArray(group.hooks) || group.hooks.length === 0) {
+        return false;
+      }
+      for (const hookValue of group.hooks) {
+        const hook = record(hookValue);
+        if (hook?.type !== "command" || hook.command !== GOAL_PROGRESS_STABLE_HOOK_COMMAND) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
+async function isSupportedLegacyLauncher(path: string, expectedContent: string): Promise<boolean> {
+  const metadata = await lstat(path);
+  const mode = metadata.mode & 0o777;
+  return (
+    metadata.isFile() &&
+    (mode === 0o700 || mode === 0o755) &&
+    (mode & 0o022) === 0 &&
+    (await readFile(path, "utf8")) === expectedContent
+  );
+}
 
 export interface PluginController {
   ensure(
@@ -133,22 +206,6 @@ export function createPluginController(options: {
     MARKETPLACE_NAME,
   );
   const pluginCacheRoot = resolve(marketplaceCacheRoot, PLUGIN_NAME);
-  const removeStalePluginCaches = async (currentVersion: string): Promise<void> => {
-    let entries: string[];
-    try {
-      entries = await readdir(pluginCacheRoot);
-    } catch (error) {
-      if (isNotFound(error)) {
-        return;
-      }
-      throw error;
-    }
-    await Promise.all(
-      entries
-        .filter((entry) => entry !== currentVersion)
-        .map((entry) => rm(resolve(pluginCacheRoot, entry), { recursive: true, force: true })),
-    );
-  };
   const removePluginCache = async (): Promise<boolean> => {
     let changed = false;
     let pluginCacheExists = false;
@@ -220,9 +277,10 @@ export function createPluginController(options: {
     const sourceRoot = resolve(marketplaceRoot, "plugins", PLUGIN_NAME);
     try {
       await verifyPluginTreeManifest(sourceRoot, expectedTreeManifestSha256);
-      const [sourceManifest, sourceMcp, sourceHook] = await Promise.all([
+      const [sourceManifest, sourceMcp, sourceHooks, sourceHook] = await Promise.all([
         readFile(resolve(sourceRoot, ".codex-plugin/plugin.json"), "utf8"),
         readFile(resolve(sourceRoot, ".mcp.json"), "utf8"),
+        readFile(resolve(sourceRoot, "hooks/hooks.json"), "utf8"),
         fileSha256(resolve(sourceRoot, "hooks/hooks.json")),
       ]);
       const parsedSourceManifest = JSON.parse(sourceManifest) as {
@@ -234,7 +292,8 @@ export function createPluginController(options: {
         !expectedVersion ||
         parsedSourceManifest.name !== PLUGIN_NAME ||
         parsedSourceManifest.version !== expectedVersion ||
-        sourceMcp.includes('"command": "node"')
+        !isSupportedMcpConfiguration(JSON.parse(sourceMcp)) ||
+        !isSupportedHookConfiguration(JSON.parse(sourceHooks))
       ) {
         return false;
       }
@@ -245,28 +304,45 @@ export function createPluginController(options: {
         PLUGIN_NAME,
         expectedVersion,
       );
+      let currentCacheExists = false;
       try {
-        await verifyPluginTreeManifest(currentCacheRoot, expectedTreeManifestSha256);
-        const [cacheManifest, cacheMcp, cacheHook] = await Promise.all([
-          readFile(resolve(currentCacheRoot, ".codex-plugin/plugin.json"), "utf8"),
-          readFile(resolve(currentCacheRoot, ".mcp.json"), "utf8"),
-          fileSha256(resolve(currentCacheRoot, "hooks/hooks.json")),
-        ]);
-        if (
-          sourceManifest !== cacheManifest ||
-          sourceMcp !== cacheMcp ||
-          sourceHook !== cacheHook
-        ) {
+        const currentCacheMetadata = await lstat(currentCacheRoot);
+        if (!currentCacheMetadata.isDirectory()) {
           return false;
         }
-        for (const launcher of ["bin/goal-progress-mcp", "bin/goal-progress-hook"]) {
-          if (((await stat(resolve(currentCacheRoot, launcher))).mode & 0o777) !== 0o700) {
+        currentCacheExists = true;
+      } catch (error) {
+        if (!isNotFound(error)) {
+          return false;
+        }
+      }
+      if (currentCacheExists) {
+        try {
+          await verifyPluginTreeManifest(currentCacheRoot, expectedTreeManifestSha256);
+          const [cacheManifest, cacheMcp, cacheHook] = await Promise.all([
+            readFile(resolve(currentCacheRoot, ".codex-plugin/plugin.json"), "utf8"),
+            readFile(resolve(currentCacheRoot, ".mcp.json"), "utf8"),
+            fileSha256(resolve(currentCacheRoot, "hooks/hooks.json")),
+          ]);
+          if (
+            sourceManifest !== cacheManifest ||
+            sourceMcp !== cacheMcp ||
+            sourceHook !== cacheHook
+          ) {
             return false;
           }
+          for (const launcher of ["bin/goal-progress-mcp", "bin/goal-progress-hook"]) {
+            const metadata = await lstat(resolve(currentCacheRoot, launcher));
+            if (!metadata.isFile() || (metadata.mode & 0o777) !== 0o700) {
+              return false;
+            }
+          }
+          if (reportedVersion === expectedVersion) {
+            return true;
+          }
+        } catch {
+          return false;
         }
-        return true;
-      } catch {
-        // An active task may rematerialize the compatible Plugin version it started with.
       }
       if (reportedVersion === expectedVersion || plugin?.enabled !== true) {
         return false;
@@ -289,36 +365,33 @@ export function createPluginController(options: {
         PLUGIN_NAME,
         reportedVersion,
       );
-      const [legacyManifest, legacyMcp, legacyHook] = await Promise.all([
-        readFile(resolve(legacyCacheRoot, ".codex-plugin/plugin.json"), "utf8"),
-        readFile(resolve(legacyCacheRoot, ".mcp.json"), "utf8"),
-        readFile(resolve(legacyCacheRoot, "hooks/hooks.json"), "utf8"),
-      ]);
+      const [legacyManifest, legacyMcp, legacyHook, legacyMcpLauncher, legacyHookLauncher] =
+        await Promise.all([
+          readFile(resolve(legacyCacheRoot, ".codex-plugin/plugin.json"), "utf8"),
+          readFile(resolve(legacyCacheRoot, ".mcp.json"), "utf8"),
+          readFile(resolve(legacyCacheRoot, "hooks/hooks.json"), "utf8"),
+          isSupportedLegacyLauncher(
+            resolve(legacyCacheRoot, "bin/goal-progress-mcp"),
+            GOAL_PROGRESS_STABLE_MCP_LAUNCHER,
+          ),
+          isSupportedLegacyLauncher(
+            resolve(legacyCacheRoot, "bin/goal-progress-hook"),
+            GOAL_PROGRESS_STABLE_HOOK_LAUNCHER,
+          ),
+        ]);
       const parsedManifest = JSON.parse(legacyManifest) as {
         name?: string;
         version?: string;
       };
-      const hookDocument = JSON.parse(legacyHook) as {
-        hooks?: Record<string, Array<{ hooks?: Array<{ command?: unknown }> }>>;
-      };
-      const hookCommands = Object.values(hookDocument.hooks ?? {}).flatMap((groups) =>
-        groups.flatMap((group) => (group.hooks ?? []).map((hook) => hook.command)),
-      );
       if (
         parsedManifest.name !== PLUGIN_NAME ||
         parsedManifest.version !== reportedVersion ||
-        legacyMcp.includes('"command": "node"') ||
-        !legacyMcp.includes('"command": "./bin/goal-progress-mcp"') ||
-        hookCommands.length === 0 ||
-        hookCommands.some((command) => command !== GOAL_PROGRESS_STABLE_HOOK_COMMAND)
+        !isSupportedMcpConfiguration(JSON.parse(legacyMcp)) ||
+        !isSupportedHookConfiguration(JSON.parse(legacyHook)) ||
+        !legacyMcpLauncher ||
+        !legacyHookLauncher
       ) {
         return false;
-      }
-      for (const launcher of ["bin/goal-progress-mcp", "bin/goal-progress-hook"]) {
-        const mode = (await stat(resolve(legacyCacheRoot, launcher))).mode & 0o777;
-        if ((mode & 0o500) !== 0o500 || (mode & 0o022) !== 0) {
-          return false;
-        }
       }
       return true;
     } catch {
@@ -329,13 +402,7 @@ export function createPluginController(options: {
   return {
     async ensure(archivePath, marketplaceRoot, reinstall, expectedTreeManifestSha256) {
       if (!reinstall && (await verifyInstalled(undefined, expectedTreeManifestSha256))) {
-        const currentPlugin = pluginList().find(
-          (candidate) => candidate.pluginId === PLUGIN_ID && candidate.installed === true,
-        );
         await enableInstalledGoalProgressHooks(command, options.codexHomeDirectory);
-        if (typeof currentPlugin?.version === "string") {
-          await removeStalePluginCaches(currentPlugin.version);
-        }
         return false;
       }
       await rm(marketplaceRoot, { recursive: true, force: true });
@@ -359,8 +426,8 @@ export function createPluginController(options: {
       if (
         pluginManifest.name !== PLUGIN_NAME ||
         !pluginManifest.version ||
-        mcp.includes('"command": "node"') ||
-        hooks.includes("trusted_hash")
+        !isSupportedMcpConfiguration(JSON.parse(mcp)) ||
+        !isSupportedHookConfiguration(JSON.parse(hooks))
       ) {
         throw new Error("GOAL_PROGRESS_RELEASE_PLUGIN_INVALID");
       }
@@ -395,7 +462,6 @@ export function createPluginController(options: {
           preserveTimestamps: true,
         });
       }
-      let installedCurrentVersion = false;
       try {
         if (previousPlugin) {
           runCodexJson(
@@ -421,10 +487,8 @@ export function createPluginController(options: {
           throw new Error("GOAL_PROGRESS_PLUGIN_INSTALL_VERIFY_FAILED");
         }
         await enableInstalledGoalProgressHooks(command, options.codexHomeDirectory);
-        await removeStalePluginCaches(pluginManifest.version);
-        installedCurrentVersion = true;
       } finally {
-        if (!installedCurrentVersion && previousCacheRoot && retainedCacheRoot) {
+        if (previousCacheRoot && retainedCacheRoot) {
           await cp(retainedCacheRoot, previousCacheRoot, {
             recursive: true,
             force: true,
