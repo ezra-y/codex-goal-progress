@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { access, chmod, lstat, readFile, readlink, rename, rm, stat } from "node:fs/promises";
+import { access, chmod, cp, lstat, readFile, readlink, rename, rm, stat } from "node:fs/promises";
 import { basename, resolve } from "node:path";
 import { atomicWriteFile, type GoalProgressPaths } from "../../../packages/store/src/index.js";
 import type { CdpController, RestoreCdpResult } from "./cdp-controller.js";
@@ -190,6 +190,9 @@ export function createInstallCommand(dependencies: InstallCommandDependencies) {
       (await plugin
         .verify(installed.releaseVersion, installedRelease.pluginTreeManifestSha256)
         .catch(() => false));
+    const pluginNeedsReinstall =
+      !pluginWasHealthy ||
+      installedRelease?.pluginTreeManifestSha256 !== release.pluginTreeManifestSha256;
     const releaseBackupPath = `${layout.programReleaseRoot}.rollback-${randomUUID()}`;
     let releaseBackupCreated = false;
     try {
@@ -252,6 +255,17 @@ export function createInstallCommand(dependencies: InstallCommandDependencies) {
             }
           }
           await copyRelease(dependencies.releaseRoot, layout, release);
+          if (!pluginNeedsReinstall && releaseBackupCreated) {
+            await cp(
+              resolve(releaseBackupPath, "plugin-marketplace"),
+              resolve(layout.programReleaseRoot, "plugin-marketplace"),
+              {
+                recursive: true,
+                force: true,
+                preserveTimestamps: true,
+              },
+            );
+          }
           await readVerifiedRelease(layout.programReleaseRoot);
           const helperPath = resolve(layout.programReleaseRoot, release.files.helper.path);
           if (((await stat(helperPath)).mode & 0o777) !== 0o700) {
@@ -292,7 +306,7 @@ export function createInstallCommand(dependencies: InstallCommandDependencies) {
           const changed = await plugin.ensure(
             resolve(layout.programReleaseRoot, release.files.pluginArchive.path),
             resolve(layout.programReleaseRoot, "plugin-marketplace"),
-            !alreadyCurrent,
+            pluginNeedsReinstall,
             release.pluginTreeManifestSha256,
           );
           await dependencies.installFaultForTest?.("after-plugin");
