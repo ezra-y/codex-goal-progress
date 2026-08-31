@@ -11,7 +11,7 @@
 </div>
 
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
 </p>
 
 ## 🆕 Latest update
@@ -100,7 +100,7 @@ Codex flow.
 ### Preparing the checklist
 
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress preparing the acceptance checklist" width="760">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress preparing the acceptance checklist" width="760">
 </p>
 
 ### Light
