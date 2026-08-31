@@ -11,6 +11,12 @@ const GoalProgressLogEntrySchema = z
     event: z.enum([
       "helper.started",
       "helper.stopped",
+      "startup.listener.started",
+      "startup.listener.stopped",
+      "startup.event",
+      "startup.handoff",
+      "update.activation",
+      "update.cleanup.failed",
       "store.initialized",
       "store.replaced",
       "store.migrated",
@@ -43,8 +49,14 @@ const GoalProgressLogEntrySchema = z
     revision: z.number().int().nonnegative().optional(),
     code: z.string().trim().min(1).max(128).optional(),
     causeCode: z.string().trim().min(1).max(128).optional(),
+    trigger: z.enum(["task-publish", "visible-recovery", "finite-retry"]).optional(),
+    attempt: z.number().int().nonnegative().optional(),
     count: z.number().int().nonnegative().optional(),
     durationMs: z.number().int().nonnegative().optional(),
+    pid: z.number().int().positive().optional(),
+    mainPid: z.number().int().positive().optional(),
+    port: z.number().int().min(1_024).max(65_535).optional(),
+    launchId: z.string().uuid().optional(),
   })
   .strict();
 

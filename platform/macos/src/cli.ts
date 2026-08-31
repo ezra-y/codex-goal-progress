@@ -18,6 +18,14 @@ import {
   runCodexRestoreHandoff,
   scheduleCodexCdpHandoff,
 } from "./installer.js";
+import {
+  GOAL_PROGRESS_UPDATE_INSTALL_HANDOFF_COMMAND,
+  runUpdateInstallHandoffFromEnvironment,
+} from "./update-install-handoff.js";
+import {
+  GOAL_PROGRESS_UPDATE_RESTART_HANDOFF_COMMAND,
+  runUpdateRestartHandoffFromEnvironment,
+} from "./update-restart-handoff.js";
 
 export interface RunGoalProgressCliOptions {
   readonly homeDirectory?: string;
@@ -29,6 +37,14 @@ export async function runGoalProgressCli(
   options: RunGoalProgressCliOptions = {},
 ): Promise<void> {
   const command = argv[0];
+  if (command === GOAL_PROGRESS_UPDATE_INSTALL_HANDOFF_COMMAND) {
+    await runUpdateInstallHandoffFromEnvironment();
+    return;
+  }
+  if (command === GOAL_PROGRESS_UPDATE_RESTART_HANDOFF_COMMAND) {
+    await runUpdateRestartHandoffFromEnvironment();
+    return;
+  }
   if (command === GOAL_PROGRESS_CDP_HANDOFF_COMMAND) {
     await runCodexCdpHandoff(resolve(options.homeDirectory ?? process.env.HOME ?? homedir()));
     return;

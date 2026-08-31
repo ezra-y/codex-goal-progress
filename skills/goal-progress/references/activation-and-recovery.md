@@ -1,6 +1,6 @@
 # Activation And Recovery
 
-Read this file only for first activation, conflicts, cancellation, or recovery.
+Read this file only for first activation, cancellation, or recovery.
 
 ## Entry Parsing
 
@@ -8,21 +8,17 @@ The Skill is already explicit when this flow starts. Treat repeated identical ma
 message as one invocation. Remove every line whose trimmed value is exactly
 `$codex-goal-progress:goal-progress`. Preserve all other lines in order as one objective body.
 
-Call `goal_progress_activate` once. It returns a plan; it does not mean the Contract is active.
+Call `goal_progress_activate` with `{}`. It reads the trusted current native Goal; model-written
+Goal text is never an activation argument. The result does not mean the Contract is active.
 
-## Branches
+## Activation Results
 
-| Branch | Native Goal | Objective body | Action |
+| Current state | Result | Action |
 | --- | --- | --- | --- |
-| A | Missing | Present | Call `create_goal` with the marker-free body, verify it with `get_goal`, then follow `progressAction`. |
-| B | Present | Empty | Attach to the current Goal. |
-| C | Present | Exact same text | Attach without replacing the Goal or resetting Token. |
-| D | Present | Different text | Report the conflict before changing Goal or progress state. |
-| E | Missing | Empty | Ask for a Goal body. Do not create an empty Goal. |
-
-Branch B or C with an existing Contract must Reuse an existing Contract.
-For branch D, never clear, complete, block, or overwrite the native Goal. If replacement was
-confirmed but verified controls are unavailable, report `NATIVE_GOAL_REPLACE_UNAVAILABLE`.
+| No native Goal | `NATIVE_GOAL_REQUIRED` | Create a native Goal from the marker-free user body, then activate once more. If the body is empty, ask for it. |
+| Native Goal without Contract | `initialize` | Prepare a Checklist for `currentNativeGoal`, then initialize. |
+| Native Goal with matching Contract | `get` | Reuse the existing Contract. |
+| Native Goal changed after binding | `rescope-or-replace` | Preserve the existing Checklist where it still applies; rescope a minor change or initialize a major replacement. |
 
 ## Progress Action
 
@@ -30,26 +26,26 @@ Follow `progressAction` exactly:
 
 - `get`: call `goal_progress_get`. Do not rebuild Checklist or contributions.
 - `initialize`: do not call `goal_progress_get`. Read the Checklist reference, prepare one Contract,
-  and Call `goal_progress_initialize`. For branch B or C, copy `preparedForObjective` from the
-  activation result exactly; do not rewrite it.
+  and call `goal_progress_initialize`. The Helper reads and binds the current native Goal itself.
+- `rescope-or-replace`: first preserve the existing Checklist. If the Goal only changed wording,
+  keep the Checklist. For a minor scope change, change only affected objectives with
+  `goal_progress_rescope`. For a major change, initialize a fresh Contract and Checklist.
 - `none`: stop Goal Progress tool calls for this activation.
 
-For branch A, the allowed sequence is:
+When the first activation returns `NATIVE_GOAL_REQUIRED`, the allowed sequence is:
 
 ```text
 goal_progress_activate
 create_goal
-get_goal
+goal_progress_activate
 goal_progress_initialize
 ```
 
-There is no `goal_progress_get` between `get_goal` and initialize.
-For branch A, copy the exact objective returned by `get_goal` into
-`goal_progress_initialize.preparedForObjective`.
+Both activation calls use `{}`. Goal text is supplied only to the Codex native Goal tool.
 
 ## Lifecycle Reports
 
-- `planned`: activate returned a branch, but no Contract is proven.
+- `planned`: activate returned an action, but no Contract is proven.
 - `preparing`: Goal or Checklist preparation is running.
 - `active`: `goal_progress_get` or `goal_progress_initialize` succeeded.
 
@@ -69,7 +65,7 @@ These conditions are not user cancellation:
 - the Goal anchor was rebuilt;
 - Helper or native Goal reads are temporarily unavailable.
 
-Continue the current preparation after an automatic stale detachment. For temporary infrastructure
+Continue the current preparation after a trusted native Goal update. For temporary infrastructure
 failure, report the exact code and use doctor or a bounded retry without changing the user's
 activation fact. Do not blame the user or ask for another Skill selection.
 

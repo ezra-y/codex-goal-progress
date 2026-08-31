@@ -37,6 +37,7 @@ export const MACOS_RELEASE_FILES = [
   "THIRD_PARTY_NOTICES.txt",
   "Uninstall Goal Progress.command",
   "bin/goal-progress",
+  "bin/goal-progress-startup-listener",
   "manifest.json",
   "plugin-marketplace.zip",
   "renderer/goal-progress.js",

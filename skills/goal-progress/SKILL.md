@@ -24,15 +24,23 @@ Hooks own runtime identity. Never invent runtime proof, IDs, revisions, or overa
 ## Start Or Resume
 
 Read [Activation and recovery](references/activation-and-recovery.md) for a first activation,
-conflict, cancellation, or recovery.
+cancellation, or recovery.
 
 1. Remove every pure Skill marker line and preserve all other body lines in order.
-2. Call `goal_progress_activate` exactly once as the first internal Goal Progress tool.
-3. Follow `progressAction` exactly:
+2. If the user explicitly asks to change an existing native Goal, use Codex `update_goal` first.
+   Goal text goes only to the native Goal tool.
+3. Call `goal_progress_activate` with an empty object as the first Goal Progress tool.
+4. Follow `progressAction` exactly:
    - `get`: call `goal_progress_get` and reuse the existing Contract.
    - `initialize`: do not call `goal_progress_get`; prepare the Checklist and call `goal_progress_initialize`.
+   - `rescope-or-replace`: compare the current native Goal with the existing Checklist. Rescope
+     only affected results, or initialize a fresh Contract for a major change.
    - `none`: do not call another Goal Progress tool.
-4. Report active only after `goal_progress_get` or `goal_progress_initialize` succeeds.
+5. Report active only after `goal_progress_get` or `goal_progress_initialize` succeeds.
+
+If activation returns `NATIVE_GOAL_REQUIRED`, create a native Goal from the marker-free user body
+with Codex `create_goal`, then call empty `goal_progress_activate` once more. If the body is empty,
+ask the user for the Goal instead of creating an empty one.
 
 ## Work Loop
 
@@ -45,11 +53,14 @@ On a revision conflict, review the returned current summary before retrying.
 
 ## Native Goal Changes
 
-When the trusted native Goal changes, Classify the change as minor or major in the current model.
+The model may create or update the native Goal with Codex native Goal tools. Goal Progress follows
+the trusted current native Goal after that change.
+When the trusted native Goal changes, classify the change as minor or major in the current model.
 Do not use text similarity, another model, or another thread.
 Do not ask the user to invoke Goal Progress again.
 Read [Checklist and scope](references/checklist-and-scope.md) before rescope or replacement.
-A minor change keeps the Contract and uses `goal_progress_rescope`.
+A wording-only change keeps the existing Checklist. A minor scope change keeps the Contract and
+uses `goal_progress_rescope` for affected results only.
 A major change prepares a fresh Contract and uses `goal_progress_initialize`.
 Ordinary implementation, bug-fix, or `update_plan` changes do neither.
 

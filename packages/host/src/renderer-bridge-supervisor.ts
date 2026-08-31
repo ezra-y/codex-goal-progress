@@ -1,7 +1,9 @@
 import type { GoalProgressRendererBridgeDoctor } from "../../codex-adapter/src/index.js";
 import {
+  classifyGoalProgressUpdateState,
   DEFAULT_GOAL_PROGRESS_UI_PREFERENCE,
   type GoalProgressUiPreference,
+  type GoalProgressUpdateState,
   type GoalProgressViewModel,
 } from "../../contracts/src/index.js";
 import type { ViewModelPublisherSink } from "./view-model-publisher.js";
@@ -9,6 +11,7 @@ import type { ViewModelPublisherSink } from "./view-model-publisher.js";
 export const RENDERER_BRIDGE_RECONNECT_DELAYS_MS = [1_000, 2_000, 5_000, 10_000, 30_000] as const;
 
 export interface RendererBridgeSupervisorConnection extends ViewModelPublisherSink {
+  readonly visibleThreadLifecycleId?: string;
   doctor(expectedThreadId?: string): Promise<GoalProgressRendererBridgeDoctor>;
   close(): Promise<void>;
 }
@@ -19,7 +22,7 @@ export interface RendererBridgeSupervisorOptions {
   readonly reconnectDelaysMs?: readonly number[];
 }
 
-type BridgeOperation = "clear" | "doctor" | "preference" | "publish";
+type BridgeOperation = "clear" | "doctor" | "preference" | "publish" | "update-state";
 
 interface ConnectedBridge {
   readonly bridge: RendererBridgeSupervisorConnection;
@@ -60,6 +63,7 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
   readonly #reconnectDelaysMs: readonly number[];
   #bridge: RendererBridgeSupervisorConnection | undefined;
   #uiPreference: GoalProgressUiPreference = DEFAULT_GOAL_PROGRESS_UI_PREFERENCE;
+  #updateState: GoalProgressUpdateState | null = null;
   #nextAttemptAt = 0;
   #backoffIndex = 0;
   #lastErrorCode: string | null = null;
@@ -76,6 +80,10 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
 
   get lastErrorCode(): string | null {
     return this.#lastErrorCode;
+  }
+
+  get currentUpdateState(): GoalProgressUpdateState | null {
+    return this.#updateState;
   }
 
   async clear(): Promise<void> {
@@ -116,6 +124,27 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
     return recovered;
   }
 
+  async reconnect(): Promise<string | undefined> {
+    let recovered: string | undefined;
+    await this.#enqueue(async () => {
+      await this.#dropBridge();
+      this.#blocked = false;
+      this.#lastErrorCode = null;
+      this.#nextAttemptAt = 0;
+      this.#backoffIndex = 0;
+      const connected = await this.#ensureConnected(true);
+      if (!connected) {
+        throw new Error(this.#lastErrorCode ?? "RENDERER_BRIDGE_UNAVAILABLE");
+      }
+      recovered = this.#recoveredVisibleThreadId;
+      this.#recoveredVisibleThreadId = undefined;
+      if (recovered === undefined) {
+        recovered = await connected.bridge.recoverVisibleThreadId?.();
+      }
+    });
+    return recovered;
+  }
+
   async setUiPreference(uiPreference: GoalProgressUiPreference): Promise<void> {
     return this.#enqueue(async () => {
       this.#uiPreference = uiPreference;
@@ -124,6 +153,32 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
         (bridge) => bridge.setUiPreference?.(uiPreference) ?? Promise.resolve(),
       );
     });
+  }
+
+  async setUpdateState(updateState: GoalProgressUpdateState | null): Promise<void> {
+    return this.#enqueue(async () => {
+      if (
+        updateState === null ||
+        classifyGoalProgressUpdateState(updateState, this.#updateState) !== "accept"
+      ) {
+        return;
+      }
+      this.#updateState = updateState;
+      await this.#requireOperation(
+        "update-state",
+        (bridge) => bridge.setUpdateState?.(updateState) ?? Promise.resolve(),
+      );
+    });
+  }
+
+  rememberUpdateState(updateState: GoalProgressUpdateState | null): void {
+    if (
+      updateState === null ||
+      classifyGoalProgressUpdateState(updateState, this.#updateState) !== "accept"
+    ) {
+      return;
+    }
+    this.#updateState = updateState;
   }
 
   async doctor(expectedThreadId?: string): Promise<GoalProgressRendererBridgeDoctor> {
@@ -169,7 +224,10 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
     if (!connected) {
       return false;
     }
-    if (connected.newlyConnected && (operation === "clear" || operation === "preference")) {
+    if (
+      connected.newlyConnected &&
+      (operation === "clear" || operation === "preference" || operation === "update-state")
+    ) {
       return true;
     }
     try {
@@ -190,7 +248,7 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
     if (!replacement) {
       return false;
     }
-    if (operation === "clear" || operation === "preference") {
+    if (operation === "clear" || operation === "preference" || operation === "update-state") {
       return true;
     }
     try {
@@ -237,6 +295,7 @@ export class RendererBridgeSupervisor implements ViewModelPublisherSink {
       this.#recoveredVisibleThreadId = await candidate.recoverVisibleThreadId?.();
       await candidate.clear();
       await candidate.setUiPreference?.(this.#uiPreference);
+      await candidate.setUpdateState?.(this.#updateState).catch(() => undefined);
     } catch (error) {
       await candidate.close().catch(() => undefined);
       const code = stableErrorCode(error);

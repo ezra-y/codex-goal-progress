@@ -128,6 +128,7 @@ export const layoutAndTypographyStyles = css`
     .current-summary-text {
       overflow: hidden;
       min-width: 0;
+      flex: 1;
       color: var(--gp-icon-muted);
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -178,6 +179,7 @@ export const layoutAndTypographyStyles = css`
     }
 
     .placement-settings-trigger {
+      position: relative;
       display: inline-grid;
       width: var(--gp-control-size);
       height: var(--gp-control-size);

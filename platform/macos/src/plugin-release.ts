@@ -5,6 +5,24 @@ const INSTALLED_BINARY =
   "$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress";
 export const GOAL_PROGRESS_STABLE_HOOK_COMMAND =
   '/bin/sh -c \'p="$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress"; [ -x "$p" ] || exit 0; exec "$p" hook\'';
+export const GOAL_PROGRESS_STABLE_MCP_LAUNCHER = [
+  "#!/bin/sh",
+  "set -eu",
+  `binary="${INSTALLED_BINARY}"`,
+  'if [ ! -x "$binary" ]; then',
+  '  echo "GOAL_PROGRESS_UNINSTALLED_OR_DISABLED: run goal-progress install --json" >&2',
+  "  exit 1",
+  "fi",
+  'exec "$binary" mcp-server "$@"',
+  "",
+].join("\n");
+export const GOAL_PROGRESS_STABLE_HOOK_LAUNCHER = [
+  "#!/bin/sh",
+  `binary="${INSTALLED_BINARY}"`,
+  '[ -x "$binary" ] || exit 0',
+  'exec "$binary" hook "$@"',
+  "",
+].join("\n");
 
 export interface ReleasePluginRuntimeFiles {
   readonly mcpJson: string;
@@ -18,30 +36,6 @@ function record(value: unknown, code: string): Record<string, unknown> {
     throw new Error(code);
   }
   return value as Record<string, unknown>;
-}
-
-function mcpLauncher(): string {
-  return [
-    "#!/bin/sh",
-    "set -eu",
-    `binary="${INSTALLED_BINARY}"`,
-    'if [ ! -x "$binary" ]; then',
-    '  echo "GOAL_PROGRESS_UNINSTALLED_OR_DISABLED: run goal-progress install --json" >&2',
-    "  exit 1",
-    "fi",
-    'exec "$binary" mcp-server "$@"',
-    "",
-  ].join("\n");
-}
-
-function hookLauncher(): string {
-  return [
-    "#!/bin/sh",
-    `binary="${INSTALLED_BINARY}"`,
-    '[ -x "$binary" ] || exit 0',
-    'exec "$binary" hook "$@"',
-    "",
-  ].join("\n");
 }
 
 export function createReleasePluginRuntimeFiles(
@@ -81,8 +75,8 @@ export function createReleasePluginRuntimeFiles(
   return {
     mcpJson: `${JSON.stringify(mcp, null, 2)}\n`,
     hooksJson: `${JSON.stringify(hooksDocument, null, 2)}\n`,
-    mcpLauncher: mcpLauncher(),
-    hookLauncher: hookLauncher(),
+    mcpLauncher: GOAL_PROGRESS_STABLE_MCP_LAUNCHER,
+    hookLauncher: GOAL_PROGRESS_STABLE_HOOK_LAUNCHER,
   };
 }
 

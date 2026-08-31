@@ -10,6 +10,15 @@ import type {
   GoalProgressUiIntent,
   GoalProgressUiPreference,
 } from "../../contracts/src/ui-preference.js";
+import type {
+  GoalProgressUpdateIntent,
+  GoalProgressUpdateIntentEnvelope,
+  GoalProgressUpdateState,
+} from "../../contracts/src/update-state.js";
+import {
+  GOAL_PROGRESS_UPDATE_INTENT_PROTOCOL_VERSION,
+  parseGoalProgressUpdateState,
+} from "../../contracts/src/update-state-runtime.js";
 import {
   type CodexHostPlatform,
   type CodexNativeGoalLocatorRegistry,
@@ -111,6 +120,7 @@ export interface GoalProgressPageMountInput {
   readonly platform: CodexHostPlatform;
   readonly appVersion: string;
   readonly viewModel: GoalProgressViewModel;
+  readonly updateState: GoalProgressUpdateState | null;
   readonly bridgeNonce?: string;
   readonly bridgeBindingName?: string;
   readonly uiPreference: GoalProgressUiPreference;
@@ -122,6 +132,7 @@ export interface GoalProgressPageHostApi {
   readonly releaseVersion: typeof GOAL_PROGRESS_RELEASE_VERSION;
   mount(input: unknown): SidecarMountResult | GoalProgressPageHostFailure;
   update(viewModel: unknown): SidecarMountResult | GoalProgressPageHostFailure;
+  setUpdateState(updateState: unknown): SidecarMountResult | GoalProgressPageHostFailure;
   unmount(): SidecarMountResult | GoalProgressPageHostFailure;
   health(): GoalProgressPageHealthResult;
 }
@@ -241,6 +252,10 @@ function parseMountInput(value: unknown): GoalProgressPageMountInput | null {
   const bridgeBindingName = value.bridgeBindingName;
   const uiPreference =
     value.uiPreference === undefined ? defaultUiPreference : parseUiPreference(value.uiPreference);
+  const updateState =
+    value.updateState === null || value.updateState === undefined
+      ? null
+      : parseGoalProgressUpdateState(value.updateState);
   if (
     (platform !== "macos" && platform !== "windows") ||
     typeof appVersion !== "string" ||
@@ -252,7 +267,8 @@ function parseMountInput(value: unknown): GoalProgressPageMountInput | null {
       (typeof bridgeNonce !== "string" ||
         !/^[A-Za-z0-9_-]{32}$/u.test(bridgeNonce) ||
         bridgeBindingName !== `${GOAL_PROGRESS_UI_INTENT_BINDING_PREFIX}${bridgeNonce}`)) ||
-    uiPreference === null
+    uiPreference === null ||
+    (value.updateState !== null && value.updateState !== undefined && updateState === null)
   ) {
     return null;
   }
@@ -260,6 +276,7 @@ function parseMountInput(value: unknown): GoalProgressPageMountInput | null {
     platform,
     appVersion,
     viewModel: value.viewModel,
+    updateState,
     ...(bridgeNonce === undefined ? {} : { bridgeNonce }),
     ...(bridgeBindingName === undefined ? {} : { bridgeBindingName }),
     uiPreference,
@@ -496,6 +513,21 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
     return this.#reconcile();
   }
 
+  setUpdateState(updateState: unknown): SidecarMountResult | GoalProgressPageHostFailure {
+    if (!this.#configuration) {
+      return failure(this.#document, "not-configured");
+    }
+    const parsed = updateState === null ? null : parseGoalProgressUpdateState(updateState);
+    if (updateState !== null && parsed === null) {
+      return failure(this.#document, "invalid-input");
+    }
+    this.#configuration = {
+      ...this.#configuration,
+      updateState: parsed,
+    };
+    return this.#controller?.setUpdateState(parsed) ?? failure(this.#document, "not-configured");
+  }
+
   unmount(): SidecarMountResult | GoalProgressPageHostFailure {
     if (!this.#configuration && !this.#controller) {
       removeManagedGoalProgressHosts(this.#document);
@@ -574,6 +606,7 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
         const retained = this.#controller.retainCurrentSession(
           parsed.viewModel,
           parsed.uiPreference,
+          parsed.updateState,
         );
         this.#recordResult(retained);
         this.#lastManagedHost = this.#controller.managedHostElement() ?? this.#lastManagedHost;
@@ -646,6 +679,8 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
         nativeGoalLocator: locator,
         elementName: this.#elementName,
         onUiIntent: (intent, context) => this.#forwardUiIntent(intent, context.userActivated),
+        onUpdateIntent: (intent, context) =>
+          this.#forwardUpdateIntent(intent, context.userActivated),
       });
     }
     const location = locator.locate(this.#document);
@@ -658,6 +693,7 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
         : { kind: "fallback" },
       environmentChanged: this.#lastReconcileCause === "relevant-mutation",
       nativeGoalRejectionReason: location.rejectionReason,
+      updateState: parsed.updateState,
     });
     this.#lastManagedHost = this.#controller.managedHostElement() ?? this.#lastManagedHost;
     this.#recordResult(result);
@@ -689,6 +725,23 @@ class GoalProgressPageHost implements GoalProgressPageHostApi {
     }
     const envelope: GoalProgressUiIntentEnvelope = {
       protocolVersion: GOAL_PROGRESS_UI_INTENT_PROTOCOL_VERSION,
+      bridgeNonce: configuration.bridgeNonce,
+      contractId: configuration.viewModel.contractId,
+      threadId: configuration.viewModel.sessionId,
+      userActivated,
+      intent,
+    };
+    this.#uiIntentBinding(JSON.stringify(envelope));
+  }
+
+  #forwardUpdateIntent(intent: GoalProgressUpdateIntent, userActivated: boolean): void {
+    const configuration = this.#configuration;
+    if (!configuration?.bridgeNonce || !this.#uiIntentBinding) {
+      return;
+    }
+    const envelope: GoalProgressUpdateIntentEnvelope = {
+      protocolVersion: GOAL_PROGRESS_UPDATE_INTENT_PROTOCOL_VERSION,
+      intentKind: "update",
       bridgeNonce: configuration.bridgeNonce,
       contractId: configuration.viewModel.contractId,
       threadId: configuration.viewModel.sessionId,
@@ -866,6 +919,7 @@ function isInstalledApi(value: unknown): value is GoalProgressPageHostApi {
     value.releaseVersion === GOAL_PROGRESS_RELEASE_VERSION &&
     typeof value.mount === "function" &&
     typeof value.update === "function" &&
+    typeof value.setUpdateState === "function" &&
     typeof value.unmount === "function" &&
     typeof value.health === "function"
   );

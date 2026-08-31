@@ -1,8 +1,10 @@
 import { z } from "zod";
 import {
-  GOAL_NATIVE_OBJECTIVE_MAX_LENGTH,
   GoalContractInitializationSchema,
   GoalProgressCommandSchema,
+  GoalProgressUpdateIntentSchema,
+  GoalProgressUpdateRestartResultSchema,
+  GoalProgressUpdateWorkerResultSchema,
   GoalProgressViewModelSchema,
   RuntimeContextSchema,
   RuntimeProofSchema,
@@ -10,6 +12,9 @@ import {
 
 export const GOAL_PROGRESS_IPC_PROTOCOL_VERSION = 4 as const;
 export const GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES = 1_048_576;
+export const GoalProgressRendererTargetIdSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u);
 
 export const GoalProgressActivationResumeResultSchema = z.discriminatedUnion("status", [
   z
@@ -44,7 +49,7 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
       method: z.literal("hello"),
       params: z
         .object({
-          clientKind: z.enum(["hook", "mcp", "cdp", "doctor"]),
+          clientKind: z.enum(["hook", "mcp", "cdp", "doctor", "updater"]),
           clientVersion: z.string().trim().min(1).max(64),
         })
         .strict(),
@@ -125,8 +130,6 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
       method: z.literal("activation.plan"),
       params: z
         .object({
-          objectiveBody: z.string().trim().min(1).max(GOAL_NATIVE_OBJECTIVE_MAX_LENGTH).nullable(),
-          replacementRequested: z.boolean(),
           runtimeContext: RuntimeContextSchema,
           runtimeProof: RuntimeProofSchema,
         })
@@ -194,6 +197,7 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
       method: z.literal("renderer.visible-thread"),
       params: z
         .object({
+          targetId: GoalProgressRendererTargetIdSchema,
           threadId: z
             .string()
             .trim()
@@ -201,6 +205,11 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
             .max(256)
             .refine((value) => !value.startsWith("client-new-thread:"))
             .nullable(),
+          sequence: z.number().int().positive().max(Number.MAX_SAFE_INTEGER).optional(),
+          lifecycleId: z
+            .string()
+            .regex(/^[A-Za-z0-9_-]{32}$/u)
+            .optional(),
         })
         .strict(),
     })
@@ -211,6 +220,7 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
       method: z.literal("renderer.disconnected"),
       params: z
         .object({
+          targetId: GoalProgressRendererTargetIdSchema,
           code: z
             .string()
             .trim()
@@ -229,6 +239,32 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
           intent: z.unknown(),
         })
         .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...RequestEnvelopeFields,
+      method: z.literal("update.intent"),
+      params: z
+        .object({
+          sessionId: z.string().trim().min(1).max(256),
+          intent: GoalProgressUpdateIntentSchema,
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      ...RequestEnvelopeFields,
+      method: z.literal("update.worker-result"),
+      params: GoalProgressUpdateWorkerResultSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...RequestEnvelopeFields,
+      method: z.literal("update.restart-result"),
+      params: GoalProgressUpdateRestartResultSchema,
     })
     .strict(),
   z

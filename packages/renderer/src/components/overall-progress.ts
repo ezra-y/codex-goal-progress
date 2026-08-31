@@ -9,6 +9,7 @@ export interface OverallProgressRenderOptions {
   readonly toggleDisabled?: boolean;
   readonly toggleDisabledLabel?: string;
   readonly onToggleCollapsed: () => void;
+  readonly showUpdateUnread?: boolean;
   readonly messages: GoalProgressMessages;
 }
 
@@ -99,6 +100,11 @@ export function renderOverallProgress(
           >
             <path d=${options.collapsed ? "m5 15.5 7-7 7 7" : "m5 8.5 7 7 7-7"}></path>
           </svg>
+          ${
+            options.showUpdateUnread
+              ? html`<span class="update-unread-dot" aria-hidden="true"></span>`
+              : nothing
+          }
         </button>
       </div>
     </section>

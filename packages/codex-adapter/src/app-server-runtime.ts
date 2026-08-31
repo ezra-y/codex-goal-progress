@@ -47,7 +47,8 @@ export interface CodexAppServerRuntime {
   resolveCurrentThread(input: CurrentThreadResolverInput): Promise<RuntimeIdentity>;
   refreshGoalUsage(threadId: string): Promise<GoalUsageSnapshot>;
   watchGoalUsage(threadId: string, listener: (snapshot: GoalUsageSnapshot) => void): void;
-  setPollingMode(mode: TokenPollingMode): void;
+  unwatchGoalUsage?(threadId: string): void;
+  setPollingMode(mode: TokenPollingMode, threadId?: string): void;
   close(): Promise<void>;
 }
 
@@ -62,6 +63,7 @@ export interface CodexAppServerRuntimeOptions extends CodexAppServerClientOption
     readonly jitterRatio?: number;
   };
   readonly random?: () => number;
+  readonly now?: () => number;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly setTimeout?: (handler: () => void, timeout: number) => unknown;
   readonly clearTimeout?: (id: unknown) => void;
@@ -193,6 +195,7 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
   readonly #failureThreshold: number;
   readonly #jitterRatio: number;
   readonly #random: () => number;
+  readonly #now: () => number;
   readonly #sleep: (ms: number) => Promise<void>;
   readonly #setTimeout: (handler: () => void, timeout: number) => unknown;
   readonly #clearTimeout: (id: unknown) => void;
@@ -202,8 +205,9 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
   #consecutiveConnectFailures = 0;
   #closing = false;
   #requestedMode: TokenPollingMode = "active";
-  #watchedThreadId: string | undefined;
-  #listener: ((snapshot: GoalUsageSnapshot) => void) | undefined;
+  readonly #requestedModeByThread = new Map<string, TokenPollingMode>();
+  readonly #listenersByThread = new Map<string, (snapshot: GoalUsageSnapshot) => void>();
+  readonly #nextPollAtByThread = new Map<string, number>();
   #pollTimer: unknown;
   #consecutiveReadFailuresByThread = new Map<string, number>();
   #lastGoalByThread = new Map<string, ThreadGoal | null>();
@@ -228,6 +232,7 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
       options.tokenPolling?.failureThreshold ?? TOKEN_POLLING_FAILURE_THRESHOLD;
     this.#jitterRatio = options.tokenPolling?.jitterRatio ?? TOKEN_POLLING_JITTER_RATIO;
     this.#random = options.random ?? Math.random;
+    this.#now = options.now ?? Date.now;
     this.#sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.#setTimeout = options.setTimeout ?? ((handler, timeout) => setTimeout(handler, timeout));
     this.#clearTimeout = options.clearTimeout ?? ((id) => clearTimeout(id as NodeJS.Timeout));
@@ -250,24 +255,40 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
   }
 
   watchGoalUsage(threadId: string, listener: (snapshot: GoalUsageSnapshot) => void): void {
-    if (threadId !== this.#watchedThreadId) {
+    if (!this.#listenersByThread.has(threadId)) {
       this.#lastFingerprintByThread.delete(threadId);
     }
-    this.#watchedThreadId = threadId;
-    this.#listener = listener;
+    this.#listenersByThread.set(threadId, listener);
     void this.refreshGoalUsage(threadId).catch(() => undefined);
   }
 
-  setPollingMode(mode: TokenPollingMode): void {
-    this.#requestedMode = mode;
+  unwatchGoalUsage(threadId: string): void {
+    this.#listenersByThread.delete(threadId);
+    this.#requestedModeByThread.delete(threadId);
+    this.#nextPollAtByThread.delete(threadId);
+    this.#lastFingerprintByThread.delete(threadId);
+    this.#armPoll();
+  }
+
+  setPollingMode(mode: TokenPollingMode, threadId?: string): void {
+    if (threadId === undefined) {
+      this.#requestedMode = mode;
+      for (const watchedThreadId of this.#listenersByThread.keys()) {
+        this.#resetNextPoll(watchedThreadId);
+      }
+    } else {
+      this.#requestedModeByThread.set(threadId, mode);
+      this.#resetNextPoll(threadId);
+    }
     this.#armPoll();
   }
 
   async close(): Promise<void> {
     this.#closing = true;
     this.#clearPoll();
-    this.#watchedThreadId = undefined;
-    this.#listener = undefined;
+    this.#listenersByThread.clear();
+    this.#requestedModeByThread.clear();
+    this.#nextPollAtByThread.clear();
     await this.#enqueue(async () => {
       const client = this.#client;
       this.#client = undefined;
@@ -313,8 +334,8 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
           stale: false,
           unavailable: false,
         };
-        this.#clearPoll();
         this.#publish(snapshot);
+        this.#armPoll();
         return snapshot;
       }
       const tokenUsage = tokenUsageFromGoal(goal, threadId, this.#splitUsageByThread.get(threadId));
@@ -417,7 +438,7 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
     if (
       notification.method !== "thread/tokenUsage/updated" ||
       notification.threadId === undefined ||
-      notification.threadId !== this.#watchedThreadId ||
+      !this.#listenersByThread.has(notification.threadId) ||
       notification.tokenUsage === undefined
     ) {
       return;
@@ -435,36 +456,85 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
       return;
     }
     this.#lastFingerprintByThread.set(snapshot.threadId, fingerprint);
-    if (snapshot.threadId === this.#watchedThreadId) {
-      this.#listener?.(snapshot);
-    }
+    this.#listenersByThread.get(snapshot.threadId)?.(snapshot);
   }
 
   #armPoll(): void {
     this.#clearPoll();
-    if (this.#closing || !this.#watchedThreadId) {
+    if (this.#closing || this.#listenersByThread.size === 0) {
       return;
     }
-    const intervalMs = selectTokenPollingIntervalMs(
-      effectivePollingMode(this.#requestedMode, this.#lastGoalByThread.get(this.#watchedThreadId)),
-      this.#pollingIntervals,
-    );
-    if (intervalMs === null) {
+    const now = this.#now();
+    const dueTimes: number[] = [];
+    for (const threadId of this.#listenersByThread.keys()) {
+      const interval = this.#pollingInterval(threadId);
+      if (interval === null) {
+        this.#nextPollAtByThread.delete(threadId);
+        continue;
+      }
+      let dueAt = this.#nextPollAtByThread.get(threadId);
+      if (dueAt === undefined) {
+        dueAt = now + applyJitter(interval, this.#random, this.#jitterRatio);
+        this.#nextPollAtByThread.set(threadId, dueAt);
+      }
+      dueTimes.push(dueAt);
+    }
+    if (dueTimes.length === 0) {
       return;
     }
-    const delayMs = applyJitter(intervalMs, this.#random, this.#jitterRatio);
+    const delayMs = Math.max(0, Math.min(...dueTimes) - now);
     this.#pollTimer = this.#setTimeout(() => {
       void this.#pollOnce();
     }, delayMs);
   }
 
   async #pollOnce(): Promise<void> {
-    const threadId = this.#watchedThreadId;
-    if (!threadId || this.#closing) {
+    this.#pollTimer = undefined;
+    if (this.#listenersByThread.size === 0 || this.#closing) {
       return;
     }
-    await this.refreshGoalUsage(threadId).catch(() => undefined);
+    const now = this.#now();
+    const dueThreadIds = [...this.#listenersByThread.keys()].filter(
+      (threadId) => (this.#nextPollAtByThread.get(threadId) ?? Number.POSITIVE_INFINITY) <= now,
+    );
+    for (const threadId of dueThreadIds) {
+      const interval = this.#pollingInterval(threadId);
+      if (interval === null || !this.#listenersByThread.has(threadId) || this.#closing) {
+        this.#nextPollAtByThread.delete(threadId);
+        continue;
+      }
+      this.#nextPollAtByThread.set(
+        threadId,
+        now + applyJitter(interval, this.#random, this.#jitterRatio),
+      );
+      await this.refreshGoalUsage(threadId).catch(() => undefined);
+    }
     this.#armPoll();
+  }
+
+  #pollingInterval(threadId: string): number | null {
+    return selectTokenPollingIntervalMs(
+      effectivePollingMode(
+        this.#requestedModeByThread.get(threadId) ?? this.#requestedMode,
+        this.#lastGoalByThread.get(threadId),
+      ),
+      this.#pollingIntervals,
+    );
+  }
+
+  #resetNextPoll(threadId: string): void {
+    if (!this.#listenersByThread.has(threadId)) {
+      return;
+    }
+    const interval = this.#pollingInterval(threadId);
+    if (interval === null) {
+      this.#nextPollAtByThread.delete(threadId);
+      return;
+    }
+    this.#nextPollAtByThread.set(
+      threadId,
+      this.#now() + applyJitter(interval, this.#random, this.#jitterRatio),
+    );
   }
 
   #clearPoll(): void {

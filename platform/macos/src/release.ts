@@ -42,6 +42,7 @@ export interface CreateMacosReleaseManifestInput {
   readonly nodeVersion: string;
   readonly pluginTreeManifestSha256: string;
   readonly helper: MacosReleaseFile;
+  readonly startupListener: MacosReleaseFile;
   readonly renderer: MacosReleaseFile;
   readonly rendererManifest: MacosReleaseFile;
   readonly pluginArchive: MacosReleaseFile;
@@ -76,6 +77,7 @@ export function createMacosReleaseManifest(input: CreateMacosReleaseManifestInpu
   }
   for (const file of [
     input.helper,
+    input.startupListener,
     input.renderer,
     input.rendererManifest,
     input.pluginArchive,
@@ -103,6 +105,7 @@ export function createMacosReleaseManifest(input: CreateMacosReleaseManifestInpu
     pluginTreeManifestSha256: input.pluginTreeManifestSha256,
     files: {
       helper: input.helper,
+      startupListener: input.startupListener,
       renderer: input.renderer,
       rendererManifest: input.rendererManifest,
       pluginArchive: input.pluginArchive,

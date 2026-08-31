@@ -11,6 +11,7 @@ const CDP_REQUEST_TIMEOUT_MS = 10_000;
 const CDP_MAX_MESSAGE_BYTES = 4 * 1024 * 1024;
 const CDP_MAX_HTTP_BYTES = 1024 * 1024;
 export const CODEX_RENDERER_URL = "app://-/index.html";
+const CODEX_LOCAL_THREAD_ROUTE_PATTERN = /^\/local\/[A-Za-z0-9][A-Za-z0-9_-]{0,255}$/u;
 
 const CdpVersionSchema = z
   .object({
@@ -82,6 +83,34 @@ export interface CodexCdpTarget {
 export interface CodexCdpDiscovery {
   readonly version: CodexCdpVersion;
   readonly targets: readonly CodexCdpTarget[];
+}
+
+export function isCodexRendererPageUrl(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (
+    url.protocol !== "app:" ||
+    url.hostname !== "-" ||
+    url.pathname !== "/index.html" ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.hash !== ""
+  ) {
+    return false;
+  }
+  const keys = [...url.searchParams.keys()];
+  if (keys.length === 0) {
+    return url.search === "";
+  }
+  return (
+    keys.length === 1 &&
+    keys[0] === "initialRoute" &&
+    CODEX_LOCAL_THREAD_ROUTE_PATTERN.test(url.searchParams.get("initialRoute") ?? "")
+  );
 }
 
 export type FetchLike = (
@@ -172,14 +201,18 @@ export async function discoverCodexCdp(
       if (!candidate.success || candidate.data.type !== "page") {
         return [];
       }
-      const target = CdpTargetSchema.parse(rawTarget);
+      const parsedTarget = CdpTargetSchema.safeParse(rawTarget);
+      if (!parsedTarget.success) {
+        return [];
+      }
+      const target = parsedTarget.data;
       let pageUrl: URL;
       try {
         pageUrl = new URL(target.url);
       } catch {
         return [];
       }
-      if (target.type !== "page" || pageUrl.toString() !== CODEX_RENDERER_URL) {
+      if (target.type !== "page" || !isCodexRendererPageUrl(pageUrl.toString())) {
         return [];
       }
       const pageWebSocketUrl = validateLoopbackWebSocketUrl(
@@ -484,11 +517,17 @@ export interface CdpCommandSender {
   send(method: string, params?: unknown): Promise<unknown>;
 }
 
-export type GoalProgressPageApiMethod = "mount" | "update" | "unmount" | "health";
+export type GoalProgressPageApiMethod =
+  | "mount"
+  | "update"
+  | "setUpdateState"
+  | "unmount"
+  | "health";
 
 const goalProgressPageApiFunctions: Readonly<Record<GoalProgressPageApiMethod, string>> = {
   mount: "function(input) { return this.mount(input); }",
   update: "function(input) { return this.update(input); }",
+  setUpdateState: "function(input) { return this.setUpdateState(input); }",
   unmount: "function() { return this.unmount(); }",
   health: "function() { return this.health(); }",
 };
@@ -631,10 +670,12 @@ const GOAL_PROGRESS_VISIBLE_THREAD_WATCHER_KEY = "__CODEX_GOAL_PROGRESS_VISIBLE_
 export function createGoalProgressVisibleThreadWatcherSource(
   bindingName: string,
   bridgeNonce: string,
+  watcherId: string = bridgeNonce,
 ): string {
   if (
     !/^__CODEX_GOAL_PROGRESS_VISIBLE_THREAD_[A-Za-z0-9_-]{32}$/u.test(bindingName) ||
-    !/^[A-Za-z0-9_-]{32}$/u.test(bridgeNonce)
+    !/^[A-Za-z0-9_-]{32}$/u.test(bridgeNonce) ||
+    !/^[A-Za-z0-9_-]{32}$/u.test(watcherId)
   ) {
     throw cdpError("GOAL_PROGRESS_VISIBLE_THREAD_WATCHER_IDENTITY_INVALID");
   }
@@ -646,9 +687,11 @@ export function createGoalProgressVisibleThreadWatcherSource(
     }
     const bindingName = ${JSON.stringify(bindingName)};
     const bridgeNonce = ${JSON.stringify(bridgeNonce)};
+    const watcherId = ${JSON.stringify(watcherId)};
     const readVisibleThreadId = ${resolveCurrentMacosVisibleThreadId.toString()};
     let initialized = false;
     let lastThreadId = null;
+    let sequence = 0;
     let scheduled = false;
     const report = () => {
       scheduled = false;
@@ -658,13 +701,16 @@ export function createGoalProgressVisibleThreadWatcherSource(
       }
       initialized = true;
       lastThreadId = threadId;
+      sequence += 1;
       const binding = globalThis[bindingName];
       if (typeof binding === "function") {
         binding(JSON.stringify({
           protocolVersion: 1,
           bridgeNonce,
+          lifecycleId: watcherId,
           type: "visibleThreadChanged",
-          threadId
+          threadId,
+          sequence
         }));
       }
     };
@@ -737,20 +783,22 @@ export async function installGoalProgressVisibleThreadWatcher(
   sender: CdpCommandSender,
   bindingName: string,
   bridgeNonce: string,
+  watcherId: string = bridgeNonce,
 ): Promise<void> {
-  const source = createGoalProgressVisibleThreadWatcherSource(bindingName, bridgeNonce);
+  const source = createGoalProgressVisibleThreadWatcherSource(bindingName, bridgeNonce, watcherId);
   await sender.send("Page.enable");
   await sender.send("Runtime.enable");
   await sender.send("Page.addScriptToEvaluateOnNewDocument", { source });
-  await refreshGoalProgressVisibleThreadWatcher(sender, bindingName, bridgeNonce);
+  await refreshGoalProgressVisibleThreadWatcher(sender, bindingName, bridgeNonce, watcherId);
 }
 
 export async function refreshGoalProgressVisibleThreadWatcher(
   sender: CdpCommandSender,
   bindingName: string,
   bridgeNonce: string,
+  watcherId: string = bridgeNonce,
 ): Promise<void> {
-  const source = createGoalProgressVisibleThreadWatcherSource(bindingName, bridgeNonce);
+  const source = createGoalProgressVisibleThreadWatcherSource(bindingName, bridgeNonce, watcherId);
   await sender.send("Runtime.addBinding", { name: bindingName });
   await sender.send("Runtime.evaluate", {
     expression: source,

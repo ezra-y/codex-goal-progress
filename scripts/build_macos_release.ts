@@ -51,6 +51,7 @@ const rendererSourceRoot = resolve(root, "dist/renderer");
 const rendererBundleSource = resolve(rendererSourceRoot, "goal-progress.js");
 const rendererManifestSource = resolve(rendererSourceRoot, "goal-progress.manifest.json");
 const helperRelativePath = "bin/goal-progress";
+const startupListenerRelativePath = "bin/goal-progress-startup-listener";
 const rendererRelativePath = "renderer/goal-progress.js";
 const rendererManifestRelativePath = "renderer/goal-progress.manifest.json";
 const pluginArchiveRelativePath = "plugin-marketplace.zip";
@@ -131,6 +132,7 @@ async function main(): Promise<void> {
   await rm(outputRoot, { recursive: true, force: true });
   const workRoot = resolve(outputRoot, ".build");
   const helperPath = resolve(outputRoot, helperRelativePath);
+  const startupListenerPath = resolve(outputRoot, startupListenerRelativePath);
   const rendererPath = resolve(outputRoot, rendererRelativePath);
   const rendererManifestPath = resolve(outputRoot, rendererManifestRelativePath);
   await Promise.all([
@@ -138,6 +140,24 @@ async function main(): Promise<void> {
     mkdir(dirname(rendererPath), { recursive: true }),
     mkdir(workRoot, { recursive: true }),
   ]);
+  const startupListenerSource = resolve(root, "platform/macos/startup-listener/main.swift");
+  run(
+    "/usr/bin/xcrun",
+    ["swiftc", "-O", "-framework", "AppKit", startupListenerSource, "-o", startupListenerPath],
+    "GOAL_PROGRESS_STARTUP_LISTENER_BUILD_FAILED",
+  );
+  assertReleaseBinaryHygiene(await readFile(startupListenerPath), [root, outputRoot, workRoot]);
+  await chmod(startupListenerPath, 0o755);
+  run(
+    "/usr/bin/codesign",
+    ["--force", "--sign", process.env.GOAL_PROGRESS_CODESIGN_IDENTITY ?? "-", startupListenerPath],
+    "GOAL_PROGRESS_STARTUP_LISTENER_SIGN_FAILED",
+  );
+  run(
+    "/usr/bin/codesign",
+    ["--verify", "--strict", startupListenerPath],
+    "GOAL_PROGRESS_STARTUP_LISTENER_SIGNATURE_INVALID",
+  );
   await Promise.all([
     copyFile(rendererBundleSource, rendererPath),
     copyFile(rendererManifestSource, rendererManifestPath),
@@ -266,6 +286,7 @@ async function main(): Promise<void> {
 
   const [
     helper,
+    startupListener,
     renderer,
     rendererManifestFile,
     pluginArchive,
@@ -280,6 +301,7 @@ async function main(): Promise<void> {
     readme,
   ] = await Promise.all([
     releaseFile(helperPath, helperRelativePath),
+    releaseFile(startupListenerPath, startupListenerRelativePath),
     releaseFile(rendererPath, rendererRelativePath),
     releaseFile(rendererManifestPath, rendererManifestRelativePath),
     releaseFile(pluginArchivePath, pluginArchiveRelativePath),
@@ -299,6 +321,7 @@ async function main(): Promise<void> {
     nodeVersion: GOAL_PROGRESS_MACOS_RELEASE_NODE_VERSION,
     pluginTreeManifestSha256,
     helper,
+    startupListener,
     renderer,
     rendererManifest: rendererManifestFile,
     pluginArchive,
@@ -319,6 +342,7 @@ async function main(): Promise<void> {
     resolve(outputRoot, "SHA256SUMS"),
     renderSha256Sums([
       helper,
+      startupListener,
       renderer,
       rendererManifestFile,
       pluginArchive,

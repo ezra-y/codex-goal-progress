@@ -20,8 +20,8 @@ Preserve valid user contributions. Never provide a total percentage.
 
 Call `goal_progress_initialize` after the structure is complete. Fix a rejected structure in the
 same turn. If it still fails validation, report the exact code and leave progress unavailable.
-Set `preparedForObjective` to the exact trusted native Goal objective used to prepare the Checklist.
-If get returns a newer objective, discard the older preparation and rebuild for that exact value.
+Do not copy Goal text into initialize. The Helper reads the trusted current native Goal when it
+binds the Contract.
 
 Keep `update_plan` as execution detail. Never turn `update_plan` steps into the Goal denominator.
 
@@ -44,12 +44,15 @@ For a minor native Goal change:
 For a major native Goal change:
 
 - do not reactivate the Skill;
-- read the current native Goal and copy its exact objective into `preparedForObjective`;
-- enter preparation without reading the stale Contract first;
+- use the trusted current native Goal returned by Goal Progress;
 - generate a Goal-specific Checklist with a fresh Contract ID;
 - do not inherit old progress or evidence;
-- call `goal_progress_initialize` for the trusted major Goal change; the Store archives the old
+- call `goal_progress_initialize`; the Helper binds the current native Goal and archives the old
   Contract through replacement.
 
 A change is minor only when the final deliverable and most acceptance results still apply. It is
 major when the final deliverable or main acceptance boundary changes.
+
+Always inspect the existing Checklist first. A wording-only Goal change keeps it unchanged. A minor
+change edits only affected objectives. Do not rewrite the full Checklist unless the deliverable or
+main acceptance boundary changed.

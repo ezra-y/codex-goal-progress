@@ -1,6 +1,9 @@
 import {
   type GoalProgressUiIntent,
   type GoalProgressUiPreference,
+  type GoalProgressUpdateIntent,
+  type GoalProgressUpdateState,
+  GoalProgressUpdateStateSchema,
   type GoalProgressViewModel,
   GoalProgressViewModelSchema,
   migrateGoalProgressUiPreference,
@@ -17,6 +20,11 @@ export interface GoalProgressUiIntentState {
   readonly viewModel: GoalProgressViewModel;
   readonly uiPreference: GoalProgressUiPreference;
   readonly dismissed?: boolean;
+}
+
+export interface GoalProgressUpdateIntentState {
+  readonly action: "deferred" | "opened-release" | "state-updated";
+  readonly updateState: GoalProgressUpdateState;
 }
 
 export function parseGoalProgressViewState(result: unknown): GoalProgressViewState {
@@ -36,6 +44,24 @@ export function parseGoalProgressViewState(result: unknown): GoalProgressViewSta
     viewModel: GoalProgressViewModelSchema.parse(result.viewModel),
     uiPreference,
     ...("dismissed" in result && result.dismissed === true ? { dismissed: true } : {}),
+  };
+}
+
+export function parseGoalProgressUpdateIntentState(result: unknown): GoalProgressUpdateIntentState {
+  if (
+    result === null ||
+    typeof result !== "object" ||
+    !("action" in result) ||
+    !("updateState" in result) ||
+    (result.action !== "deferred" &&
+      result.action !== "opened-release" &&
+      result.action !== "state-updated")
+  ) {
+    throw new Error("GOAL_PROGRESS_IPC_UPDATE_RESPONSE_INVALID");
+  }
+  return {
+    action: result.action,
+    updateState: GoalProgressUpdateStateSchema.parse(result.updateState),
   };
 }
 
@@ -60,17 +86,27 @@ export class GoalProgressCdpViewClient {
     return parseGoalProgressViewState(response.result);
   }
 
-  async reportVisibleThread(threadId: string | null): Promise<void> {
+  async reportVisibleThread(
+    targetId: string,
+    threadId: string | null,
+    sequence?: number,
+    lifecycleId?: string,
+  ): Promise<void> {
     await this.#client.request({
       method: "renderer.visible-thread",
-      params: { threadId },
+      params: {
+        targetId,
+        threadId,
+        ...(sequence === undefined ? {} : { sequence }),
+        ...(lifecycleId === undefined ? {} : { lifecycleId }),
+      },
     });
   }
 
-  async reportDisconnected(code: string): Promise<void> {
+  async reportDisconnected(targetId: string, code: string): Promise<void> {
     await this.#client.request({
       method: "renderer.disconnected",
-      params: { code },
+      params: { targetId, code },
     });
   }
 
@@ -83,5 +119,16 @@ export class GoalProgressCdpViewClient {
       params: { sessionId, intent },
     });
     return parseGoalProgressViewState(response.result);
+  }
+
+  async applyUpdateIntent(
+    sessionId: string,
+    intent: GoalProgressUpdateIntent,
+  ): Promise<GoalProgressUpdateIntentState> {
+    const response = await this.#client.request({
+      method: "update.intent",
+      params: { sessionId, intent },
+    });
+    return parseGoalProgressUpdateIntentState(response.result);
   }
 }

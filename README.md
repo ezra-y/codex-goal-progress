@@ -11,22 +11,34 @@
 </div>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
 </p>
 
 ## 🆕 Latest update
 
-### v0.2.2 — Lifecycle and layout hardening
+### 🚀 v0.3.0 — Restart recovery, multi-window support, and in-app updates
 
-- 🧩 Updated for the latest Codex Goal row, sidebar task, and composer structure.
-- 🫥 Completed Goals clear their progress UI instead of leaving a 100% ghost card.
-- 📌 Long composer input keeps fixed progress at its verified native position.
-- 👀 Visibility diagnostics now match what is actually visible on screen.
-- 🧬 A replacement Goal can no longer inherit progress from the previous Goal.
-- ⏱️ Status labels and elapsed time no longer make the current Goal look like a replacement.
-- 📐 Fixed progress follows the live left and right boundaries of the native Goal.
-- 🧹 Updates remove stale Plugin caches instead of leaving old Hook and Skill files behind.
-- 🔌 Compatible updates keep active Goal Progress sessions working without restarting Codex.
+- 🔌 **Start from the official Codex icon.** Goal Progress sets up the required CDP connection
+  automatically. No extra command or manual setup is needed.
+- 🔄 **Progress returns after a full quit.** Reopen an old task to restore its checklist, progress,
+  Token count, and display settings. You do not need to be on a task with progress when you quit or
+  start Codex.
+- 🪟 **Multiple windows are now supported.** New windows, task links, and tasks opened in a new
+  window connect automatically. Each window follows its own task. Switching or closing one window
+  does not affect another.
+- 🎉 **Update inside Codex.** Goal Progress checks for new versions automatically, and you can also
+  check manually. Select **Update now** to download, verify, and install an update with real
+  download progress.
+- ⋯ **A new More menu.** The three-dot menu has **Version**, **Effects**, and **Display** sections.
+  You can view the installed version, check for updates, open release notes, change animations, and
+  choose a display position in one place.
+- 🧩 **More reliable installs and updates.** Fixed early install failures and enabled the Hook
+  required by the plugin. Interrupted downloads can be retried. Restarting no longer leaves updates
+  stuck on **Restart required** because of recovery timing.
+- 🛠️ **Cleaner code and better recovery.** Large files were split and repeated install, Doctor,
+  and Verify code was reduced. Page reloads, task switches, and interrupted updates recover more
+  reliably. Temporary files are removed after an update completes.
+- 🤖 **A new cute robot logo.** Goal Progress now uses the new transparent robot icon.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 
@@ -63,8 +75,8 @@ curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/downloa
 The script downloads the macOS package and `SHA256SUMS`, verifies the ZIP, and runs the bundled
 installer. If Codex must restart, the script asks first.
 
-If Codex asks you to review the Goal Progress Hook, approve it, then open a new task so the new
-Plugin session loads.
+After installation, reopen Codex when requested, then open a new task so the new Plugin session
+loads.
 
 ## 🛠️ Requirements
 
@@ -83,7 +95,13 @@ record.
 Enable Goal Progress separately for each new Goal. Ordinary Goals continue through the native
 Codex flow.
 
-## 🌓 Light and dark
+## 🌓 Progress states and themes
+
+### Preparing the checklist
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress preparing the acceptance checklist" width="760">
+</p>
 
 ### Light
 

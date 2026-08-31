@@ -42,12 +42,16 @@ When the Goal already exists:
 
 1. The Hook injects a signed runtime proof.
 2. Helper resolves the current thread and reads its native Goal.
-3. The current model reuses or prepares a checklist.
-4. `goal_progress_initialize` creates Contract revision 1.
+3. `goal_progress_activate({})` returns `initialize`, `get`, or `rescope-or-replace`.
+4. The current model reuses or prepares a checklist.
+5. `goal_progress_initialize` sends only the Contract ID, source, and objectives. Helper binds the
+   Contract to the current native Goal it reads at that moment.
 
 When the Goal changes:
 
-- A small scope change updates the current Contract through `goal_progress_rescope`.
+- The current model may use Codex native Goal tools to update it.
+- A wording-only change keeps the existing checklist.
+- A small scope change updates only affected objectives through `goal_progress_rescope`.
 - A new delivery target creates a replacement Contract at revision 1.
 - The previous Contract remains in event history.
 
