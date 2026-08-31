@@ -1,12 +1,24 @@
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { access, chmod, cp, lstat, readdir, readFile, realpath, rm, stat } from "node:fs/promises";
+import {
+  access,
+  chmod,
+  cp,
+  lstat,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  rmdir,
+  stat,
+} from "node:fs/promises";
 import { resolve } from "node:path";
 import { ensurePrivateDirectory } from "../../../packages/store/src/index.js";
 import {
   enableInstalledGoalProgressHooks,
   GOAL_PROGRESS_PLUGIN_ID as PLUGIN_ID,
+  removeInstalledGoalProgressHookState,
 } from "./hook-configuration.js";
 import { isNotFound } from "./macos-errors.js";
 import { assertPluginTreeHasNoSymlinks, verifyPluginTreeManifest } from "./plugin-integrity.js";
@@ -114,12 +126,12 @@ export function createPluginController(options: {
   readonly codexCommand: string;
 }): PluginController {
   const command = options.codexCommand;
-  const pluginCacheRoot = resolve(
+  const marketplaceCacheRoot = resolve(
     options.codexHomeDirectory,
     "plugins/cache",
     MARKETPLACE_NAME,
-    PLUGIN_NAME,
   );
+  const pluginCacheRoot = resolve(marketplaceCacheRoot, PLUGIN_NAME);
   const removeStalePluginCaches = async (currentVersion: string): Promise<void> => {
     let entries: string[];
     try {
@@ -137,16 +149,33 @@ export function createPluginController(options: {
     );
   };
   const removePluginCache = async (): Promise<boolean> => {
+    let changed = false;
+    let pluginCacheExists = false;
     try {
       await lstat(pluginCacheRoot);
+      pluginCacheExists = true;
     } catch (error) {
-      if (isNotFound(error)) {
-        return false;
+      if (!isNotFound(error)) {
+        throw error;
       }
-      throw error;
     }
-    await rm(pluginCacheRoot, { recursive: true, force: true });
-    return true;
+    if (pluginCacheExists) {
+      await rm(pluginCacheRoot, { recursive: true, force: true });
+      changed = true;
+    }
+    try {
+      await rmdir(marketplaceCacheRoot);
+      changed = true;
+    } catch (error) {
+      const code =
+        error instanceof Error && "code" in error
+          ? (error as NodeJS.ErrnoException).code
+          : undefined;
+      if (code !== "ENOENT" && code !== "ENOTEMPTY") {
+        throw error;
+      }
+    }
+    return changed;
   };
   const pluginList = () =>
     listedRecords(
@@ -347,6 +376,7 @@ export function createPluginController(options: {
     },
     async remove() {
       let changed = false;
+      await removeInstalledGoalProgressHookState(command, options.codexHomeDirectory);
       if (isInstalled()) {
         runCodexJson(
           command,

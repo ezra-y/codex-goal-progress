@@ -2,6 +2,11 @@ import { spawn } from "node:child_process";
 
 export const GOAL_PROGRESS_PLUGIN_ID = "codex-goal-progress@codex-goal-progress-local";
 const HOOK_CONFIGURATION_TIMEOUT_MS = 10_000;
+const GOAL_PROGRESS_HOOK_KEYS = [
+  `${GOAL_PROGRESS_PLUGIN_ID}:hooks/hooks.json:pre_tool_use:0:0`,
+  `${GOAL_PROGRESS_PLUGIN_ID}:hooks/hooks.json:post_tool_use:0:0`,
+  `${GOAL_PROGRESS_PLUGIN_ID}:hooks/hooks.json:session_start:0:0`,
+] as const;
 
 interface CodexHookMetadata {
   readonly key: string;
@@ -21,9 +26,10 @@ function quotedKeyPathSegment(value: string): string {
   return `"${value.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
 }
 
-export async function enableInstalledGoalProgressHooks(
+async function configureInstalledGoalProgressHooks(
   command: string,
   codexHomeDirectory: string,
+  mode: "enable" | "remove",
 ): Promise<void> {
   const child = spawn(command, ["app-server", "--stdio"], {
     env: {
@@ -110,7 +116,22 @@ export async function enableInstalledGoalProgressHooks(
         }
         if (message.id === 1) {
           send({ method: "initialized", params: {} });
-          requestHooks(2);
+          if (mode === "enable") {
+            requestHooks(2);
+          } else {
+            send({
+              id: 5,
+              method: "config/batchWrite",
+              params: {
+                edits: GOAL_PROGRESS_HOOK_KEYS.map((key) => ({
+                  keyPath: `hooks.state.${quotedKeyPathSegment(key)}`,
+                  value: null,
+                  mergeStrategy: "replace",
+                })),
+                reloadUserConfig: true,
+              },
+            });
+          }
           continue;
         }
         if (message.id === 2) {
@@ -168,6 +189,10 @@ export async function enableInstalledGoalProgressHooks(
           finish();
           return;
         }
+        if (message.id === 5) {
+          finish();
+          return;
+        }
       }
     });
 
@@ -185,4 +210,18 @@ export async function enableInstalledGoalProgressHooks(
       },
     });
   });
+}
+
+export async function enableInstalledGoalProgressHooks(
+  command: string,
+  codexHomeDirectory: string,
+): Promise<void> {
+  await configureInstalledGoalProgressHooks(command, codexHomeDirectory, "enable");
+}
+
+export async function removeInstalledGoalProgressHookState(
+  command: string,
+  codexHomeDirectory: string,
+): Promise<void> {
+  await configureInstalledGoalProgressHooks(command, codexHomeDirectory, "remove");
 }
