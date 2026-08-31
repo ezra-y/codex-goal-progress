@@ -11,7 +11,7 @@
 </div>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress 演示">
+  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress 演示">
 </p>
 
 ## 🆕 最近更新
@@ -84,7 +84,13 @@ macOS 安装包已经包含运行时。
 
 每个新 Goal 需要单独启用 Goal Progress。普通 Goal 继续使用 Codex 原生流程。
 
-## 🌓 浅色与深色
+## 🌓 进度状态与主题
+
+### 正在准备验收清单
+
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress 正在准备验收清单" width="760">
+</p>
 
 ### 浅色
 

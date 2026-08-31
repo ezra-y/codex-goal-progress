@@ -11,7 +11,7 @@
 </div>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
+  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
 </p>
 
 ## 🆕 Latest update
@@ -95,7 +95,13 @@ record.
 Enable Goal Progress separately for each new Goal. Ordinary Goals continue through the native
 Codex flow.
 
-## 🌓 Light and dark
+## 🌓 Progress states and themes
+
+### Preparing the checklist
+
+<p align="center">
+  <img src="docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress preparing the acceptance checklist" width="760">
+</p>
 
 ### Light
 
