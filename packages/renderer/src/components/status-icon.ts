@@ -3,6 +3,13 @@ import type { GoalProgressViewModel } from "../../../contracts/src/index.js";
 import type { GoalProgressMessages } from "../locale.js";
 import { type GoalProgressObjectiveView, statusLabel } from "../view-labels.js";
 
+const visibleStatusLabels = {
+  completed: "Success",
+  active: "Working",
+  pending: "Pending",
+  blocked: "Blocked",
+} as const;
+
 export function renderStatusIcon(
   objective: GoalProgressObjectiveView,
   index: number,
@@ -14,19 +21,12 @@ export function renderStatusIcon(
     objective.status !== "active"
       ? null
       : trackingPhase === "paused"
-        ? messages.visiblePaused
+        ? "Paused"
         : trackingPhase === "blocked"
-          ? messages.visibleBlocked
+          ? "Blocked"
           : null;
   const accessibleLabel = phaseStatus ?? label;
-  const visible =
-    phaseStatus ??
-    {
-      completed: messages.visibleSuccess,
-      active: messages.visibleWorking,
-      pending: messages.visiblePending,
-      blocked: messages.visibleBlocked,
-    }[objective.status];
+  const visible = phaseStatus ?? visibleStatusLabels[objective.status];
   return html`
     <span class="status-index" aria-hidden="true">${index + 1}.</span>
     <span class="status ${objective.status}" aria-hidden="true">${visible}</span>

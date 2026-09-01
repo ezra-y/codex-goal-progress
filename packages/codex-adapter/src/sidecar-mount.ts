@@ -140,10 +140,25 @@ function clampFloatingDockRatio(value: number): number {
   return Math.max(0, Math.min(1, value));
 }
 
+const RTL_DOCUMENT_LANGUAGES = new Set(["ar", "fa", "ur"]);
+
+function documentDirection(document: Document, language: string): "ltr" | "rtl" {
+  const declared = document.documentElement.getAttribute("dir")?.trim().toLowerCase();
+  if (declared === "rtl" || declared === "ltr") {
+    return declared;
+  }
+  try {
+    const locale = new Intl.Locale(language);
+    return RTL_DOCUMENT_LANGUAGES.has(locale.language) ? "rtl" : "ltr";
+  } catch {
+    return "ltr";
+  }
+}
+
 function syncHostLocale(host: GoalProgressHostElement, document: Document): void {
   const language = (document.documentElement.lang ?? "").trim();
-  host.lang = language || "zh-CN";
-  host.dir = document.documentElement.dir === "rtl" ? "rtl" : "ltr";
+  host.lang = language || "en";
+  host.dir = documentDirection(document, host.lang);
 }
 
 function floatingGoalBlockRect(anchor: HTMLElement): DOMRect {

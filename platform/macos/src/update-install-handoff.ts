@@ -1,4 +1,4 @@
-import { execFile, spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { access, lstat } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -27,6 +27,7 @@ import {
   createUpdateWorkerInvocation,
   currentUpdateWorkerInvocationInput,
   notifyUpdateWorkerResult,
+  removeUpdateWorker,
   submitUpdateWorker,
   type UpdateWorkerLaunchctlRunner,
 } from "./update-worker-launchd.js";
@@ -79,8 +80,8 @@ export function createUpdateInstallHandoffInvocation(
 export function submitUpdateInstallHandoff(
   operationId: string,
   runner?: UpdateWorkerLaunchctlRunner,
-): void {
-  submitUpdateWorker(
+): Promise<void> {
+  return submitUpdateWorker(
     createUpdateInstallHandoffInvocation(currentUpdateWorkerInvocationInput(operationId)),
     runner,
   );
@@ -170,7 +171,7 @@ export interface RunUpdateInstallHandoffOptions {
   readonly now?: () => Date;
 }
 
-export async function runUpdateInstallHandoff(
+async function executeUpdateInstallHandoff(
   options: RunUpdateInstallHandoffOptions,
 ): Promise<GoalProgressUpdateWorkerResult> {
   const operationStore = new MacosGoalProgressUpdateOperationStore(options.paths);
@@ -239,6 +240,14 @@ export async function runUpdateInstallHandoff(
     const code = stableWorkerError(error);
     await finish("failed", code).catch(() => undefined);
     throw new Error(code);
+  }
+}
+
+export async function runUpdateInstallHandoff(
+  options: RunUpdateInstallHandoffOptions,
+): Promise<GoalProgressUpdateWorkerResult> {
+  try {
+    return await executeUpdateInstallHandoff(options);
   } finally {
     await options.removeJob?.();
   }
@@ -274,8 +283,6 @@ export async function runUpdateInstallHandoffFromEnvironment(
         params: result,
       });
     },
-    removeJob: () => {
-      spawnSync(invocation.command, [...invocation.removeArgs], invocation.options);
-    },
+    removeJob: () => removeUpdateWorker(invocation),
   });
 }

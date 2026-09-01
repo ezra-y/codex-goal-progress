@@ -13,7 +13,10 @@ import {
   inspectProcess,
   launchCodexNormally,
   launchCodexWithCdp,
+  listCodexMainProcesses,
+  readCodexCdpRuntimeState,
   stopLaunchedCodexCdpProcess,
+  verifyCodexCdpListenerOwnership,
   waitForCodexCdpListenerOwnership,
   writeCodexCdpRuntimeState,
 } from "../../../platform/macos/src/index.js";
@@ -94,6 +97,9 @@ export interface MacosStartupHandoffControllerOptions {
   readonly paths: GoalProgressPaths;
   readonly inspectApp?: (appPath: string) => Promise<CodexMacosAppIdentity>;
   readonly inspectTargetProcess?: typeof inspectProcess;
+  readonly listMainProcesses?: typeof listCodexMainProcesses;
+  readonly readRuntimeState?: typeof readCodexCdpRuntimeState;
+  readonly verifyExistingOwnership?: typeof verifyCodexCdpListenerOwnership;
   readonly allocatePort?: typeof allocateRandomLoopbackPort;
   readonly launchWithCdp?: typeof launchCodexWithCdp;
   readonly waitForOwnership?: typeof waitForCodexCdpListenerOwnership;
@@ -108,6 +114,7 @@ export interface MacosStartupHandoffControllerOptions {
 
 export interface MacosStartupHandoffContext {
   readonly isPending: () => boolean;
+  readonly isStopped?: () => boolean;
 }
 
 function eventResponse(
@@ -222,6 +229,9 @@ export class MacosStartupHandoffController {
   readonly #paths: GoalProgressPaths;
   readonly #inspectApp: NonNullable<MacosStartupHandoffControllerOptions["inspectApp"]>;
   readonly #inspectTargetProcess: typeof inspectProcess;
+  readonly #listMainProcesses: typeof listCodexMainProcesses;
+  readonly #readRuntimeState: typeof readCodexCdpRuntimeState;
+  readonly #verifyExistingOwnership: typeof verifyCodexCdpListenerOwnership;
   readonly #allocatePort: typeof allocateRandomLoopbackPort;
   readonly #launchWithCdp: typeof launchCodexWithCdp;
   readonly #waitForOwnership: typeof waitForCodexCdpListenerOwnership;
@@ -233,11 +243,18 @@ export class MacosStartupHandoffController {
   readonly #now: () => number;
   readonly #sleep: (milliseconds: number) => Promise<void>;
   readonly #outcomes = new Map<string, MacosCodexStartupResponse>();
+  readonly #reusedMainProcesses = new Map<number, string>();
+  #operationSequence = 0;
+  #runtimeWriteTail: Promise<void> = Promise.resolve();
 
   constructor(options: MacosStartupHandoffControllerOptions) {
     this.#paths = options.paths;
     this.#inspectApp = options.inspectApp ?? ((appPath) => inspectCodexMacosApp(appPath));
     this.#inspectTargetProcess = options.inspectTargetProcess ?? inspectProcess;
+    this.#listMainProcesses = options.listMainProcesses ?? listCodexMainProcesses;
+    this.#readRuntimeState = options.readRuntimeState ?? readCodexCdpRuntimeState;
+    this.#verifyExistingOwnership =
+      options.verifyExistingOwnership ?? verifyCodexCdpListenerOwnership;
     this.#allocatePort = options.allocatePort ?? allocateRandomLoopbackPort;
     this.#launchWithCdp = options.launchWithCdp ?? launchCodexWithCdp;
     this.#waitForOwnership = options.waitForOwnership ?? waitForCodexCdpListenerOwnership;
@@ -268,6 +285,183 @@ export class MacosStartupHandoffController {
     return response;
   }
 
+  async #existingInstanceResponse(
+    event: MacosCodexStartupEvent,
+    app: CodexMacosAppIdentity,
+  ): Promise<MacosCodexStartupResponse | undefined> {
+    try {
+      const state = await this.#readRuntimeState(this.#paths.cdpRuntimePath);
+      if (
+        state.mainPid !== event.pid &&
+        state.appPath === app.realAppPath &&
+        state.executablePath === app.realExecutablePath &&
+        state.bundleId === app.bundleId &&
+        state.teamId === app.teamId
+      ) {
+        const ownership = await this.#verifyExistingOwnership(app, state.mainPid, state.port);
+        if (
+          ownership.mainProcess.startedAt === state.processStartedAt &&
+          ownership.mainProcess.command === state.command
+        ) {
+          this.#rememberReusedMainProcess(ownership.mainProcess);
+          return eventResponse(event, "continue", "STARTUP_EVENT_EXISTING_CDP", state);
+        }
+      }
+    } catch {
+      // A stale or unavailable runtime record does not prove that no main process exists.
+    }
+
+    let processes: readonly Awaited<ReturnType<typeof inspectProcess>>[];
+    try {
+      processes = await this.#listMainProcesses(app);
+    } catch {
+      return eventResponse(event, "continue", "STARTUP_EVENT_INSTANCE_CHECK_FAILED");
+    }
+    const existing = processes.find((process) => process.pid !== event.pid);
+    if (existing) {
+      this.#rememberReusedMainProcess(existing);
+    }
+    return existing
+      ? {
+          ...eventResponse(event, "continue", "STARTUP_EVENT_EXISTING_INSTANCE"),
+          mainPid: existing.pid,
+        }
+      : undefined;
+  }
+
+  #processIdentity(process: { readonly startedAt: string; readonly command: string }): string {
+    return `${process.startedAt}\n${process.command}`;
+  }
+
+  #rememberReusedMainProcess(process: Awaited<ReturnType<typeof inspectProcess>>): void {
+    this.#reusedMainProcesses.set(process.pid, this.#processIdentity(process));
+    while (this.#reusedMainProcesses.size > STARTUP_EVENT_DEDUP_LIMIT) {
+      const oldest = this.#reusedMainProcesses.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.#reusedMainProcesses.delete(oldest);
+    }
+  }
+
+  #launchedProcessIdentity(launched: Awaited<ReturnType<typeof launchCodexWithCdp>>): string {
+    return this.#processIdentity({
+      startedAt: launched.processStartedAt,
+      command: launched.command,
+    });
+  }
+
+  #launchWasReused(launched: Awaited<ReturnType<typeof launchCodexWithCdp>>): boolean {
+    return this.#reusedMainProcesses.get(launched.pid) === this.#launchedProcessIdentity(launched);
+  }
+
+  async #matchingLaunchedProcess(
+    launched: Awaited<ReturnType<typeof launchCodexWithCdp>>,
+  ): Promise<Awaited<ReturnType<typeof inspectProcess>> | null> {
+    try {
+      const current = await this.#inspectTargetProcess(launched.pid);
+      return this.#processIdentity(current) === this.#launchedProcessIdentity(launched)
+        ? current
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async #launchIsInUse(
+    launched: Awaited<ReturnType<typeof launchCodexWithCdp>>,
+    port: number,
+  ): Promise<boolean> {
+    const current = await this.#matchingLaunchedProcess(launched);
+    if (!current) {
+      this.#reusedMainProcesses.delete(launched.pid);
+      return false;
+    }
+    if (this.#launchWasReused(launched)) {
+      return true;
+    }
+    try {
+      const state = await this.#readRuntimeState(this.#paths.cdpRuntimePath);
+      return (
+        state.mainPid === launched.pid &&
+        state.port === port &&
+        state.processStartedAt === launched.processStartedAt &&
+        state.command === launched.command
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  async #writeRuntimeIfCurrent(
+    state: CodexCdpRuntimeState,
+    isCurrent: () => boolean,
+  ): Promise<boolean> {
+    let written = false;
+    const write = this.#runtimeWriteTail.then(async () => {
+      if (!isCurrent()) {
+        return;
+      }
+      await this.#writeRuntimeState(this.#paths.cdpRuntimePath, state);
+      written = true;
+    });
+    this.#runtimeWriteTail = write.then(
+      () => undefined,
+      () => undefined,
+    );
+    await write;
+    return written;
+  }
+
+  async #stopOwnedLaunch(
+    app: CodexMacosAppIdentity,
+    launched: Awaited<ReturnType<typeof launchCodexWithCdp>>,
+    port: number,
+    preserveForNewerOperation = false,
+  ): Promise<boolean> {
+    if (preserveForNewerOperation && (await this.#matchingLaunchedProcess(launched))) {
+      return true;
+    }
+    if (await this.#launchIsInUse(launched, port)) {
+      return true;
+    }
+    try {
+      await this.#stopCdpProcess(app, launched, port);
+    } catch {
+      try {
+        const current = await this.#inspectTargetProcess(launched.pid);
+        if (
+          current.startedAt === launched.processStartedAt &&
+          current.command === launched.command
+        ) {
+          this.#signalProcess(launched.pid, "SIGTERM");
+          await waitForProcessExit(launched.pid, this.#inspectTargetProcess, this.#sleep);
+        }
+      } catch {
+        // The launched process already exited.
+      }
+    }
+    return processStillExists(launched.pid, this.#inspectTargetProcess);
+  }
+
+  async #restoreNormalIfNoMain(
+    app: CodexMacosAppIdentity,
+    isStopped: () => boolean,
+  ): Promise<boolean> {
+    try {
+      if ((await this.#listMainProcesses(app)).length > 0) {
+        return false;
+      }
+      if (isStopped()) {
+        return false;
+      }
+      await this.#launchNormal(app);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async handle(
     eventInput: MacosCodexStartupEvent,
     recoverableProgress: boolean,
@@ -279,6 +473,11 @@ export class MacosStartupHandoffController {
     if (duplicate) {
       return duplicate;
     }
+    const operationSequence = ++this.#operationSequence;
+    const isSuperseded = () => operationSequence !== this.#operationSequence;
+    const isStopped = () => context.isStopped?.() === true;
+    const canFinish = () => !isSuperseded() && !isStopped();
+    const canStart = () => canFinish() && context.isPending() && this.#now() < event.deadlineAtMs;
     if (!recoverableProgress) {
       return this.#remember(
         key,
@@ -332,6 +531,11 @@ export class MacosStartupHandoffController {
       return this.#remember(key, eventResponse(event, "continue", "STARTUP_EVENT_APP_MISMATCH"));
     }
 
+    const existingInstance = await this.#existingInstanceResponse(event, app);
+    if (existingInstance) {
+      return this.#remember(key, existingInstance);
+    }
+
     let launched: Awaited<ReturnType<typeof launchCodexWithCdp>> | undefined;
     let port: number | undefined;
     try {
@@ -339,7 +543,7 @@ export class MacosStartupHandoffController {
       if (this.#now() >= event.deadlineAtMs) {
         return this.#remember(key, eventResponse(event, "continue", "STARTUP_EVENT_EXPIRED"));
       }
-      if (!context.isPending()) {
+      if (!canStart()) {
         return this.#remember(key, eventResponse(event, "continue", "STARTUP_EVENT_RELEASED"));
       }
       this.#signalProcess(event.pid, "SIGTERM");
@@ -347,38 +551,70 @@ export class MacosStartupHandoffController {
       if (!(await waitForProcessExit(event.pid, this.#inspectTargetProcess, this.#sleep))) {
         throw new Error("GOAL_PROGRESS_CODEX_CURRENT_PROCESS_STOP_TIMEOUT");
       }
+      if (!canFinish()) {
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
+      const concurrentInstance = await this.#existingInstanceResponse(event, app);
+      if (concurrentInstance) {
+        return this.#remember(key, concurrentInstance);
+      }
+      if (!canFinish()) {
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
       launched = await this.#launchWithCdp(app, { port });
+      if (!canFinish()) {
+        await this.#stopOwnedLaunch(app, launched, port, isSuperseded() && !isStopped());
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
       const ownership = await this.#waitForOwnership(app, launched.pid, port);
+      if (!canFinish()) {
+        await this.#stopOwnedLaunch(app, launched, port, isSuperseded() && !isStopped());
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
       const state = this.#createRuntimeState(app, launched, ownership, port);
-      await this.#writeRuntimeState(this.#paths.cdpRuntimePath, state);
+      if (!(await this.#writeRuntimeIfCurrent(state, canFinish))) {
+        await this.#stopOwnedLaunch(app, launched, port, isSuperseded() && !isStopped());
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
+      if (!canFinish()) {
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
       return this.#remember(
         key,
         eventResponse(event, "complete", "STARTUP_HANDOFF_COMPLETE", state),
       );
     } catch {
+      const reusedByNewerOperation = launched ? this.#launchWasReused(launched) : false;
       if (launched && port !== undefined) {
-        try {
-          await this.#stopCdpProcess(app, launched, port);
-        } catch {
-          try {
-            this.#signalProcess(launched.pid, "SIGTERM");
-            await waitForProcessExit(launched.pid, this.#inspectTargetProcess, this.#sleep);
-          } catch {
-            // The running CDP process is safer than opening a second normal process.
-          }
-        }
-        if (await processStillExists(launched.pid, this.#inspectTargetProcess)) {
+        if (await this.#stopOwnedLaunch(app, launched, port, isSuperseded() && !isStopped())) {
           return this.#remember(
             key,
             eventResponse(event, "complete", "STARTUP_HANDOFF_CDP_PROCESS_RETAINED"),
           );
         }
       }
+      if (!canFinish()) {
+        if (
+          isSuperseded() &&
+          !isStopped() &&
+          reusedByNewerOperation &&
+          (await this.#restoreNormalIfNoMain(app, isStopped))
+        ) {
+          return this.#remember(
+            key,
+            eventResponse(event, "complete", "STARTUP_HANDOFF_FALLBACK_NORMAL"),
+          );
+        }
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
+      }
       if (await processStillExists(event.pid, this.#inspectTargetProcess)) {
         return this.#remember(
           key,
           eventResponse(event, "continue", "STARTUP_HANDOFF_CONTINUED_ORIGINAL"),
         );
+      }
+      if (!canFinish()) {
+        return this.#remember(key, eventResponse(event, "complete", "STARTUP_EVENT_RELEASED"));
       }
       try {
         await this.#launchNormal(app);

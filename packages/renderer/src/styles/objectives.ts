@@ -107,6 +107,8 @@ export const objectiveStyles = css`
       font-variant-numeric: tabular-nums;
       font-weight: 560;
       line-height: 1.25;
+      direction: ltr;
+      unicode-bidi: isolate;
       white-space: nowrap;
     }
 
@@ -281,9 +283,29 @@ export const objectiveStyles = css`
       font-variant-numeric: tabular-nums;
       font-weight: 600;
       line-height: 1.25;
+      direction: ltr;
       text-align: right;
       transform: translateX(calc(0px - var(--gp-objective-percent-shift)));
+      unicode-bidi: isolate;
       white-space: nowrap;
+    }
+
+    :host([dir="rtl"]) .objective-row > div:first-child {
+      justify-items: end;
+    }
+
+    :host([dir="rtl"]) .status-index {
+      right: calc(0px - var(--gp-mini-track-leading-extension));
+      left: auto;
+    }
+
+    :host([dir="rtl"]) .status {
+      text-align: right;
+    }
+
+    :host([dir="rtl"]) .objective-percent {
+      text-align: left;
+      transform: translateX(var(--gp-objective-percent-shift));
     }
 
 `;

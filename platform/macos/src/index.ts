@@ -31,6 +31,7 @@ export {
   type LaunchedCodexCdpProcess,
   launchCodexNormally,
   launchCodexWithCdp,
+  listCodexMainProcesses,
   type ProcessSignalSender,
   type RestoreCodexCdpResult,
   readCodexCdpRuntimeState,

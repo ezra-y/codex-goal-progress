@@ -27,6 +27,7 @@ import {
   createUpdateWorkerInvocation,
   currentUpdateWorkerInvocationInput,
   notifyUpdateWorkerResult,
+  removeUpdateWorker,
   submitUpdateWorker,
   type UpdateWorkerLaunchctlRunner,
 } from "./update-worker-launchd.js";
@@ -45,8 +46,8 @@ export function createUpdateRestartHandoffInvocation(
 export function submitUpdateRestartHandoff(
   operationId: string,
   runner?: UpdateWorkerLaunchctlRunner,
-): void {
-  submitUpdateWorker(
+): Promise<void> {
+  return submitUpdateWorker(
     createUpdateRestartHandoffInvocation(currentUpdateWorkerInvocationInput(operationId)),
     runner,
   );
@@ -90,7 +91,7 @@ export interface UpdateRestartHandoffResult {
   readonly oldLaunchId: string;
 }
 
-export async function runUpdateRestartHandoff(
+async function executeUpdateRestartHandoff(
   options: RunUpdateRestartHandoffOptions,
 ): Promise<UpdateRestartHandoffResult> {
   const operationStore = new MacosGoalProgressUpdateOperationStore(options.paths);
@@ -181,6 +182,14 @@ export async function runUpdateRestartHandoff(
       );
     }
     throw new Error(code);
+  }
+}
+
+export async function runUpdateRestartHandoff(
+  options: RunUpdateRestartHandoffOptions,
+): Promise<UpdateRestartHandoffResult> {
+  try {
+    return await executeUpdateRestartHandoff(options);
   } finally {
     await options.removeJob?.();
   }
@@ -214,8 +223,6 @@ export async function runUpdateRestartHandoffFromEnvironment(
         params: result,
       });
     },
-    removeJob: () => {
-      spawnSync(invocation.command, [...invocation.removeArgs], invocation.options);
-    },
+    removeJob: () => removeUpdateWorker(invocation),
   });
 }
