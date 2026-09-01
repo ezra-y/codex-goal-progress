@@ -136,7 +136,7 @@ export class GoalProgressElement extends LitElement {
     this.floatingCenterAvailable = true;
     this.floatingPanelConstrained = false;
     this.theme = "auto";
-    this.locale = "zh-CN";
+    this.locale = "en";
     this._scrolling = false;
     this._scrollable = false;
     this._scrollThumbSize = 0;

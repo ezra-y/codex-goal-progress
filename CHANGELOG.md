@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3
+
+- Goal Progress now follows the Codex interface language and text direction automatically.
+
 ## 0.3.2
 
 - Progress is calculated from a structured checklist that breaks the goal into weighted, measurable steps.

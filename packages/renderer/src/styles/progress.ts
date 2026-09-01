@@ -44,7 +44,9 @@ export const progressStyles = css`
       font-variant-numeric: tabular-nums;
       font-weight: 740;
       line-height: 1;
+      direction: ltr;
       text-align: center;
+      unicode-bidi: isolate;
     }
 
     .disclosure-icon {

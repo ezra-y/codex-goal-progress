@@ -20,50 +20,73 @@ function escapeXml(value: string): string {
     .replaceAll('"', "&quot;");
 }
 
-export function launchAgentPlist(
-  layout: MacosInstallationLayout,
-  codex: CodexInstallIdentity,
-): string {
-  const helperPath = resolve(layout.currentReleasePath, "bin/goal-progress");
-  const values = {
-    label: escapeXml(layout.launchAgentLabel),
-    helper: escapeXml(helperPath),
-    root: escapeXml(layout.applicationSupportRoot),
-    stdout: escapeXml(resolve(layout.logsRoot, "helper.log")),
-    stderr: escapeXml(resolve(layout.logsRoot, "helper-error.log")),
-    codexCommand: escapeXml(resolve(codex.realAppPath, "Contents/Resources/codex")),
-  };
-  return [
+export interface LaunchdPlistInput {
+  readonly label: string;
+  readonly programArguments: readonly string[];
+  readonly environment: Readonly<Record<string, string>>;
+  readonly runAtLoad: boolean;
+  readonly keepAlive: boolean;
+  readonly standardOutPath?: string;
+  readonly standardErrorPath?: string;
+}
+
+export function launchdPlist(input: LaunchdPlistInput): string {
+  const lines = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
     '<plist version="1.0">',
     "<dict>",
     "  <key>Label</key>",
-    `  <string>${values.label}</string>`,
+    `  <string>${escapeXml(input.label)}</string>`,
     "  <key>ProgramArguments</key>",
     "  <array>",
-    `    <string>${values.helper}</string>`,
-    "    <string>serve</string>",
+    ...input.programArguments.map((argument) => `    <string>${escapeXml(argument)}</string>`),
     "  </array>",
     "  <key>EnvironmentVariables</key>",
     "  <dict>",
-    "    <key>GOAL_PROGRESS_ROOT</key>",
-    `    <string>${values.root}</string>`,
-    "    <key>GOAL_PROGRESS_CODEX_COMMAND</key>",
-    `    <string>${values.codexCommand}</string>`,
+    ...Object.entries(input.environment).flatMap(([key, value]) => [
+      `    <key>${escapeXml(key)}</key>`,
+      `    <string>${escapeXml(value)}</string>`,
+    ]),
     "  </dict>",
     "  <key>RunAtLoad</key>",
-    "  <true/>",
+    input.runAtLoad ? "  <true/>" : "  <false/>",
     "  <key>KeepAlive</key>",
-    "  <true/>",
-    "  <key>StandardOutPath</key>",
-    `  <string>${values.stdout}</string>`,
-    "  <key>StandardErrorPath</key>",
-    `  <string>${values.stderr}</string>`,
-    "</dict>",
-    "</plist>",
-    "",
-  ].join("\n");
+    input.keepAlive ? "  <true/>" : "  <false/>",
+  ];
+  if (input.standardOutPath) {
+    lines.push(
+      "  <key>StandardOutPath</key>",
+      `  <string>${escapeXml(input.standardOutPath)}</string>`,
+    );
+  }
+  if (input.standardErrorPath) {
+    lines.push(
+      "  <key>StandardErrorPath</key>",
+      `  <string>${escapeXml(input.standardErrorPath)}</string>`,
+    );
+  }
+  lines.push("</dict>", "</plist>", "");
+  return lines.join("\n");
+}
+
+export function launchAgentPlist(
+  layout: MacosInstallationLayout,
+  codex: CodexInstallIdentity,
+): string {
+  const helperPath = resolve(layout.currentReleasePath, "bin/goal-progress");
+  return launchdPlist({
+    label: layout.launchAgentLabel,
+    programArguments: [helperPath, "serve"],
+    environment: {
+      GOAL_PROGRESS_ROOT: layout.applicationSupportRoot,
+      GOAL_PROGRESS_CODEX_COMMAND: resolve(codex.realAppPath, "Contents/Resources/codex"),
+    },
+    runAtLoad: true,
+    keepAlive: true,
+    standardOutPath: resolve(layout.logsRoot, "helper.log"),
+    standardErrorPath: resolve(layout.logsRoot, "helper-error.log"),
+  });
 }
 
 export async function writeIfChanged(path: string, contents: string): Promise<boolean> {
@@ -92,7 +115,7 @@ function delay(milliseconds: number): Promise<void> {
   return new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds));
 }
 
-function launchDomain(): string {
+export function launchDomain(): string {
   const uid = process.getuid?.();
   if (uid === undefined) {
     throw new Error("GOAL_PROGRESS_LAUNCHD_UID_UNAVAILABLE");

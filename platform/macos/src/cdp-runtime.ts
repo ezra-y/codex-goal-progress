@@ -344,6 +344,39 @@ export async function inspectProcess(
   };
 }
 
+export async function listCodexMainProcesses(
+  app: CodexMacosAppIdentity,
+  runner: CommandRunner = runSystemCommand,
+): Promise<readonly CodexCdpProcessSnapshot[]> {
+  const result = await runner("/bin/ps", ["-axo", "pid=,command="]);
+  if (result.exitCode !== 0) {
+    throw discoveryError("GOAL_PROGRESS_CDP_PROCESS_LIST_FAILED", result.stderr);
+  }
+  const candidatePids = result.stdout.split(/\r?\n/u).flatMap((line) => {
+    const match = /^\s*(\d+)\s+(.+)$/u.exec(line);
+    const pid = Number(match?.[1]);
+    const command = match?.[2]?.trim();
+    return Number.isSafeInteger(pid) &&
+      pid > 1 &&
+      command &&
+      commandBelongsToExecutable(command, app.realExecutablePath)
+      ? [pid]
+      : [];
+  });
+  const processes: CodexCdpProcessSnapshot[] = [];
+  for (const pid of candidatePids) {
+    try {
+      const snapshot = await inspectProcess(pid, runner);
+      if (commandBelongsToExecutable(snapshot.command, app.realExecutablePath)) {
+        processes.push(snapshot);
+      }
+    } catch {
+      // The process exited after the process list was captured.
+    }
+  }
+  return processes;
+}
+
 function childHasExited(child: ChildProcess): boolean {
   return child.exitCode !== null || child.signalCode !== null;
 }

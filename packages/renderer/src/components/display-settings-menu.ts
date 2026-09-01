@@ -50,9 +50,9 @@ function updateMenuStatus(state: GoalProgressUpdateState, messages: GoalProgress
     return messages.checkFailed;
   }
   if (state.phase === "restart-required" && state.latestVersion) {
-    return messages.restartPending(state.latestVersion);
+    return messages.restartPending;
   }
-  return state.latestVersion ? messages.newVersion(state.latestVersion) : messages.checkFailed;
+  return state.latestVersion ? messages.newVersion : messages.checkFailed;
 }
 
 function renderIconNode([tagName, attributes, children = []]: LucideIconNode): string {
@@ -165,7 +165,11 @@ export function renderDisplaySettingsMenu(options: DisplaySettingsMenuRenderOpti
                       </span>
                       <span
                         class="update-menu-value ${
-                          updateState.phase === "up-to-date" ? "muted" : ""
+                          updateState.phase === "up-to-date"
+                            ? "muted"
+                            : updateState.phase === "available"
+                              ? "update-available"
+                              : ""
                         }"
                       >
                         ${updateMenuStatus(updateState, options.messages)}

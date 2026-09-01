@@ -69,7 +69,12 @@ export const layoutAndTypographyStyles = css`
       font-size: max(10px, calc(var(--gp-font-size) - 3px));
       font-variant-numeric: tabular-nums;
       transform: translateX(calc(0px - var(--gp-token-right-shift)));
+      unicode-bidi: plaintext;
       white-space: nowrap;
+    }
+
+    :host([dir="rtl"]) .token {
+      transform: translateX(var(--gp-token-right-shift));
     }
 
     .current-summary {
@@ -212,6 +217,7 @@ export const layoutAndTypographyStyles = css`
       position: absolute;
       z-index: 20;
       right: 0;
+      left: auto;
       top: calc(100% + 6px);
       bottom: auto;
       display: grid;
@@ -251,7 +257,7 @@ export const layoutAndTypographyStyles = css`
       color: var(--gp-text);
       cursor: pointer;
       font-size: var(--gp-font-size-sm);
-      text-align: left;
+      text-align: start;
     }
 
     .placement-menu button:hover:not(:disabled),

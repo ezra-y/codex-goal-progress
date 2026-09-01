@@ -444,6 +444,7 @@ export class GoalProgressHelper {
           await hasRecoverableGoalProgress(this.paths),
           {
             isPending: () => this.#startupListener?.isPending(event.pid) === true,
+            isStopped: () => this.#server === undefined,
           },
         );
         if (response.code === "STARTUP_HANDOFF_COMPLETE") {

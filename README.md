@@ -16,7 +16,7 @@
 
 ## 🆕 Latest update
 
-### 🚀 v0.3.2 — Restart recovery, multi-window support, and in-app updates
+### 🚀 v0.3.3 — Restart recovery, multi-window support, and in-app updates
 
 Progress is calculated from a structured checklist that breaks the goal into weighted, measurable steps.
 

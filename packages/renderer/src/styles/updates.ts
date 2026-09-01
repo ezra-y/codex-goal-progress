@@ -84,8 +84,10 @@ export const updateStyles = css`
     .update-percent {
       flex: none;
       color: var(--gp-text);
+      direction: ltr;
       font-variant-numeric: tabular-nums;
       font-weight: 650;
+      unicode-bidi: isolate;
     }
 
     .update-prompt-actions {
@@ -214,7 +216,7 @@ export const updateStyles = css`
 
     .placement-menu-title,
     .update-menu-section-title {
-      text-align: left;
+      text-align: start;
     }
 
     .placement-menu [data-update-check] .menu-row-text {
@@ -241,14 +243,19 @@ export const updateStyles = css`
       font-size: 10px;
       font-variant-numeric: tabular-nums;
       font-weight: 350;
-      text-align: right;
+      text-align: end;
       text-overflow: ellipsis;
+      unicode-bidi: isolate;
       white-space: nowrap;
     }
 
     .update-menu-value.muted {
       color: var(--gp-icon-muted);
       font-weight: 350;
+    }
+
+    .update-menu-value.update-available {
+      color: color-mix(in oklab, var(--gp-accent) 62%, var(--gp-icon-muted));
     }
 
     .update-external-icon {
@@ -318,6 +325,25 @@ export const updateStyles = css`
       color: currentColor;
     }
 
+    :host(:lang(ml)) .content.has-update-prompt:has(.restart-required),
+    :host(:lang(ta)) .content.has-update-prompt:has(.restart-required) {
+      padding-top: max(var(--gp-content-padding-top), calc(var(--gp-font-size) * 3.2));
+    }
+
+    :host(:lang(ml)) .update-prompt.restart-required,
+    :host(:lang(ta)) .update-prompt.restart-required {
+      height: auto;
+      overflow: visible;
+    }
+
+    :host(:lang(ml)) .restart-required .update-state-text,
+    :host(:lang(ta)) .restart-required .update-state-text {
+      overflow: visible;
+      line-height: 1.15;
+      text-overflow: clip;
+      white-space: normal;
+    }
+
     @keyframes update-dot-breathe {
       0%,
       100% {
@@ -336,8 +362,35 @@ export const updateStyles = css`
         gap: 4px;
       }
 
+      .content.has-update-prompt:has(.restart-required) {
+        padding-top: max(var(--gp-content-padding-top), calc(var(--gp-font-size) * 5.2));
+      }
+
+      .update-prompt.restart-required {
+        width: min(100%, calc(100vw - 104px));
+        height: auto;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        row-gap: 3px;
+        overflow: visible;
+        white-space: normal;
+      }
+
       .restart-required .update-state-text {
-        max-width: 116px;
+        overflow: visible;
+        max-width: none;
+        flex: 1 1 100%;
+        line-height: 1.15;
+        text-align: end;
+        text-overflow: clip;
+        white-space: normal;
+      }
+
+      .restart-required .update-prompt-actions {
+        width: 100%;
+        max-width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
 
       .update-action {

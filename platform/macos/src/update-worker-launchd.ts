@@ -1,11 +1,17 @@
 import { spawnSync } from "node:child_process";
+import { rm } from "node:fs/promises";
+import { resolve } from "node:path";
 import { isSea } from "node:sea";
+import { atomicWriteFile } from "../../../packages/store/src/index.js";
+import { launchDomain, launchdPlist } from "./launch-agent-controller.js";
 
 export interface UpdateWorkerLaunchctlInvocation {
   readonly label: string;
   readonly command: "/bin/launchctl";
   readonly args: readonly string[];
   readonly removeArgs: readonly string[];
+  readonly plistPath: string;
+  readonly plist: string;
   readonly options: {
     readonly shell: false;
     readonly stdio: "ignore";
@@ -52,6 +58,13 @@ export interface CreateUpdateWorkerInvocationInput {
   readonly sea?: boolean;
 }
 
+export interface CreateOneShotUpdateWorkerInvocationInput {
+  readonly label: string;
+  readonly plistPath: string;
+  readonly programArguments: readonly string[];
+  readonly environment: Readonly<Record<string, string>>;
+}
+
 function programArguments(
   input: CreateUpdateWorkerInvocationInput,
   internalCommand: string,
@@ -83,40 +96,65 @@ export function createUpdateWorkerInvocation(
     GOAL_PROGRESS_UPDATE_OPERATION_ID: input.operationId,
   };
   const label = `com.codexgoalprogress.update-${kind}.${input.operationId}`;
-  return {
+  const plistPath = resolve(root, "runtime", "update-workers", `${label}.plist`);
+  const invocation = createOneShotUpdateWorkerInvocation({
     label,
+    plistPath,
+    programArguments: programArguments(input, internalCommand),
+    environment,
+  });
+  return invocation;
+}
+
+export function createOneShotUpdateWorkerInvocation(
+  input: CreateOneShotUpdateWorkerInvocationInput,
+): UpdateWorkerLaunchctlInvocation {
+  const domain = launchDomain();
+  return {
+    label: input.label,
     command: "/bin/launchctl",
-    args: [
-      "submit",
-      "-l",
-      label,
-      "--",
-      "/usr/bin/env",
-      ...Object.entries(environment).map(([key, value]) => `${key}=${value}`),
-      ...programArguments(input, internalCommand),
-    ],
-    removeArgs: ["remove", label],
+    args: ["bootstrap", domain, input.plistPath],
+    removeArgs: ["bootout", `${domain}/${input.label}`],
+    plistPath: input.plistPath,
+    plist: launchdPlist({
+      label: input.label,
+      programArguments: input.programArguments,
+      environment: input.environment,
+      runAtLoad: true,
+      keepAlive: false,
+    }),
     options: {
       shell: false,
       stdio: "ignore",
-      env: environment,
+      env: input.environment,
     },
   };
 }
 
-export function submitUpdateWorker(
+export async function submitUpdateWorker(
   invocation: UpdateWorkerLaunchctlInvocation,
   runner: UpdateWorkerLaunchctlRunner = (command, args, options) =>
     spawnSync(command, [...args], options),
-): void {
+): Promise<void> {
+  await atomicWriteFile(invocation.plistPath, invocation.plist);
   const result = runner(invocation.command, invocation.args, invocation.options);
   if (result.status !== 0) {
+    await rm(invocation.plistPath, { force: true });
     throw new Error(
       invocation.label.includes("update-install")
         ? "GOAL_PROGRESS_UPDATE_INSTALL_SUBMIT_FAILED"
         : "GOAL_PROGRESS_UPDATE_RESTART_SUBMIT_FAILED",
     );
   }
+}
+
+export async function removeUpdateWorker(
+  invocation: UpdateWorkerLaunchctlInvocation,
+  runner: UpdateWorkerLaunchctlRunner = (command, args, options) =>
+    spawnSync(command, [...args], options),
+): Promise<void> {
+  await rm(invocation.plistPath, { force: true });
+  runner(invocation.command, invocation.removeArgs, invocation.options);
 }
 
 export function currentUpdateWorkerInvocationInput(
