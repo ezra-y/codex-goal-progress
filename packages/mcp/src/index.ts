@@ -18,9 +18,7 @@ import {
   type GoalProgressViewModel,
   GoalProgressViewModelSchema,
   RuntimeContextArgumentSchema,
-  RuntimeContextSchema,
   RuntimeProofArgumentSchema,
-  RuntimeProofSchema,
 } from "../../contracts/src/index.js";
 import {
   GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES,
@@ -30,6 +28,12 @@ import {
   goalProgressIpcRequestBytes,
 } from "../../ipc/src/index.js";
 import { resolveGoalProgressPaths } from "../../store/src/index.js";
+import {
+  type GoalProgressMcpRequestExtra,
+  type RuntimeIdentityErrorCode,
+  resolveTrustedToolAuthorization,
+  type TrustedToolAuthorization,
+} from "./runtime-identity.js";
 
 export const GOAL_PROGRESS_INITIALIZE_TOOL_NAME = "goal_progress_initialize";
 export const GOAL_PROGRESS_ACTIVATE_TOOL_NAME = "goal_progress_activate";
@@ -330,7 +334,29 @@ function toolContent(output: z.infer<typeof GoalProgressToolOutputSchema>) {
   };
 }
 
-function runtimeContextError(code = "HOOK_CONTEXT_REQUIRED") {
+function runtimeContextError(
+  code: RuntimeIdentityErrorCode | "HOOK_PROOF_INVALID" = "HOOK_CONTEXT_REQUIRED",
+) {
+  const message =
+    code === "CODEX_REQUEST_METADATA_REQUIRED"
+      ? {
+          summary: "Trusted Codex request metadata is required when Hook identity is unavailable.",
+          nextStep: "Reload the current task so Codex supplies complete MCP request metadata.",
+        }
+      : code === "CODEX_REQUEST_IDENTITY_CONFLICT"
+        ? {
+            summary: "Trusted request identity fields do not match.",
+            nextStep: "Stop this tool call and reload the current task identity.",
+          }
+        : code === "CODEX_REQUEST_THREAD_UNTRUSTED"
+          ? {
+              summary: "Goal Progress only accepts a main user task.",
+              nextStep: "Use Goal Progress from the main Codex task.",
+            }
+          : {
+              summary: "Trusted Hook identity is required.",
+              nextStep: "Review Goal Progress hooks, then retry.",
+            };
   return toolContent({
     ok: false,
     code,
@@ -338,8 +364,7 @@ function runtimeContextError(code = "HOOK_CONTEXT_REQUIRED") {
     revision: null,
     currentRevision: null,
     ...progressOutput(),
-    summary: "Trusted Hook identity is required.",
-    nextStep: "Review Goal Progress hooks, then retry.",
+    ...message,
     duplicate: null,
   });
 }
@@ -509,6 +534,12 @@ function errorNextStep(code: string): string {
     case "CURRENT_THREAD_AMBIGUOUS":
     case "CURRENT_THREAD_UNAVAILABLE":
       return "Stay in the current Goal thread and retry after the host identity is unique.";
+    case "CODEX_REQUEST_IDENTITY_CONFLICT":
+    case "CODEX_REQUEST_REPLAYED":
+    case "CODEX_REQUEST_THREAD_UNTRUSTED":
+      return "Stop this tool call and retry from the same main Codex task.";
+    case "CODEX_REQUEST_THREAD_UNAVAILABLE":
+      return "Retry after Codex can read this task.";
     case "NATIVE_GOAL_READ_UNAVAILABLE":
       return "Run doctor and verify the current native Goal, then retry.";
     case "NATIVE_GOAL_DETACHED":
@@ -530,10 +561,13 @@ function errorNextStep(code: string): string {
 
 async function consumeProofForRejectedInput(
   client: GoalProgressIpcClient,
-  runtimeContext: z.infer<typeof RuntimeContextSchema>,
-  runtimeProof: z.infer<typeof RuntimeProofSchema>,
+  authorization: Extract<TrustedToolAuthorization, { readonly ok: true }>,
   rejection: InputRejection,
 ) {
+  if (authorization.auth.kind !== "hook-proof") {
+    return inputError(rejection);
+  }
+  const { runtimeContext, runtimeProof } = authorization.auth;
   try {
     const response = await client.request({
       method: "runtime-proof.consume",
@@ -549,18 +583,12 @@ async function consumeProofForRejectedInput(
 async function rejectOversizedRequest(
   client: GoalProgressIpcClient,
   request: GoalProgressIpcRequestInput,
-  runtimeContext: z.infer<typeof RuntimeContextSchema>,
-  runtimeProof: z.infer<typeof RuntimeProofSchema>,
+  authorization: Extract<TrustedToolAuthorization, { readonly ok: true }>,
 ) {
   if (goalProgressIpcRequestBytes(request) <= GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES) {
     return undefined;
   }
-  return consumeProofForRejectedInput(
-    client,
-    runtimeContext,
-    runtimeProof,
-    IPC_MESSAGE_TOO_LARGE_REJECTION,
-  );
+  return consumeProofForRejectedInput(client, authorization, IPC_MESSAGE_TOO_LARGE_REJECTION);
 }
 
 function toolRequestIds(toolUseId: string): { eventId: string; requestId: string } {
@@ -610,15 +638,23 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
   const getIpcClient = (): GoalProgressIpcClient => {
     if (!ipcClient) {
       const configuredRoot = process.env.GOAL_PROGRESS_ROOT;
-      const paths = resolveGoalProgressPaths(
+      const { helperSocketPath } = resolveGoalProgressPaths(
         configuredRoot === undefined ? {} : { root: resolve(configuredRoot) },
       );
-      ipcClient = new GoalProgressIpcClient(paths.helperSocketPath, {
+      ipcClient = new GoalProgressIpcClient(helperSocketPath, {
         clientKind: "mcp",
       });
     }
     return ipcClient;
   };
+  const resolveToolIdentity = (
+    toolName: string,
+    input: {
+      readonly _runtimeContext?: unknown;
+      readonly _runtimeProof?: unknown;
+    },
+    extra: GoalProgressMcpRequestExtra,
+  ) => resolveTrustedToolAuthorization(toolName, input, extra);
 
   server.registerTool(
     GOAL_PROGRESS_ACTIVATE_TOOL_NAME,
@@ -635,18 +671,16 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         openWorldHint: false,
       },
     },
-    async (input) => {
-      const context = RuntimeContextSchema.safeParse(input._runtimeContext);
-      const proof = RuntimeProofSchema.safeParse(input._runtimeProof);
-      if (!context.success || !proof.success) {
-        return runtimeContextError();
+    async (input, extra) => {
+      const identity = await resolveToolIdentity(GOAL_PROGRESS_ACTIVATE_TOOL_NAME, input, extra);
+      if (!identity.ok) {
+        return runtimeContextError(identity.code);
       }
       const business = GoalProgressActivateBusinessSchema.safeParse(businessInput(input));
       if (!business.success) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           inputRejection(business.error),
         );
       }
@@ -654,8 +688,7 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         const response = await getIpcClient().request({
           method: "activation.plan",
           params: {
-            runtimeContext: context.data,
-            runtimeProof: proof.data,
+            auth: identity.auth,
           },
         });
         const result = IpcActivationResultSchema.parse(response.result);
@@ -701,47 +734,43 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         openWorldHint: false,
       },
     },
-    async (input) => {
-      const context = RuntimeContextSchema.safeParse(input._runtimeContext);
-      const proof = RuntimeProofSchema.safeParse(input._runtimeProof);
-      if (!context.success || !proof.success) {
-        return runtimeContextError();
+    async (input, extra) => {
+      const identity = await resolveToolIdentity(GOAL_PROGRESS_INITIALIZE_TOOL_NAME, input, extra);
+      if (!identity.ok) {
+        return runtimeContextError(identity.code);
       }
       const business = GoalProgressInitializeBusinessSchema.safeParse(businessInput(input));
       if (!business.success) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           inputRejection(business.error),
         );
       }
       if (!contributionTotalIsValid(business.data.objectives)) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           INVALID_CONTRIBUTION_TOTAL_REJECTION,
         );
       }
       try {
-        const ids = toolRequestIds(proof.data.toolUseId);
+        const ids = toolRequestIds(identity.callId);
         const request = {
           method: "store.initialize",
           params: {
             initialization: business.data,
             metadata: {
               ...ids,
-              turnId: context.data.turnId,
-              occurredAt: new Date(proof.data.issuedAtMs).toISOString(),
+              turnId: identity.turnId,
+              occurredAt: new Date(identity.occurredAtMs).toISOString(),
               source: "model",
             },
-            runtimeContext: context.data,
-            runtimeProof: proof.data,
+            auth: identity.auth,
           },
         } satisfies GoalProgressIpcRequestInput;
         const client = getIpcClient();
-        const oversized = await rejectOversizedRequest(client, request, context.data, proof.data);
+        const oversized = await rejectOversizedRequest(client, request, identity);
         if (oversized) {
           return oversized;
         }
@@ -768,18 +797,16 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         openWorldHint: false,
       },
     },
-    async (input) => {
-      const context = RuntimeContextSchema.safeParse(input._runtimeContext);
-      const proof = RuntimeProofSchema.safeParse(input._runtimeProof);
-      if (!context.success || !proof.success) {
-        return runtimeContextError();
+    async (input, extra) => {
+      const identity = await resolveToolIdentity(GOAL_PROGRESS_GET_TOOL_NAME, input, extra);
+      if (!identity.ok) {
+        return runtimeContextError(identity.code);
       }
       const business = EmptyBusinessSchema.safeParse(businessInput(input));
       if (!business.success) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           inputRejection(business.error),
         );
       }
@@ -787,9 +814,8 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         const response = await getIpcClient().request({
           method: "store.load",
           params: {
-            sessionId: context.data.hookSessionId,
-            runtimeContext: context.data,
-            runtimeProof: proof.data,
+            sessionId: identity.sessionId,
+            auth: identity.auth,
           },
         });
         const result = IpcLoadResultSchema.parse(response.result);
@@ -848,34 +874,32 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         openWorldHint: false,
       },
     },
-    async (input) => {
-      const context = RuntimeContextSchema.safeParse(input._runtimeContext);
-      const proof = RuntimeProofSchema.safeParse(input._runtimeProof);
-      if (!context.success || !proof.success) {
-        return runtimeContextError();
+    async (input, extra) => {
+      const identity = await resolveToolIdentity(GOAL_PROGRESS_UPDATE_TOOL_NAME, input, extra);
+      if (!identity.ok) {
+        return runtimeContextError(identity.code);
       }
       const business = GoalProgressUpdateBusinessSchema.safeParse(businessInput(input));
       if (!business.success) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           inputRejection(business.error),
         );
       }
       try {
-        const ids = toolRequestIds(proof.data.toolUseId);
+        const ids = toolRequestIds(identity.callId);
         const request = {
           method: "store.apply",
           params: {
             command: {
               type: "update-items",
               contractId: business.data.contractId,
-              sessionId: context.data.hookSessionId,
+              sessionId: identity.sessionId,
               expectedRevision: business.data.expectedRevision,
               ...ids,
-              turnId: context.data.turnId,
-              occurredAt: new Date(proof.data.issuedAtMs).toISOString(),
+              turnId: identity.turnId,
+              occurredAt: new Date(identity.occurredAtMs).toISOString(),
               source: "model",
               changes: business.data.changes,
               ...(business.data.activeObjectiveId === undefined
@@ -885,12 +909,11 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
                 ? {}
                 : { correctionReason: business.data.correctionReason }),
             },
-            runtimeContext: context.data,
-            runtimeProof: proof.data,
+            auth: identity.auth,
           },
         } satisfies GoalProgressIpcRequestInput;
         const client = getIpcClient();
-        const oversized = await rejectOversizedRequest(client, request, context.data, proof.data);
+        const oversized = await rejectOversizedRequest(client, request, identity);
         if (oversized) {
           return oversized;
         }
@@ -918,52 +941,48 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         openWorldHint: false,
       },
     },
-    async (input) => {
-      const context = RuntimeContextSchema.safeParse(input._runtimeContext);
-      const proof = RuntimeProofSchema.safeParse(input._runtimeProof);
-      if (!context.success || !proof.success) {
-        return runtimeContextError();
+    async (input, extra) => {
+      const identity = await resolveToolIdentity(GOAL_PROGRESS_RESCOPE_TOOL_NAME, input, extra);
+      if (!identity.ok) {
+        return runtimeContextError(identity.code);
       }
       const business = GoalProgressRescopeBusinessSchema.safeParse(businessInput(input));
       if (!business.success) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           inputRejection(business.error),
         );
       }
       if (!contributionTotalIsValid(business.data.objectives)) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           INVALID_CONTRIBUTION_TOTAL_REJECTION,
         );
       }
       try {
-        const ids = toolRequestIds(proof.data.toolUseId);
+        const ids = toolRequestIds(identity.callId);
         const request = {
           method: "store.apply",
           params: {
             command: {
               type: "rescope",
               contractId: business.data.contractId,
-              sessionId: context.data.hookSessionId,
+              sessionId: identity.sessionId,
               expectedRevision: business.data.expectedRevision,
               ...ids,
-              turnId: context.data.turnId,
-              occurredAt: new Date(proof.data.issuedAtMs).toISOString(),
+              turnId: identity.turnId,
+              occurredAt: new Date(identity.occurredAtMs).toISOString(),
               source: "model",
               reason: business.data.reason,
               objectives: business.data.objectives,
             },
-            runtimeContext: context.data,
-            runtimeProof: proof.data,
+            auth: identity.auth,
           },
         } satisfies GoalProgressIpcRequestInput;
         const client = getIpcClient();
-        const oversized = await rejectOversizedRequest(client, request, context.data, proof.data);
+        const oversized = await rejectOversizedRequest(client, request, identity);
         if (oversized) {
           return oversized;
         }
@@ -991,43 +1010,40 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
         openWorldHint: false,
       },
     },
-    async (input) => {
-      const context = RuntimeContextSchema.safeParse(input._runtimeContext);
-      const proof = RuntimeProofSchema.safeParse(input._runtimeProof);
-      if (!context.success || !proof.success) {
-        return runtimeContextError();
+    async (input, extra) => {
+      const identity = await resolveToolIdentity(GOAL_PROGRESS_SET_PHASE_TOOL_NAME, input, extra);
+      if (!identity.ok) {
+        return runtimeContextError(identity.code);
       }
       const business = GoalProgressSetPhaseBusinessSchema.safeParse(businessInput(input));
       if (!business.success) {
         return consumeProofForRejectedInput(
           getIpcClient(),
-          context.data,
-          proof.data,
+          identity,
           inputRejection(business.error),
         );
       }
       try {
-        const ids = toolRequestIds(proof.data.toolUseId);
+        const ids = toolRequestIds(identity.callId);
         const request = {
           method: "store.apply",
           params: {
             command: {
               type: "set-phase",
               contractId: business.data.contractId,
-              sessionId: context.data.hookSessionId,
+              sessionId: identity.sessionId,
               expectedRevision: business.data.expectedRevision,
               ...ids,
-              turnId: context.data.turnId,
-              occurredAt: new Date(proof.data.issuedAtMs).toISOString(),
+              turnId: identity.turnId,
+              occurredAt: new Date(identity.occurredAtMs).toISOString(),
               source: "model",
               phase: business.data.phase,
             },
-            runtimeContext: context.data,
-            runtimeProof: proof.data,
+            auth: identity.auth,
           },
         } satisfies GoalProgressIpcRequestInput;
         const client = getIpcClient();
-        const oversized = await rejectOversizedRequest(client, request, context.data, proof.data);
+        const oversized = await rejectOversizedRequest(client, request, identity);
         if (oversized) {
           return oversized;
         }

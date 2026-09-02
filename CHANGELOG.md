@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.4 - 2026-09-02
+
+- Added compatibility with the latest Codex and fixed the progress UI disappearing after updates.
+- Fixed Goal Progress activation in existing tasks after plugin updates.
+- Fixed stale version numbers after upgrades.
+
 ## 0.3.3
 
 - Goal Progress now follows the Codex interface language and text direction automatically.

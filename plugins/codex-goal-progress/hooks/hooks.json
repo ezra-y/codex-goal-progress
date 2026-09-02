@@ -21,7 +21,7 @@
           {
             "type": "command",
             "command": "/bin/sh -c 'p=\"$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress\"; [ -x \"$p\" ] || exit 0; exec \"$p\" hook'",
-            "timeout": 3
+            "timeout": 1
           }
         ]
       }

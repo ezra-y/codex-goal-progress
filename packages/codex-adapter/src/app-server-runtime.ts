@@ -3,7 +3,11 @@ import type {
   RuntimeIdentity,
   ThreadGoal,
 } from "../../contracts/src/index.js";
-import type { AppServerNotificationSummary, CodexAppServerClientOptions } from "./index.js";
+import type {
+  AppServerNotificationSummary,
+  CodexAppServerClientOptions,
+  CodexThreadIdentity,
+} from "./index.js";
 import {
   type CurrentThreadResolver,
   type CurrentThreadResolverInput,
@@ -36,6 +40,7 @@ export interface CodexAppServerSession {
   readonly closed: Promise<void>;
   readonly requestMethods: readonly string[];
   getGoal(threadId: string): Promise<ThreadGoal | null>;
+  readThreadIdentity(threadId: string): Promise<CodexThreadIdentity>;
   listLoadedThreads(): Promise<readonly ThreadCatalogEntry[]>;
   listThreads(filter?: { readonly cwd?: string }): Promise<readonly ThreadCatalogEntry[]>;
   listTurnIds(threadId: string): Promise<readonly string[]>;
@@ -44,6 +49,7 @@ export interface CodexAppServerSession {
 
 export interface CodexAppServerRuntime {
   getGoal(threadId: string): Promise<ThreadGoal | null>;
+  readThreadIdentity(threadId: string): Promise<CodexThreadIdentity>;
   resolveCurrentThread(input: CurrentThreadResolverInput): Promise<RuntimeIdentity>;
   refreshGoalUsage(threadId: string): Promise<GoalUsageSnapshot>;
   watchGoalUsage(threadId: string, listener: (snapshot: GoalUsageSnapshot) => void): void;
@@ -240,6 +246,13 @@ class CodexAppServerRuntimeImpl implements CodexAppServerRuntime {
 
   async getGoal(threadId: string): Promise<ThreadGoal | null> {
     return this.#enqueue(() => this.#getGoalUnlocked(threadId));
+  }
+
+  async readThreadIdentity(threadId: string): Promise<CodexThreadIdentity> {
+    return this.#enqueue(async () => {
+      const client = await this.#ensureClient();
+      return client.readThreadIdentity(threadId);
+    });
   }
 
   async resolveCurrentThread(input: CurrentThreadResolverInput): Promise<RuntimeIdentity> {

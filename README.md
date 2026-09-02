@@ -16,31 +16,13 @@
 
 ## 🆕 Latest update
 
-### 🚀 v0.3.3 — Restart recovery, multi-window support, and in-app updates
+### 🚑 v0.3.4 — Compatible with the latest Codex
 
-Progress is calculated from a structured checklist that breaks the goal into weighted, measurable steps.
+**Updated: September 2, 2026**
 
-- 🔌 **Start from the official Codex icon.** Goal Progress sets up the required CDP connection
-  automatically. No extra command or manual setup is needed.
-- 🔄 **Progress returns after a full quit.** Reopen an old task to restore its checklist, progress,
-  Token count, and display settings. You do not need to be on a task with progress when you quit or
-  start Codex.
-- 🪟 **Multiple windows are now supported.** New windows, task links, and tasks opened in a new
-  window connect automatically. Each window follows its own task. Switching or closing one window
-  does not affect another.
-- 🎉 **Update inside Codex.** Goal Progress checks for new versions automatically, and you can also
-  check manually. Select **Update now** to download, verify, and install an update with real
-  download progress.
-- ⋯ **A new More menu.** The three-dot menu has **Version**, **Effects**, and **Display** sections.
-  You can view the installed version, check for updates, open release notes, change animations, and
-  choose a display position in one place.
-- 🧩 **More reliable installs and updates.** Fixed early install failures and enabled the Hook
-  required by the plugin. Interrupted downloads can be retried. Restarting no longer leaves updates
-  stuck on **Restart required** because of recovery timing.
-- 🛠️ **Cleaner code and better recovery.** Large files were split and repeated install, Doctor,
-  and Verify code was reduced. Page reloads, task switches, and interrupted updates recover more
-  reliably. Temporary files are removed after an update completes.
-- 🤖 **A new cute robot logo.** Goal Progress now uses the new transparent robot icon.
+- Added compatibility with the latest Codex and fixed the progress UI disappearing after updates.
+- Fixed Goal Progress activation in existing tasks after plugin updates.
+- Fixed stale version numbers after upgrades.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 
