@@ -16,27 +16,13 @@
 
 ## 🆕 Latest update
 
-### 🚑 v0.3.4 — Codex update recovery and existing-task compatibility
+### 🚑 v0.3.4 — Compatible with the latest Codex
 
 **Updated: September 2, 2026**
 
-This release focuses on keeping Goal Progress working across Codex and plugin updates.
-
-- 🔄 **Recovers after Codex updates.** When Codex replaces its browser process, Goal Progress
-  detects the closed connection, reconnects to the new process, and mounts the progress UI again.
-  You no longer need to restart the Helper manually.
-- 🧭 **Existing tasks activate normally after plugin updates.** Older open or resumed tasks no longer
-  fail with `HOOK_CONTEXT_REQUIRED` when their session Hook has not refreshed.
-- 🔐 **Task identity stays isolated.** Goal tools can use Codex request identity, while the Helper
-  verifies the exact thread before reading or writing progress. Model input cannot select another
-  task, and sub-agents remain rejected.
-- 🪝 **Hook trust survives upgrades.** The installer updates the trusted Hook definition for both
-  older releases and the v0.3.3 configuration.
-- 🏷️ **The displayed version stays correct.** The More menu now follows the version of the running
-  Helper after installer or command-line upgrades. Update checks continue to compare the real
-  installed and remote versions.
-- ⚡ **Recovery remains event-driven.** Reconnection starts only after a real browser transport
-  failure and uses bounded retries. No continuous window polling was added.
+- Added compatibility with the latest Codex and fixed the progress UI disappearing after updates.
+- Fixed Goal Progress activation in existing tasks after plugin updates.
+- Fixed stale version numbers after upgrades.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 
