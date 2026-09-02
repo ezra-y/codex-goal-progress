@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
 import {
+  type CodexThreadIdentity,
   CurrentThreadResolverError,
   type CurrentThreadResolverInput,
 } from "../../codex-adapter/src/index.js";
@@ -18,7 +19,11 @@ import {
   type ThreadGoal,
 } from "../../contracts/src/index.js";
 import { hashNativeGoalObjective, migrateGoalContractV1ToV2 } from "../../core/src/index.js";
-import { GoalProgressIpcHandlerError } from "../../ipc/src/index.js";
+import {
+  type CodexRequestIdentity,
+  type GoalProgressIpcAuthorization,
+  GoalProgressIpcHandlerError,
+} from "../../ipc/src/index.js";
 import {
   atomicWriteFile,
   type GoalEventStore,
@@ -38,6 +43,10 @@ export interface TrustedNativeGoal {
 
 export type NativeGoalResolver = (threadId: string) => Promise<TrustedNativeGoal | null>;
 export type ResolveCurrentThread = (input: CurrentThreadResolverInput) => Promise<RuntimeIdentity>;
+export type ReadThreadIdentity = (threadId: string) => Promise<CodexThreadIdentity>;
+
+const CODEX_REQUEST_REPLAY_RETENTION_MS = 60_000;
+const CODEX_REQUEST_REPLAY_MAX_ENTRIES = 1_024;
 
 const GoalProgressDetachReasonSchema = z.enum([
   "user-dismissed-preparation",
@@ -321,26 +330,33 @@ export interface GoalProgressSessionCoordinatorOptions {
   readonly store: GoalEventStore;
   readonly resolveNativeGoal: NativeGoalResolver;
   readonly resolveCurrentThread: ResolveCurrentThread;
+  readonly readThreadIdentity: ReadThreadIdentity;
   readonly consumeRuntimeProof: (
     runtimeContext: RuntimeContext,
     runtimeProof: RuntimeProof,
   ) => Promise<boolean>;
   readonly log: (input: GoalProgressLogInput) => Promise<void>;
+  readonly now?: () => number;
 }
 
 export class GoalProgressSessionCoordinator {
   readonly #store: GoalEventStore;
   readonly #resolveNativeGoal: NativeGoalResolver;
   readonly #resolveCurrentThread: ResolveCurrentThread;
+  readonly #readThreadIdentity: ReadThreadIdentity;
   readonly #consumeRuntimeProof: GoalProgressSessionCoordinatorOptions["consumeRuntimeProof"];
   readonly #log: GoalProgressSessionCoordinatorOptions["log"];
+  readonly #now: () => number;
+  readonly #consumedCodexRequests = new Map<string, number>();
 
   constructor(options: GoalProgressSessionCoordinatorOptions) {
     this.#store = options.store;
     this.#resolveNativeGoal = options.resolveNativeGoal;
     this.#resolveCurrentThread = options.resolveCurrentThread;
+    this.#readThreadIdentity = options.readThreadIdentity;
     this.#consumeRuntimeProof = options.consumeRuntimeProof;
     this.#log = options.log;
+    this.#now = options.now ?? Date.now;
   }
 
   async resolveCurrentThread(input: CurrentThreadResolverInput): Promise<RuntimeIdentity> {
@@ -370,6 +386,22 @@ export class GoalProgressSessionCoordinator {
   }
 
   async authorizeSessionRequest(
+    auth: GoalProgressIpcAuthorization,
+    claimedSessionId?: string,
+    turnId?: string,
+  ): Promise<RuntimeIdentity> {
+    if (auth.kind === "codex-request") {
+      return this.#authorizeCodexRequest(auth.identity, auth.toolName, claimedSessionId, turnId);
+    }
+    return this.#authorizeHookRequest(
+      auth.runtimeContext,
+      auth.runtimeProof,
+      claimedSessionId ?? auth.runtimeContext.hookSessionId,
+      turnId,
+    );
+  }
+
+  async #authorizeHookRequest(
     runtimeContext: RuntimeContext,
     runtimeProof: RuntimeProof,
     claimedSessionId: string,
@@ -400,6 +432,96 @@ export class GoalProgressSessionCoordinator {
       ...identityLogFields(identity),
     });
     return identity;
+  }
+
+  async #authorizeCodexRequest(
+    requestIdentity: CodexRequestIdentity,
+    toolName: string,
+    claimedSessionId?: string,
+    turnId?: string,
+  ): Promise<RuntimeIdentity> {
+    if (
+      (claimedSessionId !== undefined && claimedSessionId !== requestIdentity.threadId) ||
+      (turnId !== undefined && turnId !== requestIdentity.turnId)
+    ) {
+      throw new GoalProgressIpcHandlerError(
+        "THREAD_MISMATCH",
+        "Write request identity does not match its Session and turn",
+      );
+    }
+    if (!this.#consumeCodexRequest(requestIdentity, toolName)) {
+      throw new GoalProgressIpcHandlerError(
+        "CODEX_REQUEST_REPLAYED",
+        "Codex request identity was already consumed",
+      );
+    }
+
+    let thread: CodexThreadIdentity;
+    try {
+      thread = await this.#readThreadIdentity(requestIdentity.threadId);
+    } catch (error) {
+      throw new GoalProgressIpcHandlerError(
+        "CODEX_REQUEST_THREAD_UNAVAILABLE",
+        "Could not read the exact Codex thread for this request",
+        null,
+        undefined,
+        error,
+      );
+    }
+
+    if (
+      thread.id !== requestIdentity.threadId ||
+      thread.sessionId !== requestIdentity.sessionId ||
+      thread.threadSource !== requestIdentity.threadSource ||
+      (requestIdentity.cwd !== undefined && requestIdentity.cwd !== thread.cwd)
+    ) {
+      throw new GoalProgressIpcHandlerError(
+        "CODEX_REQUEST_IDENTITY_CONFLICT",
+        "Codex request identity conflicts with the exact thread record",
+      );
+    }
+    if (thread.threadSource !== "user" || thread.agentRole !== null || thread.ephemeral) {
+      throw new GoalProgressIpcHandlerError(
+        "CODEX_REQUEST_THREAD_UNTRUSTED",
+        "Codex request does not belong to a supported main user thread",
+      );
+    }
+
+    const identity: RuntimeIdentity = {
+      sessionTreeId: thread.id,
+      threadId: thread.id,
+      turnId: requestIdentity.turnId,
+      model: requestIdentity.model,
+      cwd: thread.cwd,
+    };
+    await this.#log({
+      level: "info",
+      event: "ipc.request",
+      ...identityLogFields(identity),
+    });
+    return identity;
+  }
+
+  #consumeCodexRequest(identity: CodexRequestIdentity, toolName: string): boolean {
+    const now = this.#now();
+    for (const [key, consumedAt] of this.#consumedCodexRequests) {
+      if (now - consumedAt >= CODEX_REQUEST_REPLAY_RETENTION_MS) {
+        this.#consumedCodexRequests.delete(key);
+      }
+    }
+    const key = [identity.threadId, identity.turnId, identity.callId, toolName].join("\0");
+    if (this.#consumedCodexRequests.has(key)) {
+      return false;
+    }
+    this.#consumedCodexRequests.set(key, now);
+    while (this.#consumedCodexRequests.size > CODEX_REQUEST_REPLAY_MAX_ENTRIES) {
+      const oldest = this.#consumedCodexRequests.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.#consumedCodexRequests.delete(oldest);
+    }
+    return true;
   }
 
   async trustedNativeGoal(

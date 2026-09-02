@@ -16,31 +16,27 @@
 
 ## 🆕 Latest update
 
-### 🚀 v0.3.3 — Restart recovery, multi-window support, and in-app updates
+### 🚑 v0.3.4 — Codex update recovery and existing-task compatibility
 
-Progress is calculated from a structured checklist that breaks the goal into weighted, measurable steps.
+**Updated: September 2, 2026**
 
-- 🔌 **Start from the official Codex icon.** Goal Progress sets up the required CDP connection
-  automatically. No extra command or manual setup is needed.
-- 🔄 **Progress returns after a full quit.** Reopen an old task to restore its checklist, progress,
-  Token count, and display settings. You do not need to be on a task with progress when you quit or
-  start Codex.
-- 🪟 **Multiple windows are now supported.** New windows, task links, and tasks opened in a new
-  window connect automatically. Each window follows its own task. Switching or closing one window
-  does not affect another.
-- 🎉 **Update inside Codex.** Goal Progress checks for new versions automatically, and you can also
-  check manually. Select **Update now** to download, verify, and install an update with real
-  download progress.
-- ⋯ **A new More menu.** The three-dot menu has **Version**, **Effects**, and **Display** sections.
-  You can view the installed version, check for updates, open release notes, change animations, and
-  choose a display position in one place.
-- 🧩 **More reliable installs and updates.** Fixed early install failures and enabled the Hook
-  required by the plugin. Interrupted downloads can be retried. Restarting no longer leaves updates
-  stuck on **Restart required** because of recovery timing.
-- 🛠️ **Cleaner code and better recovery.** Large files were split and repeated install, Doctor,
-  and Verify code was reduced. Page reloads, task switches, and interrupted updates recover more
-  reliably. Temporary files are removed after an update completes.
-- 🤖 **A new cute robot logo.** Goal Progress now uses the new transparent robot icon.
+This release focuses on keeping Goal Progress working across Codex and plugin updates.
+
+- 🔄 **Recovers after Codex updates.** When Codex replaces its browser process, Goal Progress
+  detects the closed connection, reconnects to the new process, and mounts the progress UI again.
+  You no longer need to restart the Helper manually.
+- 🧭 **Existing tasks activate normally after plugin updates.** Older open or resumed tasks no longer
+  fail with `HOOK_CONTEXT_REQUIRED` when their session Hook has not refreshed.
+- 🔐 **Task identity stays isolated.** Goal tools can use Codex request identity, while the Helper
+  verifies the exact thread before reading or writing progress. Model input cannot select another
+  task, and sub-agents remain rejected.
+- 🪝 **Hook trust survives upgrades.** The installer updates the trusted Hook definition for both
+  older releases and the v0.3.3 configuration.
+- 🏷️ **The displayed version stays correct.** The More menu now follows the version of the running
+  Helper after installer or command-line upgrades. Update checks continue to compare the real
+  installed and remote versions.
+- ⚡ **Recovery remains event-driven.** Reconnection starts only after a real browser transport
+  failure and uses bounded retries. No continuous window polling was added.
 
 This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
 

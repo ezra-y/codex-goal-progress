@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 - 2026-09-02
+
+- Goal Progress reconnects and remounts automatically when a Codex update replaces the browser process.
+- Existing open or resumed tasks can activate through Codex request identity and exact-thread verification.
+- Hook trust is refreshed for upgrades from older releases and the v0.3.3 configuration.
+- The More menu synchronizes its current version with the running Helper after installer or command-line upgrades.
+- Browser recovery remains event-driven and uses bounded retries after a real transport failure.
+
 ## 0.3.3
 
 - Goal Progress now follows the Codex interface language and text direction automatically.

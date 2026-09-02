@@ -26,7 +26,7 @@ export const GOAL_PROGRESS_HOOK_EVENT_POLICY = Object.freeze({
     failureMode: "fail-open",
   }),
   PreToolUse: Object.freeze({
-    timeoutSeconds: 3,
+    timeoutSeconds: 1,
     async: false,
     failureMode: "deny-own-tool",
   }),

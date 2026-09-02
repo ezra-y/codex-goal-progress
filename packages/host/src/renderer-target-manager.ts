@@ -24,9 +24,14 @@ export interface RendererTargetSource {
   readonly initialTargets: readonly RendererTargetInfo[];
   onTargetInfo(listener: (target: RendererTargetInfo) => void): () => void;
   onTargetDestroyed(listener: (targetId: string) => void): () => void;
+  onFailure?(listener: (error: Error) => void): () => void;
   connectTarget(target: RendererTargetInfo): Promise<RendererBridgeSupervisorConnection>;
   close(): Promise<void>;
 }
+
+export const RENDERER_TARGET_SOURCE_RECONNECT_DELAYS_MS = [
+  0, 1_000, 2_000, 5_000, 10_000, 30_000,
+] as const;
 
 export interface RendererTargetManagerOptions {
   readonly connector: () => Promise<RendererTargetSource | undefined>;
@@ -35,7 +40,9 @@ export interface RendererTargetManagerOptions {
     threadId: string | null,
     lifecycleId?: string,
   ) => Promise<void> | void;
-  readonly onTargetDestroyed?: (targetId: string) => Promise<void> | void;
+  readonly onTargetDestroyed?: (targetId: string, code?: string) => Promise<void> | void;
+  readonly sourceReconnectDelaysMs?: readonly number[];
+  readonly sleep?: (delayMs: number) => Promise<void>;
 }
 
 export interface RendererTargetState {
@@ -76,10 +83,14 @@ export class RendererTargetManager implements ViewModelPublisherSink {
   readonly #connector: RendererTargetManagerOptions["connector"];
   readonly #onTargetReady: RendererTargetManagerOptions["onTargetReady"];
   readonly #onTargetDestroyed: RendererTargetManagerOptions["onTargetDestroyed"];
+  readonly #sourceReconnectDelaysMs: readonly number[];
+  readonly #sleep: (delayMs: number) => Promise<void>;
   readonly #targets = new Map<string, ManagedRendererTarget>();
   #source: RendererTargetSource | undefined;
   #removeInfoListener: (() => void) | undefined;
   #removeDestroyedListener: (() => void) | undefined;
+  #removeFailureListener: (() => void) | undefined;
+  #sourceRecovery: Promise<void> | undefined;
   #uiPreference: GoalProgressUiPreference = DEFAULT_GOAL_PROGRESS_UI_PREFERENCE;
   #updateState: GoalProgressUpdateState | null = null;
   #closed = false;
@@ -89,6 +100,15 @@ export class RendererTargetManager implements ViewModelPublisherSink {
     this.#connector = options.connector;
     this.#onTargetReady = options.onTargetReady;
     this.#onTargetDestroyed = options.onTargetDestroyed;
+    this.#sourceReconnectDelaysMs =
+      options.sourceReconnectDelaysMs ?? RENDERER_TARGET_SOURCE_RECONNECT_DELAYS_MS;
+    this.#sleep =
+      options.sleep ??
+      ((delayMs) =>
+        new Promise((resolveDelay) => {
+          const timer = setTimeout(resolveDelay, delayMs);
+          timer.unref();
+        }));
   }
 
   get currentUpdateState(): GoalProgressUpdateState | null {
@@ -133,7 +153,12 @@ export class RendererTargetManager implements ViewModelPublisherSink {
         void this.#enqueue(() => this.#connectTarget(target));
       });
       this.#removeDestroyedListener = source.onTargetDestroyed((targetId) => {
-        void this.#enqueue(() => this.#destroyTarget(targetId, true));
+        void this.#enqueue(() =>
+          this.#destroyTarget(targetId, true, "GOAL_PROGRESS_CDP_TARGET_DESTROYED"),
+        );
+      });
+      this.#removeFailureListener = source.onFailure?.((error) => {
+        this.#beginSourceRecovery(source, error);
       });
       for (const target of source.initialTargets) {
         await this.#connectTarget(target);
@@ -392,7 +417,7 @@ export class RendererTargetManager implements ViewModelPublisherSink {
     }
   }
 
-  async #destroyTarget(targetId: string, notify = false): Promise<void> {
+  async #destroyTarget(targetId: string, notify = false, code?: string): Promise<void> {
     const target = this.#targets.get(targetId);
     if (!target) {
       return;
@@ -403,7 +428,7 @@ export class RendererTargetManager implements ViewModelPublisherSink {
     await target.bridge?.close().catch(() => undefined);
     target.bridge = undefined;
     if (notify) {
-      await this.#onTargetDestroyed?.(targetId);
+      await this.#onTargetDestroyed?.(targetId, code);
     }
   }
 
@@ -418,11 +443,76 @@ export class RendererTargetManager implements ViewModelPublisherSink {
     return target;
   }
 
-  async #closeSourceAndTargets(preservePage = false): Promise<void> {
+  #beginSourceRecovery(source: RendererTargetSource, error: Error): void {
+    if (this.#closed || this.#source !== source) {
+      return;
+    }
+    if (this.#sourceRecovery) {
+      const currentRecovery = this.#sourceRecovery;
+      void currentRecovery.then(
+        () => {
+          if (!this.#closed && this.#source === source) {
+            this.#beginSourceRecovery(source, error);
+          }
+        },
+        () => undefined,
+      );
+      return;
+    }
+    const recovery = this.#recoverSource(source, stableTargetError(error));
+    this.#sourceRecovery = recovery;
+    void recovery.then(
+      () => {
+        if (this.#sourceRecovery === recovery) {
+          this.#sourceRecovery = undefined;
+        }
+      },
+      () => {
+        if (this.#sourceRecovery === recovery) {
+          this.#sourceRecovery = undefined;
+        }
+      },
+    );
+  }
+
+  async #recoverSource(source: RendererTargetSource, code: string): Promise<void> {
+    await this.#enqueue(async () => {
+      if (this.#closed || this.#source !== source) {
+        return;
+      }
+      for (const target of this.#targets.values()) {
+        target.lastErrorCode = code;
+      }
+      await this.#closeSourceAndTargets(true, code);
+    });
+    for (const delayMs of this.#sourceReconnectDelaysMs) {
+      if (this.#closed) {
+        return;
+      }
+      if (delayMs > 0) {
+        await this.#sleep(delayMs);
+      }
+      if (this.#closed) {
+        return;
+      }
+      try {
+        await this.start();
+        if (this.#source) {
+          return;
+        }
+      } catch {
+        // A Codex update can replace the process before cdp.json is refreshed. Retry only this event.
+      }
+    }
+  }
+
+  async #closeSourceAndTargets(preservePage = false, notifyCode?: string): Promise<void> {
     this.#removeInfoListener?.();
     this.#removeDestroyedListener?.();
+    this.#removeFailureListener?.();
     this.#removeInfoListener = undefined;
     this.#removeDestroyedListener = undefined;
+    this.#removeFailureListener = undefined;
     for (const targetId of this.targetIds()) {
       if (!preservePage) {
         await this.#targets
@@ -430,7 +520,7 @@ export class RendererTargetManager implements ViewModelPublisherSink {
           ?.bridge?.clear()
           .catch(() => undefined);
       }
-      await this.#destroyTarget(targetId);
+      await this.#destroyTarget(targetId, notifyCode !== undefined, notifyCode);
     }
     const source = this.#source;
     this.#source = undefined;

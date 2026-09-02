@@ -16,6 +16,116 @@ export const GoalProgressRendererTargetIdSchema = z
   .string()
   .regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u);
 
+export const CodexRequestIdentitySchema = z
+  .object({
+    threadId: z.string().trim().min(1).max(512),
+    sessionId: z.string().trim().min(1).max(512),
+    turnId: z.string().trim().min(1).max(512),
+    callId: z.string().trim().min(1).max(512),
+    model: z.string().trim().min(1).max(256),
+    threadSource: z.literal("user"),
+    cwd: z.string().trim().min(1).max(4_096).optional(),
+    pluginId: z.string().trim().min(1).max(512).optional(),
+  })
+  .strict();
+
+export const GoalProgressMcpToolNameSchema = z.enum([
+  "goal_progress_activate",
+  "goal_progress_initialize",
+  "goal_progress_get",
+  "goal_progress_update",
+  "goal_progress_rescope",
+  "goal_progress_set_phase",
+]);
+
+export const GoalProgressIpcAuthorizationSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("hook-proof"),
+      runtimeContext: RuntimeContextSchema,
+      runtimeProof: RuntimeProofSchema,
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("codex-request"),
+      identity: CodexRequestIdentitySchema,
+      toolName: GoalProgressMcpToolNameSchema,
+    })
+    .strict(),
+]);
+
+const ActivationPlanParamsSchema = z.union([
+  z.object({ auth: GoalProgressIpcAuthorizationSchema }).strict(),
+  z
+    .object({
+      runtimeContext: RuntimeContextSchema,
+      runtimeProof: RuntimeProofSchema,
+    })
+    .strict(),
+]);
+
+const StoreLoadParamsSchema = z.union([
+  z
+    .object({
+      sessionId: z.string().trim().min(1).max(256),
+      auth: GoalProgressIpcAuthorizationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      sessionId: z.string().trim().min(1).max(256),
+      runtimeContext: RuntimeContextSchema,
+      runtimeProof: RuntimeProofSchema,
+    })
+    .strict(),
+]);
+
+const StoreInitializeFields = {
+  initialization: GoalContractInitializationSchema,
+  metadata: z
+    .object({
+      eventId: z.string().trim().min(1).max(128),
+      requestId: z.string().trim().min(1).max(128),
+      turnId: z.string().trim().min(1).max(256),
+      occurredAt: z.string().datetime({ offset: true }),
+      source: z.enum(["model", "user", "local-validator", "system"]),
+    })
+    .strict(),
+};
+
+const StoreInitializeParamsSchema = z.union([
+  z
+    .object({
+      ...StoreInitializeFields,
+      auth: GoalProgressIpcAuthorizationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      ...StoreInitializeFields,
+      runtimeContext: RuntimeContextSchema,
+      runtimeProof: RuntimeProofSchema,
+    })
+    .strict(),
+]);
+
+const StoreApplyParamsSchema = z.union([
+  z
+    .object({
+      command: GoalProgressCommandSchema,
+      auth: GoalProgressIpcAuthorizationSchema,
+    })
+    .strict(),
+  z
+    .object({
+      command: GoalProgressCommandSchema,
+      runtimeContext: RuntimeContextSchema,
+      runtimeProof: RuntimeProofSchema,
+    })
+    .strict(),
+]);
+
 export const GoalProgressActivationResumeResultSchema = z.discriminatedUnion("status", [
   z
     .object({
@@ -128,60 +238,28 @@ export const GoalProgressIpcRequestSchema = z.discriminatedUnion("method", [
     .object({
       ...RequestEnvelopeFields,
       method: z.literal("activation.plan"),
-      params: z
-        .object({
-          runtimeContext: RuntimeContextSchema,
-          runtimeProof: RuntimeProofSchema,
-        })
-        .strict(),
+      params: ActivationPlanParamsSchema,
     })
     .strict(),
   z
     .object({
       ...RequestEnvelopeFields,
       method: z.literal("store.load"),
-      params: z
-        .object({
-          sessionId: z.string().trim().min(1).max(256),
-          runtimeContext: RuntimeContextSchema,
-          runtimeProof: RuntimeProofSchema,
-        })
-        .strict(),
+      params: StoreLoadParamsSchema,
     })
     .strict(),
   z
     .object({
       ...RequestEnvelopeFields,
       method: z.literal("store.initialize"),
-      params: z
-        .object({
-          initialization: GoalContractInitializationSchema,
-          metadata: z
-            .object({
-              eventId: z.string().trim().min(1).max(128),
-              requestId: z.string().trim().min(1).max(128),
-              turnId: z.string().trim().min(1).max(256),
-              occurredAt: z.string().datetime({ offset: true }),
-              source: z.enum(["model", "user", "local-validator", "system"]),
-            })
-            .strict(),
-          runtimeContext: RuntimeContextSchema,
-          runtimeProof: RuntimeProofSchema,
-        })
-        .strict(),
+      params: StoreInitializeParamsSchema,
     })
     .strict(),
   z
     .object({
       ...RequestEnvelopeFields,
       method: z.literal("store.apply"),
-      params: z
-        .object({
-          command: GoalProgressCommandSchema,
-          runtimeContext: RuntimeContextSchema,
-          runtimeProof: RuntimeProofSchema,
-        })
-        .strict(),
+      params: StoreApplyParamsSchema,
     })
     .strict(),
   z
@@ -319,6 +397,8 @@ export const GoalProgressIpcResponseSchema = z.discriminatedUnion("ok", [
 ]);
 
 export type GoalProgressIpcRequest = z.infer<typeof GoalProgressIpcRequestSchema>;
+export type CodexRequestIdentity = z.infer<typeof CodexRequestIdentitySchema>;
+export type GoalProgressIpcAuthorization = z.infer<typeof GoalProgressIpcAuthorizationSchema>;
 export type GoalProgressActivationResumeResult = z.infer<
   typeof GoalProgressActivationResumeResultSchema
 >;

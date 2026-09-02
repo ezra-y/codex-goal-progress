@@ -1042,8 +1042,16 @@ export class GoalProgressUpdateCoordinator {
       return this.#state;
     }
     const stored = await this.#store.read();
-    this.#state =
-      stored ?? (await this.#store.write(initialUpdateState(this.#currentVersion, this.#now())));
+    if (stored === null) {
+      this.#state = await this.#store.write(initialUpdateState(this.#currentVersion, this.#now()));
+      return this.#state;
+    }
+    this.#state = stored;
+    if (stored.currentVersion !== this.#currentVersion && !updateActivePhases.has(stored.phase)) {
+      this.#state = await this.#writeDirect(stored, {
+        currentVersion: this.#currentVersion,
+      });
+    }
     return this.#state;
   }
 

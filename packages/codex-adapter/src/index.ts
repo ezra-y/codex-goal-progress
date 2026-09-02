@@ -103,6 +103,30 @@ const ThreadListResponseSchema = z
   })
   .passthrough();
 
+const ThreadIdentitySchema = z
+  .object({
+    id: z.string().min(1),
+    sessionId: z.string().min(1),
+    cwd: z.string().min(1),
+    threadSource: z.string().min(1).nullable(),
+    agentRole: z.string().min(1).nullable(),
+    ephemeral: z.boolean(),
+    status: z
+      .object({
+        type: z.string().min(1),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+const ThreadReadResponseSchema = z
+  .object({
+    thread: ThreadIdentitySchema,
+  })
+  .passthrough();
+
+export type CodexThreadIdentity = z.infer<typeof ThreadIdentitySchema>;
+
 interface PendingRequest {
   readonly method: string;
   readonly resolve: (value: unknown) => void;
@@ -249,6 +273,14 @@ export class CodexAppServerClient implements ThreadCatalog {
   async getGoal(threadId: string): Promise<ThreadGoal | null> {
     const result = await this.#request("thread/goal/get", { threadId });
     return ThreadGoalGetResponseSchema.parse(result).goal;
+  }
+
+  async readThreadIdentity(threadId: string): Promise<CodexThreadIdentity> {
+    const result = await this.#request("thread/read", {
+      threadId,
+      includeTurns: false,
+    });
+    return ThreadReadResponseSchema.parse(result).thread;
   }
 
   async listTurnIds(threadId: string): Promise<readonly string[]> {

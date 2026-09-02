@@ -45,6 +45,7 @@ import {
 import {
   consumeRuntimeProofOnce,
   type GoalProgressActivationResumeResult,
+  type GoalProgressIpcAuthorization,
   type GoalProgressIpcConnectionContext,
   type GoalProgressIpcHandler,
   GoalProgressIpcHandlerError,
@@ -101,6 +102,7 @@ import {
   isUserDetachedActivationState,
   type NativeGoalResolver,
   nativeGoalErrorDetachesContract,
+  type ReadThreadIdentity,
   type ResolveCurrentThread,
   readGoalProgressActivationState,
   readGoalProgressActivationStateSnapshot,
@@ -173,6 +175,7 @@ export interface GoalProgressHelperOptions {
   readonly runtime?: CodexAppServerRuntime;
   readonly resolveNativeGoal?: NativeGoalResolver;
   readonly resolveCurrentThread?: ResolveCurrentThread;
+  readonly readThreadIdentity?: ReadThreadIdentity;
   readonly viewModelSink?: ViewModelPublisherSink;
   readonly rendererDoctor?: (
     expectedThreadId?: string,
@@ -194,6 +197,23 @@ export interface GoalProgressHelperOptions {
   readonly readCurrentLaunchId?: () => Promise<string | null>;
   readonly verifyInstalledUpdate?: (operation: GoalProgressUpdateOperation) => Promise<boolean>;
   readonly updateOperationId?: () => string;
+}
+
+function requestAuthorization(
+  params:
+    | { readonly auth: GoalProgressIpcAuthorization }
+    | {
+        readonly runtimeContext: RuntimeContext;
+        readonly runtimeProof: RuntimeProof;
+      },
+): GoalProgressIpcAuthorization {
+  return "auth" in params
+    ? params.auth
+    : {
+        kind: "hook-proof",
+        runtimeContext: params.runtimeContext,
+        runtimeProof: params.runtimeProof,
+      };
 }
 
 export function resolveGoalProgressCodexCommand(
@@ -345,10 +365,13 @@ export class GoalProgressHelper {
       (async (threadId) => trustedNativeGoalFromThreadGoal(await this.#runtime.getGoal(threadId)));
     const resolveCurrentThread =
       options.resolveCurrentThread ?? ((input) => this.#runtime.resolveCurrentThread(input));
+    const readThreadIdentity =
+      options.readThreadIdentity ?? ((threadId) => this.#runtime.readThreadIdentity(threadId));
     this.#sessionCoordinator = new GoalProgressSessionCoordinator({
       store: this.#store,
       resolveNativeGoal,
       resolveCurrentThread,
+      readThreadIdentity,
       consumeRuntimeProof: (runtimeContext, runtimeProof) =>
         this.#consumeRuntimeProof(runtimeContext, runtimeProof),
       log: (input) => this.#log(input),
@@ -1587,10 +1610,7 @@ export class GoalProgressHelper {
     request: HelperActivationIpcRequest,
   ): Promise<GoalProgressIpcHandlerResult> {
     const identity = await this.#sessionCoordinator.authorizeSessionRequest(
-      request.params.runtimeContext,
-      request.params.runtimeProof,
-      request.params.runtimeContext.hookSessionId,
-      request.params.runtimeContext.turnId,
+      requestAuthorization(request.params),
     );
     await this.#log({
       level: "info",
@@ -1684,8 +1704,7 @@ export class GoalProgressHelper {
     request: Extract<HelperStoreIpcRequest, { method: "store.load" }>,
   ): Promise<GoalProgressIpcHandlerResult> {
     const identity = await this.#sessionCoordinator.authorizeSessionRequest(
-      request.params.runtimeContext,
-      request.params.runtimeProof,
+      requestAuthorization(request.params),
       request.params.sessionId,
     );
     let loaded = await this.#store.load(identity.threadId);
@@ -2000,9 +2019,8 @@ export class GoalProgressHelper {
     context: GoalProgressIpcConnectionContext,
   ): Promise<GoalProgressIpcHandlerResult> {
     const identity = await this.#sessionCoordinator.authorizeSessionRequest(
-      request.params.runtimeContext,
-      request.params.runtimeProof,
-      request.params.runtimeContext.hookSessionId,
+      requestAuthorization(request.params),
+      undefined,
       request.params.metadata.turnId,
     );
     try {
@@ -2100,8 +2118,7 @@ export class GoalProgressHelper {
     context: GoalProgressIpcConnectionContext,
   ): Promise<GoalProgressIpcHandlerResult> {
     const identity = await this.#sessionCoordinator.authorizeSessionRequest(
-      request.params.runtimeContext,
-      request.params.runtimeProof,
+      requestAuthorization(request.params),
       request.params.command.sessionId,
       request.params.command.turnId,
     );
@@ -2417,9 +2434,9 @@ export async function runHelperCli(argv: readonly string[] = process.argv.slice(
               ?.reportVisibleThread(targetId, threadId, undefined, lifecycleId)
               .catch(() => undefined);
           },
-          onTargetDestroyed: (targetId) => {
+          onTargetDestroyed: (targetId, code) => {
             void viewClient
-              ?.reportDisconnected(targetId, "GOAL_PROGRESS_CDP_TARGET_DESTROYED")
+              ?.reportDisconnected(targetId, code ?? "GOAL_PROGRESS_CDP_TARGET_DESTROYED")
               .catch(() => undefined);
           },
         })

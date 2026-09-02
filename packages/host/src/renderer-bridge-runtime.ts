@@ -29,6 +29,7 @@ interface BrowserTargetInfo {
 
 export interface RendererTargetBrowserClient {
   onEvent(method: string, listener: (params: unknown) => void): () => void;
+  onFailure?(listener: (error: Error) => void): () => void;
   send(method: string, params?: unknown): Promise<unknown>;
   close(): Promise<void>;
 }
@@ -79,8 +80,10 @@ class BrowserRendererTargetSource implements RendererTargetSource {
   readonly #known = new Map<string, RendererTargetInfo>();
   readonly #infoListeners = new Set<(target: RendererTargetInfo) => void>();
   readonly #destroyedListeners = new Set<(targetId: string) => void>();
+  readonly #failureListeners = new Set<(error: Error) => void>();
   readonly #removeEventListeners: (() => void)[];
   #closed = false;
+  #failed: Error | undefined;
 
   constructor(options: BrowserTargetSourceOptions) {
     this.#port = options.port;
@@ -93,6 +96,9 @@ class BrowserRendererTargetSource implements RendererTargetSource {
         url: target.url,
       });
     }
+    const removeFailureListener = this.#browserClient.onFailure?.((error) => {
+      this.#receiveFailure(error);
+    });
     this.#removeEventListeners = [
       this.#browserClient.onEvent("Target.targetCreated", (params) => {
         this.#receiveInfo(
@@ -114,6 +120,7 @@ class BrowserRendererTargetSource implements RendererTargetSource {
           listener(targetId);
         }
       }),
+      ...(removeFailureListener ? [removeFailureListener] : []),
     ];
   }
 
@@ -131,8 +138,24 @@ class BrowserRendererTargetSource implements RendererTargetSource {
     return () => this.#destroyedListeners.delete(listener);
   }
 
+  onFailure(listener: (error: Error) => void): () => void {
+    this.#failureListeners.add(listener);
+    if (this.#failed) {
+      try {
+        listener(this.#failed);
+      } catch {
+        // Failure observers cannot change the existing browser transport failure.
+      }
+    }
+    return () => this.#failureListeners.delete(listener);
+  }
+
   async connectTarget(target: RendererTargetInfo): Promise<RendererBridgeSupervisorConnection> {
-    if (this.#closed || !GoalProgressRendererTargetIdSchema.safeParse(target.targetId).success) {
+    if (
+      this.#closed ||
+      this.#failed ||
+      !GoalProgressRendererTargetIdSchema.safeParse(target.targetId).success
+    ) {
       throw new Error("RENDERER_TARGET_UNKNOWN");
     }
     const webSocketDebuggerUrl = `ws://127.0.0.1:${this.#port}/devtools/page/${target.targetId}`;
@@ -155,6 +178,7 @@ class BrowserRendererTargetSource implements RendererTargetSource {
     }
     this.#infoListeners.clear();
     this.#destroyedListeners.clear();
+    this.#failureListeners.clear();
     await this.#browserClient
       .send("Target.setDiscoverTargets", { discover: false })
       .catch(() => undefined);
@@ -163,12 +187,26 @@ class BrowserRendererTargetSource implements RendererTargetSource {
 
   #receiveInfo(input: unknown): void {
     const target = rendererTargetInfo(input);
-    if (!target || this.#closed) {
+    if (!target || this.#closed || this.#failed) {
       return;
     }
     this.#known.set(target.targetId, target);
     for (const listener of this.#infoListeners) {
       listener(target);
+    }
+  }
+
+  #receiveFailure(error: Error): void {
+    if (this.#closed || this.#failed) {
+      return;
+    }
+    this.#failed = error;
+    for (const listener of this.#failureListeners) {
+      try {
+        listener(error);
+      } catch {
+        // One observer cannot block the other recovery observers.
+      }
     }
   }
 }
