@@ -26,7 +26,8 @@ Follow `progressAction` exactly:
 
 - `get`: call `goal_progress_get`. Do not rebuild Checklist or contributions.
 - `initialize`: do not call `goal_progress_get`. Read the Checklist reference, prepare one Contract,
-  and call `goal_progress_initialize`. The Helper reads and binds the current native Goal itself.
+  and call `goal_progress_initialize` with `source` and `objectives`, omitting `contractId`.
+  The plugin generates the Contract ID and binds the current native Goal itself.
 - `rescope-or-replace`: first preserve the existing Checklist. If the Goal only changed wording,
   keep the Checklist. For a minor scope change, change only affected objectives with
   `goal_progress_rescope`. For a major change, initialize a fresh Contract and Checklist.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.5 - 2026-09-05 (source plugin)
+
+- Build the Helper locally after installing the source plugin; Node.js 22.12+ and pnpm 11 are required.
+- Generate Contract IDs in the plugin instead of asking the model to invent them.
+- Restore progress after normal Codex restarts through the source startup listener.
+- Add source upgrade rollback, explicit uninstall, and marketplace scanner CI.
+
+The published v0.3.4 prebuilt installer remains unchanged.
+
 ## 0.3.4 - 2026-09-02
 
 - Added compatibility with the latest Codex and fixed the progress UI disappearing after updates.

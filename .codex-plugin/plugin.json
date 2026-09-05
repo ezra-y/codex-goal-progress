@@ -1,6 +1,6 @@
 {
   "name": "codex-goal-progress",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Explicitly attach deterministic progress tracking to one native Codex Goal.",
   "author": {
     "name": "Codex Goal Progress Contributors"
@@ -15,7 +15,24 @@
     "developerName": "Codex Goal Progress Contributors",
     "category": "Productivity",
     "logo": "./assets/codex-goal-progress-plugin-logo.png",
-    "capabilities": ["Read", "Write"],
-    "defaultPrompt": ["$codex-goal-progress:goal-progress"]
-  }
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "$codex-goal-progress:goal-progress"
+    ],
+    "composerIcon": "./assets/icon.png",
+    "websiteURL": "https://github.com/Ezra-Y/codex-goal-progress"
+  },
+  "repository": "https://github.com/ezra-y/codex-goal-progress",
+  "license": "MIT",
+  "scripts": "./runtime/",
+  "homepage": "https://github.com/Ezra-Y/codex-goal-progress",
+  "keywords": [
+    "codex",
+    "goal",
+    "progress",
+    "checklist"
+  ]
 }

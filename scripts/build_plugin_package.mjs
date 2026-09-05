@@ -81,13 +81,24 @@ export async function buildPluginPackage(options = {}) {
     await rm(outputRoot, { recursive: true, force: true });
     await mkdir(outputRoot, { recursive: true });
     await copyFromRoot(".codex-plugin");
-    for (const field of ["skills", "hooks", "mcpServers", "apps"]) {
+    for (const field of ["skills", "hooks", "mcpServers", "apps", "scripts"]) {
       const value = manifest[field];
       if (typeof value === "string") {
         await copyFromRoot(value);
       }
     }
     await copyFromRoot("bin");
+    const sourceRuntimeRoot = resolve(outputRoot, "runtime/source");
+    await rm(sourceRuntimeRoot, { recursive: true, force: true });
+    await mkdir(sourceRuntimeRoot, { recursive: true });
+    for (const directory of ["packages", "platform", "hooks"]) {
+      const source = resolve(sourceRoot, directory);
+      await assertNoSymbolicLinks(source, sourceRoot);
+      await cp(source, resolve(sourceRuntimeRoot, directory), {
+        recursive: true,
+        dereference: false,
+      });
+    }
     await mkdir(resolve(outputRoot, "dist"), { recursive: true });
     await cp(bundleOutput, resolve(outputRoot, "dist/plugin"), {
       recursive: true,
