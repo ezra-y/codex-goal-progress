@@ -134,10 +134,13 @@ When part of the user Checklist is reused and missing results are added, continu
 
 ## 5. IDs And Weights
 
+For `goal_progress_initialize`, omit `contractId`; the plugin generates it. Copy the returned
+`contractId` into later update, rescope, and phase calls.
+
 ### IDs Follow Results, Not Display Order
 
 When first generated, top-level items use IDs such as `C1` and `C2`. Child items use IDs such as
-`C1.1` and `C1.2`.
+`C1.1` and `C1.2`: the parent ID, a dot, and a positive integer. Do not use UUIDs or titles as checklist IDs.
 
 As long as the meaning of a result does not change, preserve its ID. Inserting a new item, changing
 display order, or editing wording must not renumber other items.
@@ -241,8 +244,8 @@ When the final deliverable or primary acceptance boundary changes, create a new 
 For example, the Goal changes from "deliver a local import tool" to "compare existing import
 products and submit a selection report."
 
-Generate a Checklist that fits the new Goal, use a new Contract ID, and establish it with
-`goal_progress_initialize`. Check completion against the new Goal. Do not directly inherit the old
+Generate a Checklist that fits the new Goal and establish it with `goal_progress_initialize`,
+omitting `contractId` so the plugin generates a new one. Check completion against the new Goal. Do not directly inherit the old
 Goal's percentage or evidence.
 
 ## 8. Review And Save Before Submission

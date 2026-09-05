@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { writePluginTreeManifest } from "../platform/macos/src/plugin-integrity.js";
 import {
+  createReleasePluginManifest,
   createReleasePluginRuntimeFiles,
   writeReleasePluginRuntimeFiles,
 } from "../platform/macos/src/plugin-release.js";
@@ -181,10 +182,21 @@ async function main(): Promise<void> {
   await cp(resolve(root, "plugins/codex-goal-progress"), releasePluginRoot, {
     recursive: true,
   });
-  await rm(resolve(releasePluginRoot, "dist"), {
-    recursive: true,
-    force: true,
-  });
+  await Promise.all([
+    rm(resolve(releasePluginRoot, "dist"), {
+      recursive: true,
+      force: true,
+    }),
+    rm(resolve(releasePluginRoot, "runtime"), {
+      recursive: true,
+      force: true,
+    }),
+  ]);
+  const releasePluginManifestPath = resolve(releasePluginRoot, ".codex-plugin/plugin.json");
+  const releasePluginManifest = createReleasePluginManifest(
+    JSON.parse(await readFile(releasePluginManifestPath, "utf8")),
+  );
+  await writeFile(releasePluginManifestPath, releasePluginManifest);
   const pluginRuntime = createReleasePluginRuntimeFiles(
     JSON.parse(await readFile(resolve(releasePluginRoot, ".mcp.json"), "utf8")),
     JSON.parse(await readFile(resolve(releasePluginRoot, "hooks/hooks.json"), "utf8")),
@@ -216,7 +228,8 @@ async function main(): Promise<void> {
       (entry) =>
         entry.startsWith("__MACOSX/") ||
         entry.includes("/dist/plugin/") ||
-        entry.endsWith("/dist/plugin"),
+        entry.endsWith("/dist/plugin") ||
+        entry.includes("/runtime/"),
     ) ||
     pluginRuntime.mcpJson.includes('"command": "node"') ||
     pluginRuntime.hooksJson.includes("UserPromptSubmit") ||

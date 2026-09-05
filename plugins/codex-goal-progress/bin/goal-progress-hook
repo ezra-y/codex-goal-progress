@@ -1,4 +1,0 @@
-#!/bin/sh
-binary="$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress"
-[ -x "$binary" ] || exit 0
-exec "$binary" hook "$@"

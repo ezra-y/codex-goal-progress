@@ -16,15 +16,15 @@
 
 ## 🆕 最近更新
 
-### 🚑 v0.3.4 — 适配最新 Codex
+### v0.3.5 — 源码插件
 
-**更新日期：2026 年 9 月 2 日**
+**更新日期：2026 年 9 月 5 日**
 
-- 适配最新 Codex，修复更新后进度条不显示的问题。
-- 修复插件更新后，旧任务无法启用进度条的问题。
-- 修复升级后仍显示旧版本号的问题。
+- 安装插件后，使用本机 Node 环境构建 Helper。
+- 初始化编号由插件生成，模型只需提交清单和权重。
+- 补齐插件市场所需的扫描、说明和图标。
 
-这是最新版本。更多内容请查看[完整更新记录](CHANGELOG.md)。
+预构建安装包仍为已发布的 v0.3.4，不受本次源码插件更新影响。
 
 ## ✨ 功能特性
 
@@ -41,6 +41,12 @@
 
 ## 🚀 快速开始
 
+### 从插件市场安装
+
+源码插件需要 Apple Silicon Mac、Codex Desktop、Node.js 22.12 或更高版本和 pnpm 11。
+首次使用时安装锁定版本的依赖，在 Codex 插件数据目录构建 Helper；后续直接复用。
+首次安装依赖需要联网。
+
 ### 让 AI 安装
 
 把下面这句话发给 AI：
@@ -49,10 +55,11 @@
 请按照仓库中的 INSTALL-FOR-AI.md，安装并验证 https://github.com/Ezra-Y/codex-goal-progress。
 ```
 
-### 在终端一行安装
+### 从预构建包安装
 
 ```bash
-curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh -o /tmp/codex-goal-progress-install.sh
+sh /tmp/codex-goal-progress-install.sh
 ```
 
 脚本会下载 macOS 安装包和 `SHA256SUMS`，校验 ZIP，然后运行安装包内置的安装器。
@@ -64,8 +71,9 @@ curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/downloa
 
 - Apple Silicon Mac
 - Codex Desktop
+- 源码插件：Node.js 22.12 或更高版本，以及 pnpm 11
 
-macOS 安装包已经包含运行时。
+预构建 macOS Release 已包含 Node.js 运行时和所需程序。
 
 ## 🎯 如何使用
 
@@ -105,7 +113,7 @@ macOS 安装包已经包含运行时。
 - Helper 校验 revision，并作为唯一状态写入者。
 - Core 根据 Checklist 计算小目标进度和总体进度。
 - Renderer 只接收用于显示的 ViewModel。
-- 安装器使用自包含的 Node SEA Helper。
+- 源码插件在 Codex 插件数据目录中构建 Helper；预构建 Release 使用自包含的 Node SEA Helper。
 
 更多信息请查看[技术架构](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md)、
 [权限范围](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)和
@@ -115,11 +123,11 @@ macOS 安装包已经包含运行时。
 
 Goal Progress 使用：
 
-- 应用支持目录中的本地文件；
+- Codex 插件数据目录或应用支持目录中的本地文件；
 - 私有本地 Unix Socket；
 - 连接已验证 Codex 进程的 loopback CDP；
 - 由 launchd 注册的后台 Helper；
-- 三个可审核的 Plugin Hook。
+- 三个 Plugin Hook。
 
 完整范围和卸载步骤请查看
 [PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)。
@@ -127,3 +135,7 @@ Goal Progress 使用：
 ## 许可证
 
 [MIT](https://github.com/Ezra-Y/codex-goal-progress/blob/main/LICENSE)
+
+源码安装的“检查更新”会查询 GitHub 正式发布版本。“查看更新说明”打开发布说明；请通过 Codex 插件市场安装更新。它不会自动换成预构建 Helper。
+
+卸载源码版时，对 Codex 说“卸载 Goal Progress”即可。工具删除这个源码插件、Helper 和插件进度数据，保留原生 Goal、其他插件和共享市场。先返回“开始卸载”，最终结果写入 `CODEX_HOME/logs/goal-progress-uninstall.log`。

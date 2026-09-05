@@ -16,15 +16,15 @@
 
 ## 🆕 Latest update
 
-### 🚑 v0.3.4 — Compatible with the latest Codex
+### v0.3.5 — Source plugin
 
-**Updated: September 2, 2026**
+**Updated: September 5, 2026**
 
-- Added compatibility with the latest Codex and fixed the progress UI disappearing after updates.
-- Fixed Goal Progress activation in existing tasks after plugin updates.
-- Fixed stale version numbers after upgrades.
+- Build the Helper locally after installing the plugin, using your existing Node environment.
+- Initialize with the checklist and weights; the plugin generates the Contract ID.
+- Add marketplace scanning, disclosure guidance, and an optimized icon.
 
-This is the latest release. See the [full changelog](CHANGELOG.md) for more details.
+The prebuilt installer remains the published v0.3.4 package, unchanged by this source-plugin update.
 
 ## ✨ Features
 
@@ -42,6 +42,12 @@ progress, overall progress, and Token usage attributable to that Goal.
 
 ## 🚀 Quick start
 
+### Install from a plugin marketplace
+
+The source plugin requires an Apple Silicon Mac, Codex Desktop, Node.js 22.12 or newer,
+and pnpm 11. Install Goal Progress from the marketplace. On first use it installs the locked
+dependencies and builds the Helper in Codex plugin data; later starts reuse that build.
+
 ### Install with AI
 
 Send this instruction to an AI:
@@ -53,7 +59,8 @@ Install and verify https://github.com/Ezra-Y/codex-goal-progress by following it
 ### Install from Terminal
 
 ```bash
-curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh | sh
+curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh -o /tmp/codex-goal-progress-install.sh
+sh /tmp/codex-goal-progress-install.sh
 ```
 
 The script downloads the macOS package and `SHA256SUMS`, verifies the ZIP, and runs the bundled
@@ -64,10 +71,11 @@ loads.
 
 ## 🛠️ Requirements
 
-* Apple Silicon Mac
-* Codex Desktop
+- Apple Silicon Mac
+- Codex Desktop
+- Source Plugin: Node.js 22.12 or newer and pnpm 11
 
-The macOS package includes its runtime.
+The prebuilt macOS Release includes its own runtime and does not require Node.js or pnpm.
 
 ## 🎯 How to use
 
@@ -109,7 +117,7 @@ Codex flow.
 - Helper validates revisions and is the only state writer.
 - Core derives objective and overall progress from the checklist.
 - Renderer receives a display-only ViewModel.
-- The installer uses a self-contained Node SEA Helper.
+- The source Plugin builds the Helper in Codex Plugin data; the prebuilt Release uses a self-contained Node SEA Helper.
 
 Read the [architecture](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md),
 [permissions](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md), and
@@ -120,11 +128,11 @@ for details.
 
 Goal Progress uses:
 
-- local files under its application-support directory;
+- local files under Codex Plugin data or its application-support directory;
 - a private local Unix socket;
 - a loopback CDP connection to the verified Codex process;
 - a background Helper registered through launchd;
-- three reviewable Plugin Hooks.
+- three Plugin Hooks.
 
 See [PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)
 for the exact scope and removal steps.
@@ -132,3 +140,7 @@ for the exact scope and removal steps.
 ## License
 
 [MIT](https://github.com/Ezra-Y/codex-goal-progress/blob/main/LICENSE)
+
+For source installations, **Check for updates** queries the published GitHub release. **View update notes** opens its release notes; install the update through the Codex plugin marketplace. It does not silently switch to a prebuilt Helper.
+
+To remove a source installation, ask Codex to uninstall Goal Progress. The `goal_progress_uninstall` tool removes this source plugin, its Helper and its progress data. It keeps native Goals, other plugins and the shared marketplace. The first response reports that removal has started; the final result is recorded in `CODEX_HOME/logs/goal-progress-uninstall.log`.

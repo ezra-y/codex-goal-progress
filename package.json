@@ -1,6 +1,6 @@
 {
   "name": "codex-goal-progress",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -9,7 +9,7 @@
   },
   "packageManager": "pnpm@11.19.0",
   "scripts": {
-    "lint": "biome check package.json tsconfig.base.json tsconfig.json biome.json scripts packages platform hooks",
+    "lint": "biome check package.json tsconfig.base.json tsconfig.json biome.json scripts packages platform hooks runtime",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "validate:plugin": "node scripts/validate_plugin_contract.mjs . && node scripts/validate_plugin_contract.mjs plugins/codex-goal-progress",
     "validate:hygiene": "node scripts/check_release_hygiene.mjs",

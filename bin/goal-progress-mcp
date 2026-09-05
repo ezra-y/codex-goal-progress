@@ -1,8 +1,3 @@
 #!/bin/sh
-set -eu
-binary="$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress"
-if [ ! -x "$binary" ]; then
-  echo "GOAL_PROGRESS_UNINSTALLED_OR_DISABLED: run goal-progress install --json" >&2
-  exit 1
-fi
-exec "$binary" mcp-server "$@"
+base=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec /bin/sh "$base/runtime/run-bootstrap.sh" mcp-server "$@"

@@ -1,4 +1,3 @@
 #!/bin/sh
-binary="$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress"
-[ -x "$binary" ] || exit 0
-exec "$binary" hook "$@"
+base=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec /bin/sh "$base/runtime/run-bootstrap.sh" hook "$@"

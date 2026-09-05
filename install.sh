@@ -133,4 +133,3 @@ fi
 "$installer" verify --json
 
 printf '%s\n' "Goal Progress is installed."
-printf '%s\n' "If Codex asks you to review the Goal Progress Hook, approve it, then open a new task."

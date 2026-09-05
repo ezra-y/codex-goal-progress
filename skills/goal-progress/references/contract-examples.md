@@ -28,9 +28,10 @@ These are actions or generic phases. They do not say what accepted result exists
 
 ## Initialize
 
+Omit `contractId`; the plugin returns it after saving.
+
 ```json
 {
-  "contractId": "gp_importer01",
   "source": "model-generated",
   "objectives": [
     {
@@ -63,6 +64,8 @@ These are actions or generic phases. They do not say what accepted result exists
 ```
 
 ## Update
+
+Replace the sample `gp_importer01` with the actual `contractId` returned by the tool. Copy the latest revision too.
 
 ```json
 {

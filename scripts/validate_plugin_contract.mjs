@@ -7,6 +7,7 @@ const errors = [];
 const pluginDataPlaceholder = "$" + "{PLUGIN_DATA}";
 const stableHookCommand =
   '/bin/sh -c \'p="$HOME/Library/Application Support/CodexGoalProgress/install/current/bin/goal-progress"; [ -x "$p" ] || exit 0; exec "$p" hook\'';
+const sourceHookCommand = '/bin/sh "$PLUGIN_ROOT/runtime/run-bootstrap.sh" hook';
 const semver =
   /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
@@ -59,6 +60,7 @@ function validateHookEvent(
   expectedAdditionalContextLimit,
   expectedTimeout,
   expectedAsync,
+  expectedCommand,
 ) {
   const groups = hookEvents[eventName];
   if (!Array.isArray(groups) || groups.length !== 1 || !isObject(groups[0])) {
@@ -90,8 +92,8 @@ function validateHookEvent(
   if (handler.type !== "command") {
     errors.push(`${eventName} handler type must be 'command'`);
   }
-  if (handler.command !== stableHookCommand) {
-    errors.push(`${eventName} handler command must use the stable installed Hook`);
+  if (handler.command !== expectedCommand) {
+    errors.push(`${eventName} handler command is not the expected Goal Progress Hook launcher`);
   }
   if (handler.timeout !== expectedTimeout) {
     errors.push(`${eventName} handler timeout must be ${expectedTimeout} seconds`);
@@ -246,6 +248,7 @@ if (manifest) {
       "repository",
       "license",
       "keywords",
+      "scripts",
     ]),
     "plugin.json",
   );
@@ -267,6 +270,10 @@ if (manifest) {
   }
   if (manifest.hooks !== "./hooks/hooks.json") {
     errors.push("plugin.json hooks must resolve to './hooks/hooks.json'");
+  }
+  const sourceRuntime = manifest.scripts === "./runtime/";
+  if (manifest.scripts !== undefined && !sourceRuntime) {
+    errors.push("plugin.json scripts must resolve to './runtime/'");
   }
 
   rejectUnknownFields(
@@ -346,14 +353,36 @@ if (manifest) {
   } else {
     rejectUnknownFields(
       mcpServer,
-      new Set(["command", "args", "env", "cwd"]),
+      new Set(["command", "args", "env", "cwd", "startup_timeout_sec"]),
       ".mcp.json goal_progress server",
     );
-    if (mcpServer.command !== "./bin/goal-progress-mcp") {
-      errors.push(".mcp.json goal_progress command must use the stable installed MCP launcher");
-    }
-    if (!Array.isArray(mcpServer.args) || mcpServer.args.length !== 0) {
-      errors.push(".mcp.json goal_progress args must be empty");
+    if (sourceRuntime) {
+      if (mcpServer.command !== "/bin/sh") {
+        errors.push(".mcp.json goal_progress command must use the source runtime shell launcher");
+      }
+      if (
+        !Array.isArray(mcpServer.args) ||
+        mcpServer.args.length !== 2 ||
+        mcpServer.args[0] !== "./runtime/run-bootstrap.sh" ||
+        mcpServer.args[1] !== "mcp-server"
+      ) {
+        errors.push(".mcp.json goal_progress args must start runtime/run-bootstrap.sh mcp-server");
+      }
+      if (mcpServer.startup_timeout_sec !== 300) {
+        errors.push(
+          ".mcp.json goal_progress startup_timeout_sec must allow the first source build",
+        );
+      }
+    } else {
+      if (mcpServer.command !== "./bin/goal-progress-mcp") {
+        errors.push(".mcp.json goal_progress command must use the stable installed MCP launcher");
+      }
+      if (!Array.isArray(mcpServer.args) || mcpServer.args.length !== 0) {
+        errors.push(".mcp.json goal_progress args must be empty");
+      }
+      if (mcpServer.startup_timeout_sec !== undefined) {
+        errors.push("prebuilt release MCP must not retain the source build timeout");
+      }
     }
     if (mcpServer.cwd !== ".") {
       errors.push(".mcp.json goal_progress cwd must resolve from the plugin root");
@@ -363,6 +392,66 @@ if (manifest) {
       mcpServer.env.GOAL_PROGRESS_PLUGIN_DATA !== pluginDataPlaceholder
     ) {
       errors.push(".mcp.json goal_progress env must bind the Plugin data root");
+    }
+  }
+
+  if (sourceRuntime) {
+    const runtimePackage = await readJson(
+      resolve(pluginRoot, "runtime/package.json"),
+      "runtime/package.json",
+    );
+    if (runtimePackage) {
+      if (runtimePackage.version !== manifest.version) {
+        errors.push("runtime/package.json version must match plugin.json version");
+      }
+      if (runtimePackage.engines?.node !== ">=22.12.0") {
+        errors.push("runtime/package.json must declare Node.js >=22.12.0");
+      }
+      if (runtimePackage.packageManager !== "pnpm@11.19.0") {
+        errors.push("runtime/package.json must pin pnpm 11.19.0");
+      }
+    }
+    for (const relativePath of [
+      "runtime/bootstrap.mjs",
+      "runtime/runtime-lock.mjs",
+      "runtime/build-runtime.mjs",
+      "runtime/helper-launcher.sh",
+      "runtime/node-runtime.sh",
+      "runtime/pnpm-lock.yaml",
+      "runtime/pnpm-workspace.yaml",
+      "runtime/run-bootstrap.sh",
+      "runtime/startup-listener-bridge.mjs",
+      "runtime/startup-listener-launcher.sh",
+      "runtime/startup-listener.mjs",
+      "runtime/startup-listener.jxa",
+    ]) {
+      try {
+        await readFile(resolve(pluginRoot, relativePath));
+      } catch {
+        errors.push(`source plugin is missing ${relativePath}`);
+      }
+    }
+    const sourceRoots = [
+      resolve(pluginRoot, "runtime/source"),
+      resolve(pluginRoot, "../.."),
+      pluginRoot,
+    ];
+    let completeSourceRoot = false;
+    for (const sourceRoot of sourceRoots) {
+      try {
+        await Promise.all([
+          readFile(resolve(sourceRoot, "packages/host/src/index.ts")),
+          readFile(resolve(sourceRoot, "platform/macos/src/cli.ts")),
+          readFile(resolve(sourceRoot, "hooks/src/index.ts")),
+        ]);
+        completeSourceRoot = true;
+        break;
+      } catch {
+        // Try the next supported source layout.
+      }
+    }
+    if (!completeSourceRoot) {
+      errors.push("source plugin is missing the complete Helper source tree");
     }
   }
 
@@ -383,15 +472,26 @@ if (manifest) {
     if ("UserPromptSubmit" in hookEvents) {
       errors.push("hooks/hooks.json must not define Goal Progress UserPromptSubmit hooks");
     }
-    validateHookEvent(hookEvents, "SessionStart", "^(?:startup|resume|compact)$", 128, 3);
+    const expectedHookCommand = sourceRuntime ? sourceHookCommand : stableHookCommand;
+    validateHookEvent(
+      hookEvents,
+      "SessionStart",
+      "^(?:startup|resume|compact)$",
+      128,
+      3,
+      undefined,
+      expectedHookCommand,
+    );
     validateHookEvent(
       hookEvents,
       "PreToolUse",
       "^(?:goal_progress_|.*[^A-Za-z0-9]goal_progress[^A-Za-z0-9]+goal_progress_)(?:activate|initialize|get|update|rescope|set_phase)$",
       undefined,
       1,
+      undefined,
+      expectedHookCommand,
     );
-    validateHookEvent(hookEvents, "PostToolUse", "^update_goal$", 64, 2, true);
+    validateHookEvent(hookEvents, "PostToolUse", "^update_goal$", 64, 2, true, expectedHookCommand);
   }
 }
 

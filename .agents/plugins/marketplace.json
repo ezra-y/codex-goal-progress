@@ -8,7 +8,7 @@
       "name": "codex-goal-progress",
       "source": {
         "source": "local",
-        "path": "./plugins/codex-goal-progress"
+        "path": "./"
       },
       "policy": {
         "installation": "AVAILABLE",
