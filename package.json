@@ -24,7 +24,7 @@
     "verify:public": "pnpm lint && pnpm typecheck && pnpm build && pnpm validate:plugin && pnpm validate:hygiene"
   },
   "dependencies": {
-    "@lucide/icons": "^1.37.0",
+    "@lucide/icons": "^1.39.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "lit": "^3.3.3",
     "zod": "^4.4.3"
