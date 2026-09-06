@@ -74,7 +74,7 @@ export const deMessages: GoalProgressMessages = {
   preparingBaseline: "Fortschrittsbasis wird erstellt…",
   preparingObjectives: "Abnahmepunkte werden vorbereitet…",
   preparingCopy: "Das aktuelle Modell prüft das Goal und die Abnahmeliste.",
-  unavailableTitle: "Goal-Fortschritt ist nicht verfügbar",
+  unavailableTitle: "Fortschritt nicht aktualisiert",
   unavailableCopy:
     "Das Goal kann fortgesetzt werden. Der Fortschritt erscheint nach Wiederherstellung der Verbindung.",
   retryProgress: "Fortschritt erneut laden",

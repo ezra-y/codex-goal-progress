@@ -10,10 +10,6 @@ export const stateStyles = css`
       text-align: center;
     }
 
-    .phase-error .state {
-      min-height: calc(var(--gp-font-size) * 10.857143);
-    }
-
     .state-symbol {
       position: relative;
       display: grid;
@@ -46,11 +42,6 @@ export const stateStyles = css`
       content: none;
     }
 
-    .state-symbol.error {
-      border-color: color-mix(in srgb, var(--gp-blocked) 56%, transparent);
-      color: var(--gp-blocked);
-    }
-
     .state-title {
       color: var(--gp-text);
       font-size: max(10px, calc(var(--gp-font-size) - 2px));
@@ -66,20 +57,67 @@ export const stateStyles = css`
       line-height: 1.5;
     }
 
-    .error-code {
-      display: inline-block;
-      margin-top: calc(var(--gp-font-size) * 0.571429);
-      color: var(--gp-blocked);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: max(9px, calc(var(--gp-font-size) - 5px));
-      overflow-wrap: anywhere;
+    .phase-error .state {
+      display: flex;
+      min-height: 36px;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 4px;
+      padding: 4px 8px 4px 12px;
+      color: var(--gp-muted);
+      font-size: var(--gp-font-size-sm);
+      line-height: 1.35;
+      text-align: start;
+    }
+
+    .error-summary {
+      overflow: hidden;
+      min-width: 0;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .state-actions {
       display: flex;
-      justify-content: center;
-      gap: calc(var(--gp-font-size) * 0.285714);
-      margin-top: calc(var(--gp-font-size) * 0.714286);
+      flex: none;
+      align-items: center;
+      gap: 2px;
+      margin-inline-start: auto;
+    }
+
+    .retry-button {
+      min-height: 24px;
+      border: 0;
+      border-radius: var(--gp-control-radius);
+      padding: 2px 6px;
+      background: transparent;
+      color: var(--gp-accent);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .retry-button:hover,
+    .retry-button:focus-visible {
+      background: var(--gp-control-hover);
+    }
+
+    .retry-button:focus-visible {
+      outline: 2px solid var(--gp-focus);
+      outline-offset: 1px;
+    }
+
+    .panel.phase-error.placement-floating .state {
+      position: absolute;
+      z-index: 1;
+      bottom: var(--gp-floating-stack-lift, 0px);
+      left: var(--gp-floating-chip-center, 50%);
+      width: min(280px, calc(100% - 20px));
+      border: 1px solid var(--gp-line);
+      border-radius: 15px;
+      background: var(--gp-panel-glass);
+      box-shadow: none;
+      pointer-events: auto;
+      transform: translateX(-50%);
     }
 
     .sr-only {

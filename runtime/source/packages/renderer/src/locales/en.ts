@@ -74,7 +74,7 @@ export const enMessages: GoalProgressMessages = {
   preparingBaseline: "Establishing the progress baseline…",
   preparingObjectives: "Preparing acceptance points…",
   preparingCopy: "The current model is checking the Goal and acceptance checklist.",
-  unavailableTitle: "Goal progress is unavailable",
+  unavailableTitle: "Progress not updated",
   unavailableCopy: "The Goal can continue. Progress will return when the connection recovers.",
   retryProgress: "Retry progress",
   retry: "Retry",

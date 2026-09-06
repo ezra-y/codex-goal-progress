@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { writePluginTreeManifest } from "../platform/macos/src/plugin-integrity.js";
 import {
+  createReleaseMarketplaceManifest,
   createReleasePluginManifest,
   createReleasePluginRuntimeFiles,
   writeReleasePluginRuntimeFiles,
@@ -175,9 +176,11 @@ async function main(): Promise<void> {
   const marketplaceRoot = resolve(workRoot, "plugin-marketplace");
   const releasePluginRoot = resolve(marketplaceRoot, "plugins/codex-goal-progress");
   await mkdir(resolve(marketplaceRoot, ".agents/plugins"), { recursive: true });
-  await copyFile(
-    resolve(root, ".agents/plugins/marketplace.json"),
+  await writeFile(
     resolve(marketplaceRoot, ".agents/plugins/marketplace.json"),
+    createReleaseMarketplaceManifest(
+      JSON.parse(await readFile(resolve(root, ".agents/plugins/marketplace.json"), "utf8")),
+    ),
   );
   await cp(resolve(root, "plugins/codex-goal-progress"), releasePluginRoot, {
     recursive: true,

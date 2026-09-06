@@ -74,7 +74,7 @@ export const plMessages: GoalProgressMessages = {
   preparingBaseline: "Ustalanie punktu odniesienia postępu…",
   preparingObjectives: "Przygotowywanie punktów odbioru…",
   preparingCopy: "Bieżący model sprawdza Goal i listę odbioru.",
-  unavailableTitle: "Postęp Goal jest niedostępny",
+  unavailableTitle: "Postęp nie został zaktualizowany",
   unavailableCopy: "Goal może działać dalej. Postęp wróci po odzyskaniu połączenia.",
   retryProgress: "Ponów wczytywanie postępu",
   retry: "Ponów",

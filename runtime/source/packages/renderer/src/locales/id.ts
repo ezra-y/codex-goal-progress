@@ -74,7 +74,7 @@ export const idMessages: GoalProgressMessages = {
   preparingBaseline: "Menyiapkan patokan progres…",
   preparingObjectives: "Menyiapkan poin penerimaan…",
   preparingCopy: "Model saat ini sedang memeriksa Goal dan daftar penerimaan.",
-  unavailableTitle: "Progres Goal tidak tersedia",
+  unavailableTitle: "Progres belum diperbarui",
   unavailableCopy: "Goal dapat terus berjalan. Progres akan kembali saat koneksi pulih.",
   retryProgress: "Coba lagi progres",
   retry: "Coba lagi",

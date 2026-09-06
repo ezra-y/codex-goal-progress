@@ -74,7 +74,7 @@ export const frCAMessages: GoalProgressMessages = {
   preparingBaseline: "Création du point de référence…",
   preparingObjectives: "Préparation des critères d’acceptation…",
   preparingCopy: "Le modèle actuel vérifie le Goal et la liste d’acceptation.",
-  unavailableTitle: "La progression du Goal est indisponible",
+  unavailableTitle: "Progression non actualisée",
   unavailableCopy: "Le Goal peut continuer. La progression reviendra avec la connexion.",
   retryProgress: "Réessayer la progression",
   retry: "Réessayer",

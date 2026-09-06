@@ -74,7 +74,7 @@ export const faMessages: GoalProgressMessages = {
   preparingBaseline: "در حال تعیین مبنای پیشرفت…",
   preparingObjectives: "در حال آماده‌سازی معیارهای پذیرش…",
   preparingCopy: "مدل فعلی در حال بررسی Goal و فهرست پذیرش است.",
-  unavailableTitle: "پیشرفت Goal در دسترس نیست",
+  unavailableTitle: "پیشرفت به‌روز نشده",
   unavailableCopy: "Goal می‌تواند ادامه یابد. با بازیابی اتصال، پیشرفت دوباره نمایش داده می‌شود.",
   retryProgress: "تلاش دوباره برای پیشرفت",
   retry: "تلاش دوباره",

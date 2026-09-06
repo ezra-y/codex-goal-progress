@@ -25,7 +25,7 @@ if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/u.test(releaseVer
   throw new Error("GOAL_PROGRESS_SOURCE_BUILD_VERSION_INVALID");
 }
 const pageHostVersionDocument = JSON.parse(
-  await readFile(resolve(sourceRoot, "packages/codex-adapter/src/page-host-version.json"), "utf8"),
+  await readFile(resolve(sourceRoot, "packages/contracts/src/page-host-version.json"), "utf8"),
 );
 const pageHostVersion = pageHostVersionDocument.pageHostVersion;
 if (!Number.isSafeInteger(pageHostVersion) || pageHostVersion < 1) {

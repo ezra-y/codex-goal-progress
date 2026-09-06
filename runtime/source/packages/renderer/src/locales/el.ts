@@ -74,7 +74,7 @@ export const elMessages: GoalProgressMessages = {
   preparingBaseline: "Δημιουργία βάσης προόδου…",
   preparingObjectives: "Προετοιμασία σημείων αποδοχής…",
   preparingCopy: "Το τρέχον μοντέλο ελέγχει το Goal και τη λίστα αποδοχής.",
-  unavailableTitle: "Η πρόοδος του Goal δεν είναι διαθέσιμη",
+  unavailableTitle: "Η πρόοδος δεν ενημερώθηκε",
   unavailableCopy:
     "Το Goal μπορεί να συνεχίσει. Η πρόοδος θα επανέλθει όταν αποκατασταθεί η σύνδεση.",
   retryProgress: "Επανάληψη προόδου",

@@ -74,7 +74,7 @@ export const kkMessages: GoalProgressMessages = {
   preparingBaseline: "Прогресс негізі құрылуда…",
   preparingObjectives: "Қабылдау тармақтары дайындалуда…",
   preparingCopy: "Ағымдағы модель Goal мен қабылдау тізімін тексеріп жатыр.",
-  unavailableTitle: "Goal прогресі қолжетімсіз",
+  unavailableTitle: "Прогресс жаңартылмаған",
   unavailableCopy:
     "Goal жұмысын жалғастыра алады. Байланыс қалпына келгенде прогресс қайта көрсетіледі.",
   retryProgress: "Прогресті қайталау",

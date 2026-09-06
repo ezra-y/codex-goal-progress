@@ -74,7 +74,7 @@ export const taMessages: GoalProgressMessages = {
   preparingBaseline: "முன்னேற்ற அடிப்படையை அமைக்கிறது…",
   preparingObjectives: "ஏற்புப் புள்ளிகளைத் தயாரிக்கிறது…",
   preparingCopy: "தற்போதைய மாதிரி Goal மற்றும் ஏற்புப் பட்டியலைச் சரிபார்க்கிறது.",
-  unavailableTitle: "Goal முன்னேற்றம் கிடைக்கவில்லை",
+  unavailableTitle: "முன்னேற்றம் புதுப்பிக்கப்படவில்லை",
   unavailableCopy: "Goal தொடர்ந்து இயங்கலாம். இணைப்பு மீண்டதும் முன்னேற்றம் திரும்பும்.",
   retryProgress: "முன்னேற்றத்தை மீண்டும் ஏற்று",
   retry: "மீண்டும் முயல்க",

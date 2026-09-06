@@ -74,7 +74,7 @@ export const bgMessages: GoalProgressMessages = {
   preparingBaseline: "Създаване на начална база за напредъка…",
   preparingObjectives: "Подготовка на критериите за приемане…",
   preparingCopy: "Текущият модел проверява Goal и списъка с критерии.",
-  unavailableTitle: "Напредъкът по Goal не е достъпен",
+  unavailableTitle: "Напредъкът не е актуализиран",
   unavailableCopy: "Goal може да продължи. Напредъкът ще се върне след възстановяване на връзката.",
   retryProgress: "Повтори напредъка",
   retry: "Повтори",

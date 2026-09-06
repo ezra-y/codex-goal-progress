@@ -29,34 +29,32 @@ export function renderErrorView(
   onDetach: () => void,
   messages: GoalProgressMessages,
 ) {
-  const errorCode = viewModel?.errorCode ?? "VIEW_MODEL_UNAVAILABLE";
+  const summary =
+    viewModel?.overallPercent === null || viewModel?.overallPercent === undefined
+      ? messages.unavailableTitle
+      : `${viewModel.overallPercent}% · ${messages.unavailableTitle}`;
   return html`
-    <div class="state" role="alert">
-      <div>
-        <div class="state-symbol error" aria-hidden="true">!</div>
-        <div class="state-title">${messages.unavailableTitle}</div>
-        <div class="state-copy">${messages.unavailableCopy}</div>
-        <code class="error-code">${errorCode}</code>
-        <div class="state-actions">
-          <button
-            class="icon-button retry-button"
-            type="button"
-            aria-label=${messages.retryProgress}
-            title=${messages.retry}
-            @click=${onRetry}
-          >
-            ↻
-          </button>
-          <button
-            class="icon-button detach-button"
-            type="button"
-            aria-label=${messages.closeProgress}
-            title=${messages.closeProgress}
-            @click=${onDetach}
-          >
-            ×
-          </button>
-        </div>
+    <div class="state error" role="alert">
+      <span class="error-summary">${summary}</span>
+      <div class="state-actions">
+        <button
+          class="retry-button"
+          type="button"
+          aria-label=${messages.retryProgress}
+          title=${messages.retry}
+          @click=${onRetry}
+        >
+          ${messages.retry}
+        </button>
+        <button
+          class="icon-button detach-button"
+          type="button"
+          aria-label=${messages.closeProgress}
+          title=${messages.closeProgress}
+          @click=${onDetach}
+        >
+          ×
+        </button>
       </div>
     </div>
   `;

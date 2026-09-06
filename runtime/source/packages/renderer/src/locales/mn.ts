@@ -74,7 +74,7 @@ export const mnMessages: GoalProgressMessages = {
   preparingBaseline: "Явцын суурь түвшинг тогтоож байна…",
   preparingObjectives: "Хүлээн авах зүйлсийг бэлдэж байна…",
   preparingCopy: "Одоогийн загвар Goal болон хүлээн авах жагсаалтыг шалгаж байна.",
-  unavailableTitle: "Goal явц боломжгүй",
+  unavailableTitle: "Явц шинэчлэгдээгүй",
   unavailableCopy: "Goal үргэлжлүүлэн ажиллаж болно. Холболт сэргэхэд явц дахин харагдана.",
   retryProgress: "Явцыг дахин оролдох",
   retry: "Дахин оролдох",

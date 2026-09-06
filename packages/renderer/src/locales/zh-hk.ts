@@ -74,7 +74,7 @@ export const zhHKMessages: GoalProgressMessages = {
   preparingBaseline: "正在建立進度基準…",
   preparingObjectives: "正在準備驗收項目…",
   preparingCopy: "目前的模型正在檢查 Goal 及驗收清單。",
-  unavailableTitle: "目標進度暫時無法使用",
+  unavailableTitle: "進度暫未更新",
   unavailableCopy: "Goal 可以繼續運作。連線恢復後，進度會再次顯示。",
   retryProgress: "重新載入進度",
   retry: "重試",

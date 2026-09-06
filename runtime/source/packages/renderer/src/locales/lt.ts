@@ -74,7 +74,7 @@ export const ltMessages: GoalProgressMessages = {
   preparingBaseline: "Kuriamas eigos atskaitos taškas…",
   preparingObjectives: "Ruošiami priėmimo punktai…",
   preparingCopy: "Dabartinis modelis tikrina Goal ir priėmimo sąrašą.",
-  unavailableTitle: "Goal eiga nepasiekiama",
+  unavailableTitle: "Eiga neatnaujinta",
   unavailableCopy: "Goal gali būti tęsiamas. Atkūrus ryšį eiga vėl bus rodoma.",
   retryProgress: "Bandyti eigą dar kartą",
   retry: "Bandyti dar kartą",

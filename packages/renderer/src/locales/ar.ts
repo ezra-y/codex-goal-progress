@@ -74,7 +74,7 @@ export const arMessages: GoalProgressMessages = {
   preparingBaseline: "جارٍ إنشاء خط أساس للتقدم…",
   preparingObjectives: "جارٍ إعداد نقاط القبول…",
   preparingCopy: "يتحقق النموذج الحالي من الهدف وقائمة القبول.",
-  unavailableTitle: "تقدم الهدف غير متاح",
+  unavailableTitle: "لم يُحدَّث التقدم",
   unavailableCopy: "يمكن أن يستمر Goal. سيظهر التقدم مجددًا بعد استعادة الاتصال.",
   retryProgress: "إعادة محاولة التقدم",
   retry: "إعادة المحاولة",

@@ -10,7 +10,7 @@ const bundlePath = resolve(outputDirectory, "goal-progress.js");
 const manifestPath = resolve(outputDirectory, "goal-progress.manifest.json");
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
 const pageHostVersionManifest = JSON.parse(
-  await readFile(resolve(root, "packages/codex-adapter/src/page-host-version.json"), "utf8"),
+  await readFile(resolve(root, "packages/contracts/src/page-host-version.json"), "utf8"),
 );
 const pageHostVersion = pageHostVersionManifest.pageHostVersion;
 if (!Number.isSafeInteger(pageHostVersion) || pageHostVersion < 1) {

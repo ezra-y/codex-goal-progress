@@ -1,4 +1,7 @@
 import type { GoalProgressViewModel } from "../../contracts/src/goal-contract.js";
+import pageHostVersionManifest from "../../contracts/src/page-host-version.json" with {
+  type: "json",
+};
 import { GOAL_PROGRESS_RELEASE_VERSION } from "../../contracts/src/release-version.js";
 import {
   GOAL_PROGRESS_HOT_ELEMENT_NAME,
@@ -26,7 +29,6 @@ import {
   createDefaultCodexNativeGoalLocatorRegistry,
   matchCurrentVisibleThread,
 } from "./anchor-adapter.js";
-import pageHostVersionManifest from "./page-host-version.json" with { type: "json" };
 import {
   GOAL_PROGRESS_ELEMENT_NAME,
   removeManagedGoalProgressHosts,

@@ -74,7 +74,7 @@ export const srMessages: GoalProgressMessages = {
   preparingBaseline: "Постављање основе напретка…",
   preparingObjectives: "Припрема тачака прихватања…",
   preparingCopy: "Тренутни модел проверава Goal и листу прихватања.",
-  unavailableTitle: "Напредак Goal није доступан",
+  unavailableTitle: "Напредак није ажуриран",
   unavailableCopy: "Goal може да настави. Напредак ће се вратити када се веза обнови.",
   retryProgress: "Поново учитај напредак",
   retry: "Покушај поново",

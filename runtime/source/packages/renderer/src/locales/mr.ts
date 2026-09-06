@@ -74,7 +74,7 @@ export const mrMessages: GoalProgressMessages = {
   preparingBaseline: "प्रगतीचा आधार तयार करत आहे…",
   preparingObjectives: "स्वीकृती मुद्दे तयार करत आहे…",
   preparingCopy: "सध्याचे मॉडेल Goal आणि स्वीकृती सूची तपासत आहे.",
-  unavailableTitle: "Goal प्रगती उपलब्ध नाही",
+  unavailableTitle: "प्रगती अपडेट झालेली नाही",
   unavailableCopy: "Goal सुरू राहू शकते. कनेक्शन पूर्ववत झाल्यावर प्रगती पुन्हा दिसेल.",
   retryProgress: "प्रगतीसाठी पुन्हा प्रयत्न करा",
   retry: "पुन्हा प्रयत्न करा",

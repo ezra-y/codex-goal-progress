@@ -74,7 +74,7 @@ export const fiMessages: GoalProgressMessages = {
   preparingBaseline: "Luodaan edistymisen lähtötasoa…",
   preparingObjectives: "Valmistellaan hyväksymiskohtia…",
   preparingCopy: "Nykyinen malli tarkistaa Goalin ja hyväksymisluettelon.",
-  unavailableTitle: "Goalin edistyminen ei ole saatavilla",
+  unavailableTitle: "Edistymistä ei ole päivitetty",
   unavailableCopy: "Goal voi jatkua. Edistyminen palaa, kun yhteys palautuu.",
   retryProgress: "Yritä edistymistä uudelleen",
   retry: "Yritä uudelleen",

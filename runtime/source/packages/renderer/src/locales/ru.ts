@@ -74,7 +74,7 @@ export const ruMessages: GoalProgressMessages = {
   preparingBaseline: "Подготовка исходного прогресса…",
   preparingObjectives: "Подготовка критериев приёмки…",
   preparingCopy: "Текущая модель проверяет Goal и список приёмки.",
-  unavailableTitle: "Прогресс Goal недоступен",
+  unavailableTitle: "Прогресс не обновлён",
   unavailableCopy:
     "Goal может продолжать работу. Прогресс вернётся после восстановления подключения.",
   retryProgress: "Повторить загрузку прогресса",

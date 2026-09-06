@@ -74,7 +74,7 @@ export const lvMessages: GoalProgressMessages = {
   preparingBaseline: "Veido progresa atskaites punktu…",
   preparingObjectives: "Gatavo pieņemšanas punktus…",
   preparingCopy: "Pašreizējais modelis pārbauda Goal un pieņemšanas sarakstu.",
-  unavailableTitle: "Goal progress nav pieejams",
+  unavailableTitle: "Progress nav atjaunināts",
   unavailableCopy:
     "Goal var turpināt darbu. Kad savienojums atjaunosies, progress atkal būs redzams.",
   retryProgress: "Mēģināt progresu vēlreiz",

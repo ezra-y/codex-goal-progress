@@ -74,7 +74,7 @@ export const bnMessages: GoalProgressMessages = {
   preparingBaseline: "অগ্রগতির ভিত্তি তৈরি হচ্ছে…",
   preparingObjectives: "গ্রহণযোগ্যতার ধাপ প্রস্তুত হচ্ছে…",
   preparingCopy: "বর্তমান মডেল Goal ও গ্রহণযোগ্যতার তালিকা যাচাই করছে।",
-  unavailableTitle: "Goal-এর অগ্রগতি পাওয়া যাচ্ছে না",
+  unavailableTitle: "অগ্রগতি হালনাগাদ হয়নি",
   unavailableCopy: "Goal চলতে পারে। সংযোগ ফিরলে অগ্রগতি আবার দেখা যাবে।",
   retryProgress: "অগ্রগতি আবার চেষ্টা করুন",
   retry: "আবার চেষ্টা করুন",

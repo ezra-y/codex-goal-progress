@@ -74,7 +74,7 @@ export const paMessages: GoalProgressMessages = {
   preparingBaseline: "ਪ੍ਰਗਤੀ ਦਾ ਆਧਾਰ ਤਿਆਰ ਹੋ ਰਿਹਾ ਹੈ…",
   preparingObjectives: "ਸਵੀਕ੍ਰਿਤੀ ਬਿੰਦੂ ਤਿਆਰ ਹੋ ਰਹੇ ਹਨ…",
   preparingCopy: "ਮੌਜੂਦਾ ਮਾਡਲ Goal ਅਤੇ ਸਵੀਕ੍ਰਿਤੀ ਸੂਚੀ ਦੀ ਜਾਂਚ ਕਰ ਰਿਹਾ ਹੈ।",
-  unavailableTitle: "Goal ਪ੍ਰਗਤੀ ਉਪਲਬਧ ਨਹੀਂ",
+  unavailableTitle: "ਤਰੱਕੀ ਅੱਪਡੇਟ ਨਹੀਂ ਹੋਈ",
   unavailableCopy: "Goal ਜਾਰੀ ਰਹਿ ਸਕਦਾ ਹੈ। ਕਨੈਕਸ਼ਨ ਠੀਕ ਹੋਣ 'ਤੇ ਪ੍ਰਗਤੀ ਮੁੜ ਦਿਖੇਗੀ।",
   retryProgress: "ਪ੍ਰਗਤੀ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ",
   retry: "ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ",

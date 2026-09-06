@@ -74,7 +74,7 @@ export const thMessages: GoalProgressMessages = {
   preparingBaseline: "กำลังสร้างค่าตั้งต้นของความคืบหน้า…",
   preparingObjectives: "กำลังเตรียมจุดตรวจรับ…",
   preparingCopy: "โมเดลปัจจุบันกำลังตรวจสอบ Goal และรายการตรวจรับ",
-  unavailableTitle: "ความคืบหน้าของ Goal ไม่พร้อมใช้งาน",
+  unavailableTitle: "ยังไม่อัปเดตความคืบหน้า",
   unavailableCopy: "Goal ทำงานต่อได้ ความคืบหน้าจะกลับมาเมื่อเชื่อมต่อได้อีกครั้ง",
   retryProgress: "ลองโหลดความคืบหน้าอีกครั้ง",
   retry: "ลองอีกครั้ง",

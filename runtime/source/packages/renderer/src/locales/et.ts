@@ -74,7 +74,7 @@ export const etMessages: GoalProgressMessages = {
   preparingBaseline: "Edenemise lähtepunkti loomine…",
   preparingObjectives: "Vastuvõtupunktide ettevalmistamine…",
   preparingCopy: "Praegune mudel kontrollib Goal-i ja vastuvõtuloendit.",
-  unavailableTitle: "Goal-i edenemine pole saadaval",
+  unavailableTitle: "Edenemine pole uuendatud",
   unavailableCopy: "Goal võib jätkata. Edenemine taastub koos ühendusega.",
   retryProgress: "Proovi edenemist uuesti",
   retry: "Proovi uuesti",

@@ -74,7 +74,7 @@ export const viMessages: GoalProgressMessages = {
   preparingBaseline: "Đang thiết lập mốc tiến độ…",
   preparingObjectives: "Đang chuẩn bị các điểm nghiệm thu…",
   preparingCopy: "Mô hình hiện tại đang kiểm tra Goal và danh sách nghiệm thu.",
-  unavailableTitle: "Tiến độ Goal không khả dụng",
+  unavailableTitle: "Tiến độ chưa được cập nhật",
   unavailableCopy: "Goal vẫn có thể tiếp tục. Tiến độ sẽ trở lại khi kết nối được khôi phục.",
   retryProgress: "Tải lại tiến độ",
   retry: "Thử lại",

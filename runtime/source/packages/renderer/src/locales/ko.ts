@@ -74,7 +74,7 @@ export const koMessages: GoalProgressMessages = {
   preparingBaseline: "진행 기준 설정 중…",
   preparingObjectives: "확인 항목 준비 중…",
   preparingCopy: "현재 모델이 Goal과 확인 목록을 검토하고 있습니다.",
-  unavailableTitle: "Goal 진행률을 사용할 수 없습니다",
+  unavailableTitle: "진행률이 갱신되지 않음",
   unavailableCopy: "Goal은 계속 진행할 수 있습니다. 연결이 복구되면 진행률이 다시 표시됩니다.",
   retryProgress: "진행률 다시 시도",
   retry: "다시 시도",

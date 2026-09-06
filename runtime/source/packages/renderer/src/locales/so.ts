@@ -74,7 +74,7 @@ export const soMessages: GoalProgressMessages = {
   preparingBaseline: "Saldhigga horumarka ayaa la diyaarinayaa…",
   preparingObjectives: "Qodobbada aqbalaadda ayaa la diyaarinayaa…",
   preparingCopy: "Moodalka hadda wuxuu hubinayaa Goal iyo liiska aqbalaadda.",
-  unavailableTitle: "Horumarka Goal lama heli karo",
+  unavailableTitle: "Horumarka lama cusboonaysiin",
   unavailableCopy: "Goal wuu sii socon karaa. Horumarku wuu soo noqonayaa marka xiriirku hagaago.",
   retryProgress: "Mar kale soo rar horumarka",
   retry: "Mar kale isku day",

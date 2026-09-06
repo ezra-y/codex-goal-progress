@@ -74,7 +74,7 @@ export const caMessages: GoalProgressMessages = {
   preparingBaseline: "S'està establint la base del progrés…",
   preparingObjectives: "S'estan preparant els punts d'acceptació…",
   preparingCopy: "El model actual està comprovant el Goal i la llista d'acceptació.",
-  unavailableTitle: "El progrés del Goal no està disponible",
+  unavailableTitle: "Progrés sense actualitzar",
   unavailableCopy: "El Goal pot continuar. El progrés tornarà quan es recuperi la connexió.",
   retryProgress: "Torna a provar el progrés",
   retry: "Torna-ho a provar",

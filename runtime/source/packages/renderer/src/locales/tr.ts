@@ -74,7 +74,7 @@ export const trMessages: GoalProgressMessages = {
   preparingBaseline: "İlerleme temeli hazırlanıyor…",
   preparingObjectives: "Kabul noktaları hazırlanıyor…",
   preparingCopy: "Geçerli model Goal'u ve kabul listesini denetliyor.",
-  unavailableTitle: "Goal ilerlemesi kullanılamıyor",
+  unavailableTitle: "İlerleme güncellenmedi",
   unavailableCopy: "Goal çalışmaya devam edebilir. Bağlantı düzeldiğinde ilerleme geri gelir.",
   retryProgress: "İlerlemeyi yeniden yükle",
   retry: "Yeniden dene",

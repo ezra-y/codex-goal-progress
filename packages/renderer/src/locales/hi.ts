@@ -74,7 +74,7 @@ export const hiMessages: GoalProgressMessages = {
   preparingBaseline: "प्रगति का आधार तैयार हो रहा है…",
   preparingObjectives: "स्वीकृति बिंदु तैयार हो रहे हैं…",
   preparingCopy: "वर्तमान मॉडल Goal और स्वीकृति सूची की जाँच कर रहा है।",
-  unavailableTitle: "Goal की प्रगति उपलब्ध नहीं है",
+  unavailableTitle: "प्रगति अपडेट नहीं हुई",
   unavailableCopy: "Goal जारी रह सकता है। कनेक्शन लौटने पर प्रगति फिर दिखेगी।",
   retryProgress: "प्रगति फिर आज़माएँ",
   retry: "फिर आज़माएँ",

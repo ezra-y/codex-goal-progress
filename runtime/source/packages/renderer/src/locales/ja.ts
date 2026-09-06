@@ -74,7 +74,7 @@ export const jaMessages: GoalProgressMessages = {
   preparingBaseline: "進捗の基準を作成中…",
   preparingObjectives: "確認項目を準備中…",
   preparingCopy: "現在のモデルが Goal と確認リストを確認しています。",
-  unavailableTitle: "Goal の進捗を表示できません",
+  unavailableTitle: "進捗は未更新です",
   unavailableCopy: "Goal は続行できます。接続が戻ると進捗も再表示されます。",
   retryProgress: "進捗を再読み込み",
   retry: "再試行",

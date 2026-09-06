@@ -74,7 +74,7 @@ export const skMessages: GoalProgressMessages = {
   preparingBaseline: "Vytvára sa základ priebehu…",
   preparingObjectives: "Pripravujú sa body prijatia…",
   preparingCopy: "Aktuálny model kontroluje Goal a kontrolný zoznam prijatia.",
-  unavailableTitle: "Priebeh Goal nie je dostupný",
+  unavailableTitle: "Priebeh nie je aktualizovaný",
   unavailableCopy: "Goal môže pokračovať. Priebeh sa vráti po obnovení pripojenia.",
   retryProgress: "Znova načítať priebeh",
   retry: "Skúsiť znova",

@@ -74,7 +74,7 @@ export const urMessages: GoalProgressMessages = {
   preparingBaseline: "پیش رفت کی بنیاد تیار ہو رہی ہے…",
   preparingObjectives: "قبولیت کے نکات تیار ہو رہے ہیں…",
   preparingCopy: "موجودہ ماڈل Goal اور قبولیت کی فہرست جانچ رہا ہے۔",
-  unavailableTitle: "Goal کی پیش رفت دستیاب نہیں",
+  unavailableTitle: "پیش رفت اپ ڈیٹ نہیں ہوئی",
   unavailableCopy: "Goal جاری رہ سکتا ہے۔ رابطہ بحال ہونے پر پیش رفت واپس آ جائے گی۔",
   retryProgress: "پیش رفت دوبارہ لوڈ کریں",
   retry: "دوبارہ کوشش کریں",

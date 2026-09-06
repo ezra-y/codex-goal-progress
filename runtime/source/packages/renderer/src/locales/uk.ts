@@ -74,7 +74,7 @@ export const ukMessages: GoalProgressMessages = {
   preparingBaseline: "Створення основи прогресу…",
   preparingObjectives: "Підготовка критеріїв приймання…",
   preparingCopy: "Поточна модель перевіряє Goal і список приймання.",
-  unavailableTitle: "Прогрес Goal недоступний",
+  unavailableTitle: "Прогрес не оновлено",
   unavailableCopy: "Goal може працювати далі. Прогрес повернеться після відновлення з'єднання.",
   retryProgress: "Повторити завантаження прогресу",
   retry: "Повторити",

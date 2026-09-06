@@ -38,6 +38,20 @@ function record(value: unknown, code: string): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+export function createReleaseMarketplaceManifest(sourceMarketplace: unknown): string {
+  const code = "GOAL_PROGRESS_RELEASE_MARKETPLACE_INVALID";
+  const marketplace = structuredClone(record(sourceMarketplace, code));
+  if (!Array.isArray(marketplace.plugins)) throw new Error(code);
+  const plugin = marketplace.plugins.find(
+    (entry: unknown) => record(entry, code).name === "codex-goal-progress",
+  );
+  if (!plugin) throw new Error(code);
+  const source = record(record(plugin, code).source, code);
+  if (source.source !== "local") throw new Error(code);
+  source.path = "./plugins/codex-goal-progress";
+  return `${JSON.stringify(marketplace, null, 2)}\n`;
+}
+
 export function createReleasePluginManifest(sourceManifest: unknown): string {
   const manifest = structuredClone(record(sourceManifest, "GOAL_PROGRESS_PLUGIN_MANIFEST_INVALID"));
   delete manifest.scripts;

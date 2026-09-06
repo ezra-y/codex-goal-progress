@@ -200,6 +200,10 @@ export function removeManagedGoalProgressHosts(document: Document): number {
   return managedHosts.length;
 }
 
+function requiresInlineState(viewModel: GoalProgressViewModel | null | undefined): boolean {
+  return viewModel?.trackingPhase === "preparing";
+}
+
 function preparingViewMatchesGoalIdentity(
   viewModel: GoalProgressViewModel,
   goalIdentity: string | null,
@@ -625,7 +629,7 @@ export class SidecarMountController {
       host.hidden = uiPreference.hidden;
       host.requestedPlacement = requestedPlacement;
       host.placement =
-        preserveFallback || viewModel.trackingPhase === "preparing" ? "inline" : requestedPlacement;
+        preserveFallback || requiresInlineState(viewModel) ? "inline" : requestedPlacement;
       host.floatingXRatio = requestedFloatingXRatio;
     }
     if (host.placement !== "inline" || host.collapsed) {
@@ -776,7 +780,7 @@ export class SidecarMountController {
       this.#requestedPlacement === "inline" &&
       !threadChanged &&
       (this.#displayMode === "native" || this.#fallbackInlineOriginRetained);
-    host.placement = this.#requestedPlacement;
+    host.placement = requiresInlineState(host.viewModel) ? "inline" : this.#requestedPlacement;
     host.spaceConstrained = false;
     host.floatingPanelConstrained = false;
     const retainInlineOrigin =
@@ -1196,8 +1200,9 @@ export class SidecarMountController {
         ? composer.getBoundingClientRect()
         : null;
     const surfaceHeight =
-      host.shadowRoot?.querySelector<HTMLElement>(".floating-chip")?.getBoundingClientRect()
-        .height ?? 38;
+      host.shadowRoot
+        ?.querySelector<HTMLElement>(".floating-chip, .phase-error .state")
+        ?.getBoundingClientRect().height ?? 38;
     const fallbackBottom =
       view && composerRect
         ? Math.max(
@@ -1242,8 +1247,12 @@ export class SidecarMountController {
     if (!host) {
       return;
     }
+    // Preparing state uses normal height; errors retain the user's compact floating position.
+    if (requiresInlineState(host.viewModel)) {
+      host.placement = "inline";
+    }
     if (this.#displayMode === "fallback") {
-      host.placement = this.#requestedPlacement;
+      host.placement = requiresInlineState(host.viewModel) ? "inline" : this.#requestedPlacement;
       host.spaceConstrained = false;
       if (
         this.#fallbackInlineOriginRetained &&
@@ -1527,7 +1536,8 @@ export class SidecarMountController {
     const hostScale = this.#positionFloatingHost(host, left, targetTop, width);
     this.#floatingViewportTop = targetTop;
 
-    const chip = host.shadowRoot?.querySelector<HTMLElement>(".floating-chip") ?? null;
+    const chip =
+      host.shadowRoot?.querySelector<HTMLElement>(".floating-chip, .phase-error .state") ?? null;
     const panel = host.shadowRoot?.querySelector<HTMLElement>(".floating-panel") ?? null;
     if (
       host.floatingPanelConstrained &&
@@ -1538,7 +1548,13 @@ export class SidecarMountController {
       this.#scheduleFloatingLayout();
       return;
     }
-    if (!chip || (!host.collapsed && !host.floatingPanelConstrained && !panel)) {
+    if (
+      !chip ||
+      (host.viewModel?.trackingPhase !== "error" &&
+        !host.collapsed &&
+        !host.floatingPanelConstrained &&
+        !panel)
+    ) {
       return;
     }
     const chipRect = chip?.getBoundingClientRect() ?? null;
@@ -1706,7 +1722,7 @@ export class SidecarMountController {
 
   #retryFloatingPlacement(): void {
     const host = this.#host;
-    if (!host || this.#requestedPlacement !== "floating") {
+    if (!host || this.#requestedPlacement !== "floating" || requiresInlineState(host.viewModel)) {
       return;
     }
     this.#floatingFallbackActive = false;

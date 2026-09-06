@@ -74,7 +74,7 @@ export const hyMessages: GoalProgressMessages = {
   preparingBaseline: "Առաջընթացի հիմքը ստեղծվում է…",
   preparingObjectives: "Ընդունման կետերը պատրաստվում են…",
   preparingCopy: "Ընթացիկ մոդելը ստուգում է Goal-ը և ընդունման ցանկը։",
-  unavailableTitle: "Goal-ի առաջընթացը հասանելի չէ",
+  unavailableTitle: "Առաջընթացը չի թարմացվել",
   unavailableCopy: "Goal-ը կարող է շարունակվել։ Կապը վերականգնվելիս առաջընթացը կվերադառնա։",
   retryProgress: "Կրկին փորձել առաջընթացը",
   retry: "Կրկին փորձել",

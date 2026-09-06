@@ -1,8 +1,9 @@
+import pageHostVersionManifest from "./page-host-version.json" with { type: "json" };
 import { GOAL_PROGRESS_RELEASE_VERSION } from "./release-version.js";
 import type { GoalProgressUiIntent } from "./ui-preference.js";
 
 export const GOAL_PROGRESS_ELEMENT_NAME = "codex-goal-progress";
-export const GOAL_PROGRESS_HOT_ELEMENT_NAME = `codex-goal-progress-v${GOAL_PROGRESS_RELEASE_VERSION.replaceAll(".", "-")}`;
+export const GOAL_PROGRESS_HOT_ELEMENT_NAME = `codex-goal-progress-v${GOAL_PROGRESS_RELEASE_VERSION.replaceAll(".", "-")}-p${pageHostVersionManifest.pageHostVersion}`;
 export const GOAL_PROGRESS_SET_COLLAPSED_EVENT = "goal-progress-set-collapsed";
 export const GOAL_PROGRESS_SET_MOTION_PAUSED_EVENT = "goal-progress-set-motion-paused";
 export const GOAL_PROGRESS_SET_PLACEMENT_EVENT = "goal-progress-set-placement";

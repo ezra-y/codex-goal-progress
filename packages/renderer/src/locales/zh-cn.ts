@@ -74,7 +74,7 @@ export const zhCNMessages: GoalProgressMessages = {
   preparingBaseline: "正在建立进度基线…",
   preparingObjectives: "正在准备专属验收点…",
   preparingCopy: "当前模型正在检查目标与验收清单。",
-  unavailableTitle: "目标进度暂不可用",
+  unavailableTitle: "进度暂未更新",
   unavailableCopy: "Goal 可以继续工作。连接恢复后，进度会重新显示。",
   retryProgress: "重试进度",
   retry: "重试",

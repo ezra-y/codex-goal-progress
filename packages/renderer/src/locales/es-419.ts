@@ -74,7 +74,7 @@ export const es419Messages: GoalProgressMessages = {
   preparingBaseline: "Creando la base del progreso…",
   preparingObjectives: "Preparando los puntos de aceptación…",
   preparingCopy: "El modelo actual está revisando el Goal y la lista de aceptación.",
-  unavailableTitle: "El progreso del Goal no está disponible",
+  unavailableTitle: "Progreso sin actualizar",
   unavailableCopy: "El Goal puede continuar. El progreso volverá cuando se recupere la conexión.",
   retryProgress: "Volver a cargar el progreso",
   retry: "Volver a intentar",

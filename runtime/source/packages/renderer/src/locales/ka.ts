@@ -74,7 +74,7 @@ export const kaMessages: GoalProgressMessages = {
   preparingBaseline: "პროგრესის საწყისი დონე მზადდება…",
   preparingObjectives: "მიღების პუნქტები მზადდება…",
   preparingCopy: "მიმდინარე მოდელი ამოწმებს Goal-ს და მიღების სიას.",
-  unavailableTitle: "Goal-ის პროგრესი მიუწვდომელია",
+  unavailableTitle: "პროგრესი არ განახლებულა",
   unavailableCopy: "Goal შეიძლება გაგრძელდეს. პროგრესი დაბრუნდება კავშირის აღდგენისას.",
   retryProgress: "პროგრესის ხელახლა ცდა",
   retry: "ხელახლა ცდა",
