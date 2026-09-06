@@ -12,6 +12,7 @@
 - Refresh the renderer after same-version reinstalls and keep floating status controls inside narrow windows.
 - Build source and prebuilt packages from the same renderer revision and correct the nested prebuilt marketplace entry.
 - Update MCP transitive dependencies to `fast-uri` 3.1.7 and `qs` 6.16.0; the production audit reports no known vulnerabilities.
+- Rebuild the source plugin before assembling the macOS release, so `pnpm build:release:macos` works from a clean clone.
 
 ## 0.3.4 - 2026-09-02
 
