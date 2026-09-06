@@ -74,7 +74,7 @@ export const svMessages: GoalProgressMessages = {
   preparingBaseline: "Skapar utgångspunkt för förloppet…",
   preparingObjectives: "Förbereder godkännandepunkter…",
   preparingCopy: "Den aktuella modellen kontrollerar Goal och godkännandelistan.",
-  unavailableTitle: "Goal-förloppet är inte tillgängligt",
+  unavailableTitle: "Förloppet har inte uppdaterats",
   unavailableCopy: "Goal kan fortsätta. Förloppet visas igen när anslutningen återställs.",
   retryProgress: "Försök läsa in förloppet igen",
   retry: "Försök igen",

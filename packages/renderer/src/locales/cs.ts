@@ -74,7 +74,7 @@ export const csMessages: GoalProgressMessages = {
   preparingBaseline: "Nastavování výchozího stavu průběhu…",
   preparingObjectives: "Příprava bodů přijetí…",
   preparingCopy: "Aktuální model kontroluje Goal a kontrolní seznam přijetí.",
-  unavailableTitle: "Průběh Goal není dostupný",
+  unavailableTitle: "Průběh není aktualizován",
   unavailableCopy: "Goal může pokračovat. Průběh se vrátí po obnovení připojení.",
   retryProgress: "Zkusit průběh znovu",
   retry: "Zkusit znovu",

@@ -74,7 +74,7 @@ export const teMessages: GoalProgressMessages = {
   preparingBaseline: "పురోగతి ఆధారాన్ని సిద్ధం చేస్తోంది…",
   preparingObjectives: "అంగీకార అంశాలను సిద్ధం చేస్తోంది…",
   preparingCopy: "ప్రస్తుత మోడల్ Goal మరియు అంగీకార జాబితాను తనిఖీ చేస్తోంది.",
-  unavailableTitle: "Goal పురోగతి అందుబాటులో లేదు",
+  unavailableTitle: "పురోగతి నవీకరించబడలేదు",
   unavailableCopy: "Goal కొనసాగవచ్చు. కనెక్షన్ తిరిగి వచ్చినప్పుడు పురోగతి కనిపిస్తుంది.",
   retryProgress: "పురోగతిని మళ్లీ లోడ్ చేయండి",
   retry: "మళ్లీ ప్రయత్నించండి",

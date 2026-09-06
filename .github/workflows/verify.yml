@@ -21,3 +21,4 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm verify
+      - run: node runtime/build-runtime.mjs --source . --output .cache/source-runtime-check

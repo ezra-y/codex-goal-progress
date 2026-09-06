@@ -74,7 +74,7 @@ export const isISMessages: GoalProgressMessages = {
   preparingBaseline: "Stofnar framvindugrunn…",
   preparingObjectives: "Undirbýr staðfestingaratriði…",
   preparingCopy: "Núverandi líkan yfirfer markmiðið og gátlistann.",
-  unavailableTitle: "Framvinda markmiðs er ekki tiltæk",
+  unavailableTitle: "Framvinda ekki uppfærð",
   unavailableCopy: "Goal getur haldið áfram. Framvindan birtist aftur þegar tengingin batnar.",
   retryProgress: "Reyna framvindu aftur",
   retry: "Reyna aftur",

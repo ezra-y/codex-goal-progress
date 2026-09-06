@@ -74,7 +74,7 @@ export const myMessages: GoalProgressMessages = {
   preparingBaseline: "တိုးတက်မှု အခြေခံအမှတ် သတ်မှတ်နေသည်…",
   preparingObjectives: "လက်ခံချက်များ ပြင်ဆင်နေသည်…",
   preparingCopy: "လက်ရှိမော်ဒယ်သည် Goal နှင့် လက်ခံချက်စာရင်းကို စစ်ဆေးနေသည်။",
-  unavailableTitle: "Goal တိုးတက်မှု မရရှိနိုင်ပါ",
+  unavailableTitle: "တိုးတက်မှုကို မွမ်းမံမထားသေးပါ",
   unavailableCopy: "Goal ကို ဆက်လုပ်နိုင်သည်။ ချိတ်ဆက်မှု ပြန်ရသောအခါ တိုးတက်မှုကို ပြန်ပြမည်။",
   retryProgress: "တိုးတက်မှုကို ပြန်စမ်းရန်",
   retry: "ပြန်စမ်းရန်",

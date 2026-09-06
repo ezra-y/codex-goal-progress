@@ -426,8 +426,8 @@ function viewPhase(
   contract: GoalContractAny,
   calculation: GoalProgressCalculation,
 ): Exclude<GoalProgressViewModel["trackingPhase"], "detached"> {
-  if (contract.phase === "preparing" || contract.phase === "error") {
-    return contract.phase;
+  if (contract.phase === "preparing") {
+    return "preparing";
   }
   if (calculation.completionConfirmed) {
     return "completed";
@@ -437,6 +437,9 @@ function viewPhase(
   }
   if (contract.nativeGoal.status === "blocked") {
     return "blocked";
+  }
+  if (contract.phase === "error" && contract.objectives.length === 0) {
+    return "error";
   }
   return "active";
 }
@@ -971,11 +974,11 @@ export function applyGoalProgressCommand(
   }
 
   if (command.type === "set-phase") {
-    if (command.phase === "paused") {
+    if (command.phase === "paused" || command.phase === "error") {
       return failure(
         "INVALID_TRANSITION",
         contract.revision,
-        "Pause state is read from the native Goal",
+        "Pause and error states are not model-controlled Contract phases",
       );
     }
     if (!validPhaseTransition(contract.phase, command.phase)) {

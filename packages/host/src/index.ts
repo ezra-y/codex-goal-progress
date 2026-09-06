@@ -1178,20 +1178,17 @@ export class GoalProgressHelper {
     code: string,
   ): Promise<GoalProgressViewModel> {
     const threadId = this.#threadIdOf(contract);
+    const {
+      blockedReason: _blockedReason,
+      token: _token,
+      ...confirmed
+    } = projectContract(contract);
     const viewModel = GoalProgressViewModelSchema.parse({
-      schemaVersion: 2,
-      contractId: contract.contractId,
-      sessionId: threadId,
-      revision: contract.revision,
-      scopeRevision: contract.scopeRevision,
+      ...confirmed,
       trackingPhase: "error",
-      objective: contract.nativeGoal.objective,
-      overallProgressBps: null,
-      overallPercent: null,
       finalVerificationPending: false,
       objectives: [],
       optionalObjectives: [],
-      maxVisibleObjectives: 3,
       errorCode: code,
     });
     await this.#publishVerified(threadId, viewModel);

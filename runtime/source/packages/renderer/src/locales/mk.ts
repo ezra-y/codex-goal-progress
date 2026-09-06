@@ -74,7 +74,7 @@ export const mkMessages: GoalProgressMessages = {
   preparingBaseline: "Се поставува почетната состојба на напредокот…",
   preparingObjectives: "Се подготвуваат точки за прифаќање…",
   preparingCopy: "Тековниот модел ги проверува Goal и списокот за прифаќање.",
-  unavailableTitle: "Напредокот на Goal не е достапен",
+  unavailableTitle: "Напредокот не е ажуриран",
   unavailableCopy: "Goal може да продолжи. Напредокот ќе се врати кога ќе се обнови врската.",
   retryProgress: "Обиди се повторно за напредокот",
   retry: "Обиди се повторно",

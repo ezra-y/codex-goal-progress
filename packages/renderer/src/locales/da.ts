@@ -74,7 +74,7 @@ export const daMessages: GoalProgressMessages = {
   preparingBaseline: "Opretter udgangspunkt for fremdrift…",
   preparingObjectives: "Forbereder godkendelsespunkter…",
   preparingCopy: "Den aktuelle model kontrollerer Goal og godkendelseslisten.",
-  unavailableTitle: "Goal-fremdrift er ikke tilgængelig",
+  unavailableTitle: "Fremskridt ikke opdateret",
   unavailableCopy:
     "Goal kan fortsætte. Fremdriften vender tilbage, når forbindelsen er genoprettet.",
   retryProgress: "Prøv fremdrift igen",

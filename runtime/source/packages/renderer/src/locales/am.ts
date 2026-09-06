@@ -74,7 +74,7 @@ export const amMessages: GoalProgressMessages = {
   preparingBaseline: "የሂደት መነሻ በማዘጋጀት ላይ…",
   preparingObjectives: "የመቀበያ ነጥቦችን በማዘጋጀት ላይ…",
   preparingCopy: "የአሁኑ ሞዴል Goalን እና የመቀበያ ዝርዝሩን እየፈተሸ ነው።",
-  unavailableTitle: "የGoal ሂደት ለጊዜው አይገኝም",
+  unavailableTitle: "ሂደቱ አልተዘመነም",
   unavailableCopy: "Goal መቀጠል ይችላል። ግንኙነቱ ሲመለስ ሂደቱ እንደገና ይታያል።",
   retryProgress: "ሂደቱን እንደገና ሞክር",
   retry: "እንደገና ሞክር",

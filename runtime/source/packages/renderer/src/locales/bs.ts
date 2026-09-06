@@ -74,7 +74,7 @@ export const bsMessages: GoalProgressMessages = {
   preparingBaseline: "Postavljanje početne vrijednosti napretka…",
   preparingObjectives: "Priprema tačaka prihvatanja…",
   preparingCopy: "Trenutni model provjerava Goal i listu prihvatanja.",
-  unavailableTitle: "Napredak Goal-a nije dostupan",
+  unavailableTitle: "Napredak nije ažuriran",
   unavailableCopy: "Goal može nastaviti. Napredak će se vratiti kada se veza oporavi.",
   retryProgress: "Ponovi učitavanje napretka",
   retry: "Pokušaj ponovo",

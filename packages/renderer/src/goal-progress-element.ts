@@ -486,7 +486,7 @@ export class GoalProgressElement extends LitElement {
     const viewModel = this.viewModel;
     const locale = resolveGoalProgressLocale(this.locale);
     if (!viewModel) {
-      return html`<section class="panel phase-error">
+      return html`<section class="panel phase-error placement-${this.placement}">
         ${renderErrorView(null, this.#requestRetry, this.#requestDetach, locale.messages)}
       </section>`;
     }
@@ -496,7 +496,7 @@ export class GoalProgressElement extends LitElement {
       </section>`;
     }
     if (viewModel.trackingPhase === "error") {
-      return html`<section class="panel phase-error">
+      return html`<section class="panel phase-error placement-${this.placement}">
         ${renderErrorView(viewModel, this.#requestRetry, this.#requestDetach, locale.messages)}
       </section>`;
     }

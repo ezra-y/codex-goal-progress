@@ -74,7 +74,7 @@ export const guMessages: GoalProgressMessages = {
   preparingBaseline: "પ્રગતિનો આધાર તૈયાર થઈ રહ્યો છે…",
   preparingObjectives: "સ્વીકૃતિ મુદ્દા તૈયાર થઈ રહ્યા છે…",
   preparingCopy: "વર્તમાન મોડેલ Goal અને સ્વીકૃતિ યાદી તપાસી રહ્યું છે.",
-  unavailableTitle: "Goal પ્રગતિ ઉપલબ્ધ નથી",
+  unavailableTitle: "પ્રગતિ અપડેટ થઈ નથી",
   unavailableCopy: "Goal ચાલુ રહી શકે છે. કનેક્શન પાછું આવે ત્યારે પ્રગતિ ફરી દેખાશે.",
   retryProgress: "પ્રગતિ ફરી અજમાવો",
   retry: "ફરી અજમાવો",

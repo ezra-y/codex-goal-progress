@@ -74,7 +74,7 @@ export const nbMessages: GoalProgressMessages = {
   preparingBaseline: "Oppretter utgangspunkt for fremdrift…",
   preparingObjectives: "Forbereder godkjenningspunkter…",
   preparingCopy: "Gjeldende modell kontrollerer Goal og godkjenningslisten.",
-  unavailableTitle: "Goal-fremdrift er utilgjengelig",
+  unavailableTitle: "Fremdriften er ikke oppdatert",
   unavailableCopy: "Goal kan fortsette. Fremdriften vises igjen når tilkoblingen er gjenopprettet.",
   retryProgress: "Prøv fremdrift på nytt",
   retry: "Prøv igjen",

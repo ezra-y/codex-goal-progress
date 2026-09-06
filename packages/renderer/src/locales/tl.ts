@@ -74,7 +74,7 @@ export const tlMessages: GoalProgressMessages = {
   preparingBaseline: "Inihahanda ang batayan ng progreso…",
   preparingObjectives: "Inihahanda ang mga punto ng pagtanggap…",
   preparingCopy: "Sinusuri ng kasalukuyang modelo ang Goal at listahan ng pagtanggap.",
-  unavailableTitle: "Hindi available ang progreso ng Goal",
+  unavailableTitle: "Hindi pa na-update ang progreso",
   unavailableCopy:
     "Maaaring magpatuloy ang Goal. Babalik ang progreso kapag bumalik ang koneksyon.",
   retryProgress: "I-load muli ang progreso",

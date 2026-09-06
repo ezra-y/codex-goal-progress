@@ -74,7 +74,7 @@ export const sqMessages: GoalProgressMessages = {
   preparingBaseline: "Duke krijuar bazën e përparimit…",
   preparingObjectives: "Duke përgatitur pikat e pranimit…",
   preparingCopy: "Modeli aktual po kontrollon Goal-in dhe listën e pranimit.",
-  unavailableTitle: "Përparimi i Goal-it nuk është i disponueshëm",
+  unavailableTitle: "Përparimi nuk është përditësuar",
   unavailableCopy: "Goal-i mund të vazhdojë. Përparimi do të rikthehet kur të rregullohet lidhja.",
   retryProgress: "Riprovo ngarkimin e përparimit",
   retry: "Riprovo",

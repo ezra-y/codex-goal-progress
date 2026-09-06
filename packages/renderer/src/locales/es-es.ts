@@ -74,7 +74,7 @@ export const esESMessages: GoalProgressMessages = {
   preparingBaseline: "Estableciendo la base del progreso…",
   preparingObjectives: "Preparando los puntos de aceptación…",
   preparingCopy: "El modelo actual está comprobando el Goal y la lista de aceptación.",
-  unavailableTitle: "El progreso del Goal no está disponible",
+  unavailableTitle: "Progreso sin actualizar",
   unavailableCopy: "El Goal puede continuar. El progreso volverá cuando se recupere la conexión.",
   retryProgress: "Volver a cargar el progreso",
   retry: "Volver a intentarlo",

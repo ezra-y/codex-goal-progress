@@ -74,7 +74,7 @@ export const ptBRMessages: GoalProgressMessages = {
   preparingBaseline: "Criando a base do progresso…",
   preparingObjectives: "Preparando pontos de aceitação…",
   preparingCopy: "O modelo atual está verificando o Goal e a lista de aceitação.",
-  unavailableTitle: "O progresso do Goal está indisponível",
+  unavailableTitle: "Progresso não atualizado",
   unavailableCopy: "O Goal pode continuar. O progresso voltará quando a conexão for restabelecida.",
   retryProgress: "Tentar carregar o progresso novamente",
   retry: "Tentar novamente",

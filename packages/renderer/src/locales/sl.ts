@@ -74,7 +74,7 @@ export const slMessages: GoalProgressMessages = {
   preparingBaseline: "Vzpostavljanje osnove napredka…",
   preparingObjectives: "Priprava točk sprejema…",
   preparingCopy: "Trenutni model preverja Goal in kontrolni seznam sprejema.",
-  unavailableTitle: "Napredek Goal ni na voljo",
+  unavailableTitle: "Napredek ni posodobljen",
   unavailableCopy: "Goal se lahko nadaljuje. Napredek se vrne, ko se povezava obnovi.",
   retryProgress: "Znova naloži napredek",
   retry: "Poskusi znova",

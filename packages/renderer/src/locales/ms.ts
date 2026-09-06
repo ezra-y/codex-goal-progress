@@ -74,7 +74,7 @@ export const msMessages: GoalProgressMessages = {
   preparingBaseline: "Menetapkan garis dasar kemajuan…",
   preparingObjectives: "Menyediakan perkara penerimaan…",
   preparingCopy: "Model semasa sedang menyemak Goal dan senarai penerimaan.",
-  unavailableTitle: "Kemajuan Goal tidak tersedia",
+  unavailableTitle: "Kemajuan belum dikemas kini",
   unavailableCopy: "Goal boleh diteruskan. Kemajuan akan muncul semula apabila sambungan pulih.",
   retryProgress: "Cuba semula kemajuan",
   retry: "Cuba lagi",

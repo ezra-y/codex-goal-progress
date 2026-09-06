@@ -74,7 +74,7 @@ export const mlMessages: GoalProgressMessages = {
   preparingBaseline: "പുരോഗതി അടിസ്ഥാനരേഖ തയ്യാറാക്കുന്നു…",
   preparingObjectives: "അംഗീകാര ഇനങ്ങൾ തയ്യാറാക്കുന്നു…",
   preparingCopy: "നിലവിലെ മോഡൽ Goal-ഉം അംഗീകാര പട്ടികയും പരിശോധിക്കുന്നു.",
-  unavailableTitle: "Goal പുരോഗതി ലഭ്യമല്ല",
+  unavailableTitle: "പുരോഗതി പുതുക്കിയിട്ടില്ല",
   unavailableCopy: "Goal തുടരാം. കണക്ഷൻ വീണ്ടെടുക്കുമ്പോൾ പുരോഗതി വീണ്ടും കാണിക്കും.",
   retryProgress: "പുരോഗതി വീണ്ടും ശ്രമിക്കുക",
   retry: "വീണ്ടും ശ്രമിക്കുക",

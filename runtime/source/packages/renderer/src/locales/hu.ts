@@ -74,7 +74,7 @@ export const huMessages: GoalProgressMessages = {
   preparingBaseline: "Előrehaladási alapérték létrehozása…",
   preparingObjectives: "Elfogadási pontok előkészítése…",
   preparingCopy: "A jelenlegi modell ellenőrzi a Goalt és az elfogadási listát.",
-  unavailableTitle: "A Goal előrehaladása nem érhető el",
+  unavailableTitle: "Az előrehaladás nem frissült",
   unavailableCopy: "A Goal folytatódhat. Az előrehaladás a kapcsolat helyreállásakor visszatér.",
   retryProgress: "Előrehaladás újrapróbálása",
   retry: "Újra",

@@ -74,7 +74,7 @@ export const nlMessages: GoalProgressMessages = {
   preparingBaseline: "Uitgangspunt voor voortgang bepalen…",
   preparingObjectives: "Acceptatiepunten voorbereiden…",
   preparingCopy: "Het huidige model controleert de Goal en acceptatielijst.",
-  unavailableTitle: "Goal-voortgang is niet beschikbaar",
+  unavailableTitle: "Voortgang niet bijgewerkt",
   unavailableCopy:
     "De Goal kan doorgaan. De voortgang verschijnt weer zodra de verbinding is hersteld.",
   retryProgress: "Voortgang opnieuw proberen",

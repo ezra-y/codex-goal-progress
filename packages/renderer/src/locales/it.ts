@@ -74,7 +74,7 @@ export const itMessages: GoalProgressMessages = {
   preparingBaseline: "Creazione del riferimento di avanzamento…",
   preparingObjectives: "Preparazione dei punti di accettazione…",
   preparingCopy: "Il modello attuale sta controllando il Goal e l’elenco di accettazione.",
-  unavailableTitle: "Avanzamento del Goal non disponibile",
+  unavailableTitle: "Avanzamento non aggiornato",
   unavailableCopy:
     "Il Goal può continuare. L’avanzamento tornerà quando la connessione sarà ripristinata.",
   retryProgress: "Riprova avanzamento",

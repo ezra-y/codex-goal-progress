@@ -141,7 +141,7 @@ export const GoalProgressRescopeInputSchema = z
   .passthrough()
   .meta({ required: ["contractId", "expectedRevision", "reason", "objectives"] });
 
-const GoalProgressModelPhaseSchema = GoalProgressPhaseSchema.exclude(["paused"]);
+const GoalProgressModelPhaseSchema = GoalProgressPhaseSchema.exclude(["paused", "error"]);
 
 export const GoalProgressSetPhaseInputSchema = z
   .object({
@@ -1014,7 +1014,7 @@ export function createGoalProgressMcpServer(options: GoalProgressMcpServerOption
     {
       title: "Set Goal Progress Phase",
       description:
-        "Set preparing, active, completed, or error. Do not use it to pause; native pause is read-only.",
+        "Set preparing, active, or completed. Do not report task failures as plugin errors; native pause is read-only. Use native Goal for blockers.",
       inputSchema: GoalProgressSetPhaseInputSchema,
       outputSchema: GoalProgressToolOutputSchema,
       annotations: {

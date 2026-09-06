@@ -74,7 +74,7 @@ export const knMessages: GoalProgressMessages = {
   preparingBaseline: "ಪ್ರಗತಿಯ ಮೂಲ ಸ್ಥಿತಿ ಸಿದ್ಧವಾಗುತ್ತಿದೆ…",
   preparingObjectives: "ಸ್ವೀಕಾರ ಅಂಶಗಳು ಸಿದ್ಧವಾಗುತ್ತಿವೆ…",
   preparingCopy: "ಪ್ರಸ್ತುತ ಮಾದರಿ Goal ಮತ್ತು ಸ್ವೀಕಾರ ಪಟ್ಟಿಯನ್ನು ಪರಿಶೀಲಿಸುತ್ತಿದೆ.",
-  unavailableTitle: "Goal ಪ್ರಗತಿ ಲಭ್ಯವಿಲ್ಲ",
+  unavailableTitle: "ಪ್ರಗತಿ ನವೀಕರಿಸಲಾಗಿಲ್ಲ",
   unavailableCopy: "Goal ಮುಂದುವರಿಯಬಹುದು. ಸಂಪರ್ಕ ಮರಳಿದಾಗ ಪ್ರಗತಿ ಮತ್ತೆ ಕಾಣಿಸುತ್ತದೆ.",
   retryProgress: "ಪ್ರಗತಿಯನ್ನು ಮರುಪ್ರಯತ್ನಿಸಿ",
   retry: "ಮರುಪ್ರಯತ್ನಿಸಿ",

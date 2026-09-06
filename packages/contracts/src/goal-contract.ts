@@ -820,15 +820,19 @@ export const GoalProgressViewModelSchema = z
       });
     }
     const hasProgress = viewModel.overallProgressBps !== null && viewModel.overallPercent !== null;
-    const shouldHaveProgress =
+    const tracksProgress =
       viewModel.trackingPhase === "active" ||
       viewModel.trackingPhase === "paused" ||
       viewModel.trackingPhase === "blocked" ||
       viewModel.trackingPhase === "completed";
-    if (hasProgress !== shouldHaveProgress) {
+    if (
+      (viewModel.overallProgressBps === null) !== (viewModel.overallPercent === null) ||
+      (tracksProgress && !hasProgress) ||
+      (!tracksProgress && viewModel.trackingPhase !== "error" && hasProgress)
+    ) {
       context.addIssue({
         code: "custom",
-        message: "Progress is available only for tracking phases",
+        message: "Tracking views require progress; error views may retain confirmed progress",
         path: ["overallProgressBps"],
       });
     }

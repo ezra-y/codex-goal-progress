@@ -74,7 +74,7 @@ export const roMessages: GoalProgressMessages = {
   preparingBaseline: "Se stabilește baza progresului…",
   preparingObjectives: "Se pregătesc punctele de acceptare…",
   preparingCopy: "Modelul curent verifică Goal-ul și lista de acceptare.",
-  unavailableTitle: "Progresul Goal nu este disponibil",
+  unavailableTitle: "Progres neactualizat",
   unavailableCopy: "Goal-ul poate continua. Progresul va reveni când se restabilește conexiunea.",
   retryProgress: "Reîncearcă încărcarea progresului",
   retry: "Reîncearcă",

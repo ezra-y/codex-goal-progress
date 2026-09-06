@@ -74,7 +74,7 @@ export const hrMessages: GoalProgressMessages = {
   preparingBaseline: "Postavljanje početnog stanja napretka…",
   preparingObjectives: "Priprema točaka prihvaćanja…",
   preparingCopy: "Trenutačni model provjerava Goal i popis prihvaćanja.",
-  unavailableTitle: "Napredak Goala nije dostupan",
+  unavailableTitle: "Napredak nije ažuriran",
   unavailableCopy: "Goal se može nastaviti. Napredak će se vratiti kad se veza obnovi.",
   retryProgress: "Ponovi dohvat napretka",
   retry: "Pokušaj ponovno",

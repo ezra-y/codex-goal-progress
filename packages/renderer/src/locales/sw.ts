@@ -74,7 +74,7 @@ export const swMessages: GoalProgressMessages = {
   preparingBaseline: "Inaweka msingi wa maendeleo…",
   preparingObjectives: "Inaandaa vipengee vya kukubali…",
   preparingCopy: "Muundo wa sasa unaangalia Goal na orodha ya kukubali.",
-  unavailableTitle: "Maendeleo ya Goal hayapatikani",
+  unavailableTitle: "Maendeleo hayajasasishwa",
   unavailableCopy: "Goal inaweza kuendelea. Maendeleo yatarudi muunganisho ukirejea.",
   retryProgress: "Jaribu kupakia maendeleo tena",
   retry: "Jaribu tena",
