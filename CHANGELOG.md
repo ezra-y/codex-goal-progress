@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.5 - 2026-09-06
+## 0.3.5 - 2026-09-07
 
 - Build the Helper locally after installing the source plugin; Node.js 22.12+ and pnpm 11 are required.
 - Generate Contract IDs in the plugin instead of asking the model to invent them.
@@ -11,6 +11,7 @@
 - Keep task blockers separate from plugin failures, preserving the checklist and native paused state.
 - Refresh the renderer after same-version reinstalls and keep floating status controls inside narrow windows.
 - Build source and prebuilt packages from the same renderer revision and correct the nested prebuilt marketplace entry.
+- Update MCP transitive dependencies to `fast-uri` 3.1.7 and `qs` 6.16.0; the production audit reports no known vulnerabilities.
 
 ## 0.3.4 - 2026-09-02
 

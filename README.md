@@ -16,15 +16,16 @@
 
 ## 🆕 Latest update
 
-### v0.3.5 — Source plugin
+### v0.3.5 — Source plugin and compact recovery
 
-**Updated: September 5, 2026**
+**Updated: September 7, 2026**
 
-- Build the Helper locally after installing the plugin, using your existing Node environment.
-- Initialize with the checklist and weights; the plugin generates the Contract ID.
-- Add marketplace scanning, disclosure guidance, and an optimized icon.
+- Build the Helper locally after installing the source plugin; the prebuilt macOS installer remains available.
+- Generate Contract IDs in the plugin and restore progress after normal Codex restarts.
+- Replace the large error card with a compact status line that retains the last confirmed progress, Retry, and Close.
+- Keep task blockers separate from plugin failures, and ship `fast-uri` 3.1.7 and `qs` 6.16.0.
 
-The prebuilt installer remains the published v0.3.4 package, unchanged by this source-plugin update.
+The source plugin and prebuilt installer now share the same v0.3.5 renderer and fixes.
 
 ## ✨ Features
 
