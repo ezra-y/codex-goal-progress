@@ -106,7 +106,14 @@ export const GoalObjectiveSchema = z
     id: GoalObjectiveIdSchema,
     title: NonEmptyTextSchema.max(500),
     requirement: GoalObjectiveRequirementSchema.default("required"),
-    contributionBps: z.number().int().min(0).max(GOAL_PROGRESS_BPS_TOTAL),
+    contributionBps: z
+      .number()
+      .int()
+      .min(0)
+      .max(GOAL_PROGRESS_BPS_TOTAL)
+      .describe(
+        "Non-cancelled required objectives: 1-10000, total 10000. Optional: 0. Cancelled required objectives may use 0 or retain a previous weight; they do not count toward progress.",
+      ),
     contributionReason: NonEmptyTextSchema.max(500),
     status: GoalProgressItemStatusSchema,
     evidence: z.array(GoalEvidenceSchema).max(100).default([]),
@@ -124,10 +131,10 @@ export const GoalObjectiveSchema = z
       }
       return;
     }
-    if (objective.contributionBps < 1) {
+    if (objective.status !== "cancelled" && objective.contributionBps < 1) {
       context.addIssue({
         code: "custom",
-        message: "Required objectives must contribute at least 1 bps",
+        message: "Non-cancelled required objectives must contribute at least 1 bps",
         path: ["contributionBps"],
       });
     }

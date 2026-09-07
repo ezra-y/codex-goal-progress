@@ -298,7 +298,10 @@ function projectContractState(
   };
 }
 
-function sanitizeModelCommand(command: GoalProgressCommand): GoalProgressCommand {
+function sanitizeModelCommand(
+  command: GoalProgressCommand,
+  previous?: GoalContract,
+): GoalProgressCommand {
   if (command.type === "update-items") {
     return {
       ...command,
@@ -313,7 +316,12 @@ function sanitizeModelCommand(command: GoalProgressCommand): GoalProgressCommand
     return {
       ...command,
       source: "model",
-      objectives: command.objectives.map(sanitizeModelObjective),
+      objectives: command.objectives.map((objective) =>
+        sanitizeModelObjective(
+          objective,
+          previous?.objectives.find((stored) => stored.id === objective.id),
+        ),
+      ),
     };
   }
   return { ...command, source: "model" };
@@ -2164,7 +2172,7 @@ export class GoalProgressHelper {
       current.contract?.revision ?? null,
     );
     let commandForStore: GoalProgressCommand =
-      context.clientKind === "mcp" ? sanitizeModelCommand(command) : command;
+      context.clientKind === "mcp" ? sanitizeModelCommand(command, contract ?? undefined) : command;
     let retargeted = false;
     if (contract && contract.nativeGoal.status !== "complete") {
       const nativeGoal = await this.#sessionCoordinator.readNativeGoal(
@@ -2179,7 +2187,9 @@ export class GoalProgressHelper {
             throw error;
           }
           const sanitized = (
-            context.clientKind === "mcp" ? sanitizeModelCommand(command) : command
+            context.clientKind === "mcp"
+              ? sanitizeModelCommand(command, contract ?? undefined)
+              : command
           ) as Extract<GoalProgressCommand, { type: "rescope" }>;
           commandForStore = {
             ...sanitized,

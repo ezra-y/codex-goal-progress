@@ -16,16 +16,13 @@
 
 ## 🆕 Latest update
 
-### v0.3.5 — Source plugin and compact recovery
+### v0.3.6 — Clearer checklists
 
 **Updated: September 7, 2026**
 
-- Build the Helper locally after installing the source plugin; the prebuilt macOS installer remains available.
-- Generate Contract IDs in the plugin and restore progress after normal Codex restarts.
-- Replace the large error card with a compact status line that retains the last confirmed progress, Retry, and Close.
-- Keep task blockers separate from plugin failures, and ship `fast-uri` 3.1.7 and `qs` 6.16.0.
-
-The source plugin and prebuilt installer now share the same v0.3.5 renderer and fixes.
+- Large sets of similar deliverables are easier to follow in separate progress groups.
+- Existing checklists and confirmed progress are preserved when work continues or the scope changes.
+- Cancelled work can be saved correctly and no longer counts toward completion.
 
 ## ✨ Features
 
