@@ -142,14 +142,40 @@ export function sanitizeModelEvidence(evidence: GoalEvidence): GoalEvidence {
   };
 }
 
-export function sanitizeModelObjective(objective: GoalObjective): GoalObjective {
+export function sanitizeModelObjective(
+  objective: GoalObjective,
+  previous?: GoalObjective,
+): GoalObjective {
+  const sameResult = (
+    next: { id: string; title: string; status: string },
+    stored?: { id: string; title: string; status: string },
+  ) =>
+    stored !== undefined &&
+    next.id === stored.id &&
+    next.title === stored.title &&
+    next.status === stored.status;
+  const previousItems = new Map(
+    (previous?.id === objective.id ? previous.items : []).map((item) => [item.id, item]),
+  );
+  const unchanged =
+    sameResult(objective, previous) &&
+    previous?.items.length === objective.items.length &&
+    objective.items.every((item) => sameResult(item, previousItems.get(item.id)));
   return {
     ...objective,
-    evidence: objective.evidence.map(sanitizeModelEvidence),
-    items: objective.items.map((item) => ({
-      ...item,
-      evidence: item.evidence.map(sanitizeModelEvidence),
-    })),
+    // A rescope copies existing facts; only changed results bring new model reports.
+    evidence:
+      unchanged && previous ? previous.evidence : objective.evidence.map(sanitizeModelEvidence),
+    items: objective.items.map((item) => {
+      const stored = previousItems.get(item.id);
+      return {
+        ...item,
+        evidence:
+          sameResult(item, stored) && stored
+            ? stored.evidence
+            : item.evidence.map(sanitizeModelEvidence),
+      };
+    }),
   };
 }
 
@@ -215,7 +241,7 @@ export function createModelContract(
     revision: 1,
     scopeRevision: 0,
     source: initialization.source,
-    objectives: initialization.objectives.map(sanitizeModelObjective),
+    objectives: initialization.objectives.map((objective) => sanitizeModelObjective(objective)),
     createdAt: occurredAt,
     updatedAt: occurredAt,
   };

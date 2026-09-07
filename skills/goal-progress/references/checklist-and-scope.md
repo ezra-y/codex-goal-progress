@@ -1,395 +1,117 @@
-# Checklist Organization And Scope Changes
+# 清单组织与范围变更
 
-## 1. Purpose
+## 1. 用途
 
-Organize the current Goal into a Checklist with complete scope, clear results, and completion that
-can be checked.
+清单回答：当前目标需要交付什么，哪些结果已经有证据证明完成。执行计划记录做事的顺序与方法，不直接作为进度清单。
 
-The Checklist answers:
+在当前任务和当前模型中整理清单。首次建立时评估结构和贡献；日常推进沿用已有清单，仅在验收范围确实变化时重新整理。
 
-> What results must this Goal deliver? Which results are already true?
+## 2. 先确认目标、材料与已有成果
 
-The implementation plan continues to record execution order, technical steps, and pending work. The
-Checklist records acceptance results. They may correspond to each other, but do not copy one
-directly into the other.
+以工具返回的 `currentNativeGoal`（当前原生目标）为依据，结合用户要求、已有清单、执行计划和相关项目要求，确认最终交付、完成条件与已完成事实。
 
-Organize the Checklist in the current task and current model. Evaluate results and weights when the
-Checklist is first created, and adjust them again only when the Goal scope actually changes.
-Ordinary execution and status updates reuse the existing structure.
+优先使用已经明确的材料；仅补读与当前验收有关的内容。会改变交付范围的未知要求需要澄清，普通实施选择留在执行计划中。不能因为写清单而扩大任务。
 
-## 2. Determine The Goal And Existing Content First
+## 3. 按结果组织顶层与子项
 
-Use the trusted `currentNativeGoal` returned by the tool to determine the current Goal. Then use the
-user request, existing Checklist, current plan, and relevant project requirements to determine the
-acceptance scope.
+### 3.1 条目描述什么
 
-Identify three things first:
+顶层项写可独立验收的交付结果，标题简短具体，能回答“交付了什么、怎样确认完成”。内部考虑其作用、内容和验收依据，不因此新增工具字段。
 
-**Final deliverable.** What must the user receive in the end? For example, a working import tool, a
-research conclusion, or a set of interface designs.
+所有计分条目，包括子项，都描述交付结果。仅为开始工作而进行的准备与执行步骤不计进度；用户明确要求交付准备类报告时，报告本身可以验收。全过程约束持续有效，但遵守约束本身不单独增加进度。
 
-**Completion conditions.** Which results must be true for that deliverable to be complete? For
-example, specified formats are supported, failures can be located, or conclusions have source
-support.
+### 3.2 大项拆到顶层，小项适当归组
 
-**Existing results.** Which results are already complete and supported by evidence, and which still
-need work?
+一个顶层项包含大部分交付，且其中多个结果能够分别完成或受阻时，即使属于同类工作，也要拆成多个顶层结果或批次。不能只在“全部交付”下增加子项，仍把主要工作藏在一个大项中。
 
-Use information that is already clear. Read additional relevant material when necessary, but do not
-restart an entire research cycle merely to organize the Checklist.
+相似的小单位可以组成顶层批次，具体单位作为批次子项；每批包含这些单位的完整交付，不按工序把全部单位横切成阶段。各批次不重叠，合起来覆盖实际范围，不用用户给出的数量上限虚构单位。
 
-Clarify requirements that are still unconfirmed and would change the delivery scope. Leave small
-implementation choices in the execution plan instead of turning every technical detail into an
-acceptance condition.
+复杂且独立的交付可以各自成项；单一的小交付只用一个顶层项，其质量条件放在对应子项。条目数量由目标决定，不套固定数量，也不受界面同时显示几行的限制。
 
-## 3. Split The Checklist By Results
+对数量较多、复杂度相近的小单位，先把主要交付分成多个规模合适的顶层批次，再将具体单位放进各批。批次数少于单位数，可按内容关联、交付边界或工作规模分组，不固定批数和每批数量。
 
-### Write Verifiable Results As Top-Level Items
+检查是否分批，要看主要交付本身有没有拆开。只有“全部成果交付”和“最后审查”两项，主体仍是一大项，没有完成分批。审查是否单列按第 3.3 节处理，不为凑条数新增审查。
 
-For each top-level item, first answer:
+用户已确认的清单、单一整体产物和本身复杂的独立交付，不强行改成这种批次结构。
 
-> How does it contribute to the Goal? What does it deliver? What fact confirms completion?
+层级示意：`C1 甲批完整成果 → C1.1、C1.2 对应单位；C2 乙批完整成果 → C2.1、C2.2 对应单位`。这仅说明父子位置，不规定批次数量或大小。
 
-Write the answer as a short, specific result. These three questions help organize the Checklist;
-they do not add separate `Why`, `What`, or `Acceptance` fields.
+### 3.3 子项与独立审查
 
-For example:
+子项说明父项内部必要的完成条件，合起来应覆盖父项承诺的结果。子项只贡献父项内部进度；同一交付不能又在别的顶层项重复计分。
 
-| Too vague | Verifiable result |
-|---|---|
-| Develop import feature | Specified CSV files can be imported correctly |
-| Handle errors | Import failures identify the incorrect row and explain the reason |
-| Complete research | The capabilities, limits, and costs of three options can be compared directly |
-| Improve the interface | Primary actions remain fully visible and clickable in a narrow window |
+保留用户明确要求的整体独立审查。日常核对随对应交付，独立审查验收其自身产出，不再次计算被检查的交付。
 
-Activities such as "read the code," "connect the tool," "set up the environment," and "make a plan"
-are usually execution steps. They may help complete the Goal, but doing them alone does not increase
-Goal completion.
+## 4. 区分已有清单、没有清单与恢复进度
 
-The acceptance target depends on the deliverable the user actually requested. If the user wants a
-test report, verify the report content and results. If the user wants a research conclusion, verify
-the conclusion and its supporting evidence. Do not force every task into fixed development,
-testing, and release stages.
+### 4.1 用户已经提供验收清单
 
-### Cover The Complete Scope With As Few Top-Level Items As Possible
+优先沿用其中有效的验收结果、原有范围和明确要求。清楚且正确的条目保留原文及用户指定的有效贡献值，不为统一风格重新改写。
 
-Split results according to whether they can be judged complete separately.
+清单不完整时，只补当前目标遗漏的必要结果；表述模糊时，依据已知目标改成可验收结果。仅因不适合计分而移出的工作仍留在执行计划中，不能丢弃用户要求。
 
-A simple Goal may have only one top-level item. Split a complex Goal only when the results are
-genuinely different, not to make the Checklist look detailed.
+### 4.2 用户只有执行计划或混合清单
 
-If two items can only be proven by the same fact, check whether they are duplicates. They may be
-merged, or one may become a child acceptance point of the other.
+从计划或混合内容中提取有效验收结果，把过程步骤留在计划中。保留已有的正确结果，只补缺项；不能把执行顺序逐条复制成顶层进度，也不能强行套统一阶段。
 
-If one item contains several important results that can be completed or fail independently,
-consider splitting it.
+### 4.3 用户没有可用清单
 
-### Child Items Explain What Makes The Parent Complete
+依据当前目标、明确要求和现有事实，从头生成目标专属的验收结构。先确认交付和完成条件，再按第 3 节组织粒度；已有成果有证据时可以直接记录，不必一律从零开始。
 
-Child items describe only the necessary acceptance conditions inside their parent.
+### 4.4 工具已经保存清单
 
-For example:
+这与“用户提供了一份文字清单”不同。已有工具保存的清单时，按主技能返回的动作读取并沿用，不因恢复会话重新生成。只有文字清单、尚未初始化时，整理后调用初始化工具保存。输入明确没有已保存清单时，“已启用跟踪”不代表“已初始化”，应建立清单而非恢复不存在的清单。
 
-```text
-C1 Specified CSV files can be imported correctly
-  C1.1 Supported fields are read and saved correctly
-  C1.2 A row missing required fields is not treated as a valid record
-```
+未改变的结果保留编号、状态、证据和仍适用的贡献值；已有证据记录原样复制，不增删字段、补写来源或重写时间。普通执行只更新对应结果；是否需要调整范围，按第 7 节判断。
 
-Together, child items cover the result stated by the parent. An important capability must not appear
-only in the parent title without any basis for confirming completion.
+### 4.5 来源标记
 
-Child completion contributes only to its parent. Do not repeat the same result as another top-level
-item and count it twice in overall progress.
+复用任何有效的用户验收项时，`source` 使用 `existing-checklist`（已有清单），包括保留部分条目、补齐缺项或把用户原条目澄清为具体验收结果。只有完全从头生成、未沿用任何用户验收项时才使用 `model-generated`（模型生成）。
 
-## 4. Prioritize The User's Existing Checklist
+## 5. 编号与贡献值
 
-When the user already provides a Checklist, use its valid acceptance results as the foundation.
+首次初始化省略 `contractId`（清单编号），由插件生成。后续写入使用工具返回的编号。顶层项使用 `C1`、`C2`；子项使用对应父项下的 `C1.1`、`C1.2`。
 
-Preserve the original scope, meaning, and explicit requirements. Keep items that are already clear.
-When an item has the right meaning but is too vague, use the current Goal to turn it into an
-observable result.
+编号跟随结果而不是排列位置。改名、排序和插入条目不应让其他结果重新编号；已经移除结果的编号不重新分配给不同结果。
 
-Keep execution steps that are mixed into the Checklist in the implementation plan. Do not discard
-work the user requested merely because it is unsuitable for progress calculation.
+每个顶层项填写 `contributionBps`（对总进度的贡献）和简短的 `contributionReason`（贡献依据）。必要且未取消的顶层项合计 `10000`，表示全部目标；可选项贡献为 `0`。已取消项可填 `0` 或保留历史贡献，均不参与进度计算，也不代表已经完成。
 
-Add only results that the current Goal truly requires and the existing Checklist omitted. Do not
-casually add unrequested performance work, monitoring, deployment, documentation, or compatibility.
+贡献依据是结果的重要性和范围，不是耗时、工具次数、文字长度、子项数量或目前完成多少。相近结果可使用相近贡献，不为显得精确制造复杂分数；保留用户已经明确指定的有效贡献。
 
-When a Contract already exists, preserve the IDs, completion status, and evidence of unchanged
-results.
+日常更新不重新分配贡献；拆分同一个结果只分配原有贡献，不制造额外分数。最终审查只计算审查产出。总体百分比由程序计算，模型不直接填写。
 
-Use the existing source convention:
+## 6. 状态与证据
 
-```text
-Reused valid acceptance results supplied by the user:
-source = existing-checklist
+未开始为 `pending`（待处理）；已开始但结果未成立为 `active`（进行中）；有可核查证据证明完成才为 `completed`（已完成）。受阻、取消等状态按当前工具定义使用，不能当作已经交付。
 
-Generated the Checklist from scratch:
-source = model-generated
-```
+部分完成只更新对应条目，不能用一个局部结果证明全部完成。耗时、尝试或调用工具不等于完成；确认完成的旧成果也不能因重新整理被清零。
 
-When part of the user Checklist is reused and missing results are added, continue using
-`existing-checklist`.
+证据要说明实际观察到的结果，并直接支持对应验收结论。证据范围不能小于所宣称的完成范围。相同证据可以支持不同结论，但同一交付只计一次。
 
-## 5. IDs And Weights
+## 7. 目标变化时如何处理
 
-For `goal_progress_initialize`, omit `contractId`; the plugin generates it. Copy the returned
-`contractId` into later update, rescope, and phase calls.
+### 7.1 只改措辞、执行方法或普通修复
 
-### IDs Follow Results, Not Display Order
+最终交付和验收条件没有改变时，保留清单、贡献、状态和证据。新的执行计划不自动改变范围。
 
-When first generated, top-level items use IDs such as `C1` and `C2`. Child items use IDs such as
-`C1.1` and `C1.2`: the parent ID, a dot, and a positive integer. Do not use UUIDs or titles as checklist IDs.
+### 7.2 局部增加、修改或缩减范围
 
-As long as the meaning of a result does not change, preserve its ID. Inserting a new item, changing
-display order, or editing wording must not renumber other items.
+最终交付仍相同，且大部分验收结果继续适用时，保留同一份清单。只调整受影响的结果；未变项的编号、完成状态和证据继续保留，贡献仅在范围变化确有需要时调整。
 
-Do not reassign the ID of a removed result to a new result with a different meaning.
+使用 `goal_progress_rescope`（调整范围），携带当前版本和完整的调整后结果集，不能只提交新条目或受影响片段。原因以工具要求的 `当前方向：` 开头，简短说明变化。
 
-### Weights Represent Contribution To Goal Completion
+范围扩大或缩减后，重新分配仍有效的必要项贡献，使其合计为 10000；保留编号和完成事实不等于沿用不再适用的旧贡献值。百分比由程序重新计算，不能为了维持数字而补分或重写证据。
 
-Assign `contributionBps` to each top-level result and use `contributionReason` to state the basis
-briefly.
+### 7.3 最终交付发生根本变化
 
-Required, non-cancelled top-level items that participate in overall progress must total `10000`.
-Here, `10000` represents 100% of the complete Goal.
+最终交付物或主要验收边界改变时，为新目标重新生成清单，并使用 `goal_progress_initialize`（初始化）。省略清单编号，由插件生成新编号；不能直接继承旧目标的百分比和证据。
 
-Assign weights according to the importance and scope of each result. Execution time, file count,
-tool call count, and how much is already complete do not directly determine weight.
+## 8. 检查、提交与保存确认
 
-When results are equally important, weights may be close to equal. Create a larger difference only
-when there is a clear primary and secondary result. Do not invent a complicated score that only
-looks precise.
+提交前在当前回合核对：范围是否完整且没有额外扩张；批量交付是否确实按第 3.2 节在顶层分批，父子覆盖及计分是否合理；编号、贡献总和和状态是否符合工具要求；已完成项是否有对应证据。不另开模型或独立审查流程来整理这份清单。
 
-For example:
+首次建立用 `goal_progress_initialize`；恢复已有清单用 `goal_progress_get`（读取）；普通状态更新用 `goal_progress_update`（更新）；局部范围变化用 `goal_progress_rescope`。具体调用顺序服从主技能及工具返回的动作，不跳过首次激活，也不重复激活已有进度。
 
-```text
-C1 Data imports correctly                     4500
-C2 Duplicate and invalid records are handled 3500
-C3 The user can run the import command        2000
-```
+参数以现有工具定义为准，结构示例见同目录 `contract-examples.md`。原生目标文本、运行身份和版本使用工具提供的事实，不自行编造字段或身份。
 
-Preserve valid contribution values already specified by the user.
-
-Ordinary status updates do not change weights. Do not temporarily change contribution values or
-split out already completed work merely to increase progress or avoid a decrease.
-
-Core calculates the overall percentage. The model submits only the Checklist, contribution values,
-status, and evidence.
-
-## 6. Status Must Match Actual Completion
-
-Set the status of new items from current facts:
-
-| Status | Meaning |
-|---|---|
-| `pending` | Work has not started |
-| `active` | Work is in progress, but the acceptance result is not fully true |
-| `completed` | The acceptance result is true and has checkable support |
-
-A Checklist may be enabled for work that is already in progress. Existing results may be recorded
-as complete after they are confirmed; they do not need to restart from zero.
-
-Starting work, spending time, or calling tools does not by itself prove a result is complete. When
-only part is complete, update the corresponding child items and preserve the true status of the
-remaining work.
-
-Evidence must directly support the corresponding result and state what was actually observed. For
-example: test results, generated files, page behavior, source material, or user confirmation.
-
-**The scope of the evidence must match the conclusion.** Verification of one part proves only that
-part. Results that have not been confirmed keep their existing status.
-
-The same evidence may support multiple different conclusions, but the same acceptance result counts
-only once.
-
-## 7. Adjusting The Checklist When The Goal Changes
-
-First inspect the current Goal and existing Checklist, then decide whether the acceptance scope
-actually changed.
-
-### Only Wording Or Implementation Changes
-
-When the final deliverable and acceptance results have not changed, preserve the original Checklist,
-weights, status, and evidence.
-
-Changing a variable name, replacing an implementation method, reordering development work, or fixing
-an ordinary bug required to meet the result does not automatically change scope.
-
-### Minor Scope Changes
-
-When the final deliverable stays the same and most acceptance results still apply, preserve the same
-Contract.
-
-Add, edit, or cancel only affected results. Preserve the IDs, status, and evidence of unchanged
-results, along with any contribution allocation that remains valid.
-
-Use `goal_progress_rescope`. Submit the complete adjusted result set with the current revision. Keep
-the existing short reason format, for example:
-
-```text
-当前方向：Add XLSX support to the existing CSV import.
-```
-
-`当前方向：` is the fixed prefix currently required by the tool.
-
-When scope expands or shrinks, the existing progress percentage may change. Preserve actual
-completion and let Core recalculate it; do not compensate for the percentage manually.
-
-### Major Goal Changes
-
-When the final deliverable or primary acceptance boundary changes, create a new Contract.
-
-For example, the Goal changes from "deliver a local import tool" to "compare existing import
-products and submit a selection report."
-
-Generate a Checklist that fits the new Goal and establish it with `goal_progress_initialize`,
-omitting `contractId` so the plugin generates a new one. Check completion against the new Goal. Do not directly inherit the old
-Goal's percentage or evidence.
-
-## 8. Review And Save Before Submission
-
-After generating the Checklist, check four things in the current turn:
-
-**Scope.** Does it cover every result the user requested? Did it add work the user did not request?
-
-**Items.** Can each item be judged complete independently? Do parent and child items correspond? Is
-anything counted twice?
-
-**Structure.** Are IDs stable? Do participating contribution values satisfy the required total? Do
-statuses match the current tool format?
-
-**Facts.** Does every result marked complete have support? Does the evidence actually support the
-conclusion?
-
-Correct problems directly before submission. This check is part of the current organization work;
-do not create a separate review process or call another model.
-
-Use `goal_progress_initialize` for the first Checklist. Use `goal_progress_rescope` for a minor scope
-change. Use `goal_progress_get` to restore an existing Checklist. Use `goal_progress_update` for
-ordinary completion status updates.
-
-Use the existing tool Schema for parameters. See `contract-examples.md` in the same directory for
-JSON shapes. Do not invent fields.
-
-The Helper reads and binds the Goal text from the trusted native Goal. The Hook supplies runtime
-identity. Get the revision of an existing Contract from the tool result.
-
-When tool validation rejects a submission, correct the structure according to the explicit error.
-Report that the Checklist was established or adjusted only after it has been saved successfully.
-
-## 9. Three Organization Examples
-
-These examples demonstrate how to split results. Specific items and weights depend on the real Goal;
-they are not a fixed template for every task.
-
-### Example A: Development Task
-
-**User Goal**
-
-> Build a local CSV import tool. Do not import the same record twice, explain the reason for invalid
-> rows, and let the user run it from a command.
-
-**Organized Checklist**
-
-```text
-C1 Specified CSV data can be imported correctly
-Contribution: 4500
-Reason: Correct data output is the primary deliverable.
-
-  C1.1 Supported fields are read and saved correctly
-  C1.2 Import results match a verified sample
-
-C2 Duplicate records and invalid rows are handled correctly
-Contribution: 3500
-Reason: Prevent invalid data from entering the result and make failures traceable.
-
-  C2.1 Deduplicate by the agreed record identifier
-  C2.2 Error messages include the row number and reason
-  C2.3 Invalid rows are not counted as successful imports
-
-C3 The user can complete an import through the command
-Contribution: 2000
-Reason: The tool must be usable in practice.
-
-  C3.1 The command runs by following the provided usage
-  C3.2 The result shows successful and failed records
-```
-
-Put "read the project," "choose a parser library," "write functions," and "run tests" in the
-implementation plan. Test results may serve as evidence for the acceptance items above.
-
-### Example B: Research Task
-
-**User Goal**
-
-> Compare the capabilities, limits, and costs of three options, then recommend one for this project.
-
-**Organized Checklist**
-
-```text
-C1 The key facts of all three options can be compared directly
-Contribution: 4000
-Reason: The choice requires a consistent factual basis.
-
-  C1.1 Describe each option's capabilities and costs using the same dimensions
-  C1.2 Key facts have traceable sources
-  C1.3 Unconfirmed information is clearly marked
-
-C2 Primary limits and their effect on this project are explained
-Contribution: 3500
-Reason: Limits may directly determine whether an option is usable.
-
-  C2.1 Distinguish confirmed limits from conditions that still need verification
-  C2.2 Explain which project result each important limit affects
-
-C3 The recommendation has a clear basis
-Contribution: 2500
-Reason: The research must support the next decision.
-
-  C3.1 Recommendation reasons correspond to the project's actual requirements
-  C3.2 State the conditions and primary tradeoffs behind the recommendation
-```
-
-"Search the web," "read documentation," and "organize notes" are research activities. The number of
-pages opened does not directly represent research completion.
-
-### Example C: User-Provided Mixed Checklist
-
-**User Goal**
-
-> Deliver a working CSV import command with deduplication and traceable errors.
-
-**Existing User Checklist**
-
-```text
-Read the project
-Support CSV import
-Do not duplicate the same record
-Write tests
-```
-
-**Organization**
-
-Preserve the acceptance meaning of "support CSV import" and "do not duplicate the same record."
-
-Keep "read the project" and "write tests" in the implementation plan.
-
-Add the missing error traceability and command usability results required by the user Goal:
-
-```text
-C1 CSV data can be imported correctly through the command
-C2 The same record is not created twice
-C3 Import errors identify the corresponding record and explain the reason
-```
-
-This Checklist reuses valid acceptance results from the user, so use:
-
-```text
-source = existing-checklist
-```
-
-Then add the necessary child items and contribution values according to the actual scope of the
-three results. Do not add an unrequested release process, monitoring service, or support for
-additional formats.
+工具拒绝时按返回错误修正；发生版本冲突时先读取最新结果。保存成功后才报告清单已经建立或调整；未成功就如实说明，不把文稿写好当作已经生效。

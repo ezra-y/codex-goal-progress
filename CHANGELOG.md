@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6 - 2026-09-07
+
+- Make large sets of similar deliverables easier to follow in separate progress groups.
+- Preserve existing checklists and confirmed progress when continuing work or changing scope.
+- Save cancelled work correctly without counting it as completed.
+
 ## 0.3.5 - 2026-09-07
 
 - Build the Helper locally after installing the source plugin; Node.js 22.12+ and pnpm 11 are required.
