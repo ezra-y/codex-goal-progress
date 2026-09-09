@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7 - 2026-09-09
+
+- Keep active work visible when another item in the same group is blocked, with consistent current and next-step guidance.
+- Continue the existing checklist and confirmed results when a completed Goal is extended.
+
 ## 0.3.6 - 2026-09-07
 
 - Make large sets of similar deliverables easier to follow in separate progress groups.

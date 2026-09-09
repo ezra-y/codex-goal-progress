@@ -1,5 +1,6 @@
 import { html } from "lit";
 import type { GoalProgressViewModel } from "../../../contracts/src/index.js";
+import { selectProgressTarget } from "../../../contracts/src/progress-focus.js";
 import type { GoalProgressMessages } from "../locale.js";
 import { phaseLabel } from "../view-labels.js";
 
@@ -7,9 +8,9 @@ export function renderCurrentSummary(
   viewModel: GoalProgressViewModel,
   messages: GoalProgressMessages,
 ) {
-  const current =
-    viewModel.objectives.find((objective) => objective.status === "active") ??
-    viewModel.objectives.find((objective) => objective.status === "blocked");
+  const selected = selectProgressTarget(viewModel.objectives);
+  // A pending candidate is not a report of work currently being performed.
+  const current = selected?.status === "pending" ? undefined : selected;
   const currentTitle = current?.currentItemTitle ?? current?.title;
   const blocked = viewModel.trackingPhase === "blocked";
   const summary =

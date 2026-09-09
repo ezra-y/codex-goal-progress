@@ -19,6 +19,7 @@ import {
   RuntimeContextArgumentSchema,
   RuntimeProofArgumentSchema,
 } from "../../contracts/src/index.js";
+import { selectProgressTarget } from "../../contracts/src/progress-focus.js";
 import {
   GOAL_PROGRESS_IPC_MAX_MESSAGE_BYTES,
   GoalProgressIpcClient,
@@ -238,12 +239,7 @@ function truncateText(value: string, maximumLength: number): string {
 }
 
 function currentObjective(viewModel: GoalProgressViewModel) {
-  return (
-    viewModel.objectives.find((objective) => objective.status === "active") ??
-    viewModel.objectives.find((objective) => objective.status === "pending") ??
-    viewModel.objectives.find((objective) => objective.status === "blocked") ??
-    null
-  );
+  return selectProgressTarget(viewModel.objectives) ?? null;
 }
 
 function progressOutput(viewModel?: GoalProgressViewModel) {

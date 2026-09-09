@@ -16,13 +16,13 @@
 
 ## 🆕 Latest update
 
-### v0.3.6 — Clearer checklists
+### v0.3.7 — More reliable continuation
 
-**Updated: September 7, 2026**
+**Updated: September 9, 2026**
 
-- Large sets of similar deliverables are easier to follow in separate progress groups.
-- Existing checklists and confirmed progress are preserved when work continues or the scope changes.
-- Cancelled work can be saved correctly and no longer counts toward completion.
+- Active work stays visible even when another item in the same group is blocked.
+- The current item and next-step guidance now point to the same work.
+- Extending a completed Goal continues the existing checklist and confirmed results automatically.
 
 ## ✨ Features
 
