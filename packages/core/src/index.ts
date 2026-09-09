@@ -486,10 +486,10 @@ export function projectGoalProgressViewModel(
     const status =
       progressBps === GOAL_PROGRESS_BPS_TOTAL
         ? "completed"
-        : countableItems.some((item) => item.status === "blocked")
-          ? "blocked"
-          : countableItems.some((item) => item.status === "active")
-            ? "active"
+        : countableItems.some((item) => item.status === "active")
+          ? "active"
+          : countableItems.some((item) => item.status === "blocked")
+            ? "blocked"
             : objective.status === "blocked"
               ? "blocked"
               : objective.status === "active"

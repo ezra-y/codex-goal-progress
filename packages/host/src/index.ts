@@ -37,6 +37,7 @@ import {
   type RuntimeProof,
   verifyRuntimeProof,
 } from "../../contracts/src/index.js";
+import { selectProgressTarget } from "../../contracts/src/progress-focus.js";
 import {
   hashNativeGoalObjective,
   type ProjectViewModelOptions,
@@ -278,24 +279,16 @@ function projectContractState(
   if (viewModel.trackingPhase === "detached") {
     return { viewModel, nextTargetId: null };
   }
-  const objectivesById = new Map(contract.objectives.map((objective) => [objective.id, objective]));
-  for (const objectiveView of viewModel.objectives) {
-    if (objectiveView.status !== "active" && objectiveView.status !== "pending") {
-      continue;
-    }
-    const item = objectivesById
-      .get(objectiveView.id)
-      ?.items.find((candidate) => candidate.status === "active" || candidate.status === "pending");
-    return {
-      viewModel,
-      nextTargetId: item?.id ?? objectiveView.id,
-    };
+  const objectiveView = selectProgressTarget(viewModel.objectives);
+  if (!objectiveView) {
+    return { viewModel, nextTargetId: null };
   }
-  const blocked = viewModel.objectives.find((objective) => objective.status === "blocked");
-  return {
-    viewModel,
-    nextTargetId: blocked?.id ?? null,
-  };
+  if (objectiveView.status === "blocked") {
+    return { viewModel, nextTargetId: objectiveView.id };
+  }
+  const objective = contract.objectives.find((candidate) => candidate.id === objectiveView.id);
+  const item = selectProgressTarget(objective?.items ?? []);
+  return { viewModel, nextTargetId: item?.id ?? objectiveView.id };
 }
 
 function sanitizeModelCommand(
@@ -2174,7 +2167,7 @@ export class GoalProgressHelper {
     let commandForStore: GoalProgressCommand =
       context.clientKind === "mcp" ? sanitizeModelCommand(command, contract ?? undefined) : command;
     let retargeted = false;
-    if (contract && contract.nativeGoal.status !== "complete") {
+    if (contract && (command.type === "rescope" || contract.nativeGoal.status !== "complete")) {
       const nativeGoal = await this.#sessionCoordinator.readNativeGoal(
         identity.threadId,
         contract.revision,
