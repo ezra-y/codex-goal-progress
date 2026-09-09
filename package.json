@@ -27,7 +27,7 @@
     "@lucide/icons": "^1.37.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "lit": "^3.3.3",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
