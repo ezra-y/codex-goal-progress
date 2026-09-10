@@ -145,7 +145,17 @@ async function main(): Promise<void> {
   const startupListenerSource = resolve(root, "platform/macos/startup-listener/main.swift");
   run(
     "/usr/bin/xcrun",
-    ["swiftc", "-O", "-framework", "AppKit", startupListenerSource, "-o", startupListenerPath],
+    [
+      "swiftc",
+      "-O",
+      "-target",
+      "arm64-apple-macosx13.0",
+      "-framework",
+      "AppKit",
+      startupListenerSource,
+      "-o",
+      startupListenerPath,
+    ],
     "GOAL_PROGRESS_STARTUP_LISTENER_BUILD_FAILED",
   );
   assertReleaseBinaryHygiene(await readFile(startupListenerPath), [root, outputRoot, workRoot]);
