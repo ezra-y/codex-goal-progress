@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8 - 2026-09-16
+
+- Keep Goal Progress startup recovery working while the Xcode license remains pending.
+- Read `arm64`, `x86_64`, and Universal architectures from the existing Mach-O file description.
+- Report missing paths separately from specific validation failures for an existing Codex app.
+
 ## 0.3.7 - 2026-09-09
 
 - Keep active work visible when another item in the same group is blocked, with consistent current and next-step guidance.

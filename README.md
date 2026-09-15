@@ -16,13 +16,13 @@
 
 ## 🆕 Latest update
 
-### v0.3.7 — More reliable continuation
+### v0.3.8 — More reliable recovery after Codex updates
 
-**Updated: September 9, 2026**
+**Updated: September 16, 2026**
 
-- Active work stays visible even when another item in the same group is blocked.
-- The current item and next-step guidance now point to the same work.
-- Extending a completed Goal continues the existing checklist and confirmed results automatically.
+- Goal Progress can identify the verified Codex app while the Xcode license remains pending.
+- Architecture detection now covers `arm64`, `x86_64`, and Universal Mach-O binaries through the existing system file description.
+- App validation reports the real identity or architecture failure when the app already exists.
 
 ## ✨ Features
 
