@@ -11,7 +11,6 @@ const MAX_COMMAND_OUTPUT_BYTES = 1024 * 1024;
 const SYSTEM_COMMANDS = {
   codesign: "/usr/bin/codesign",
   file: "/usr/bin/file",
-  lipo: "/usr/bin/lipo",
   mdfind: "/usr/bin/mdfind",
   plutil: "/usr/bin/plutil",
 } as const;
@@ -45,6 +44,7 @@ export interface CodexMacosAppIdentity {
 
 export interface RejectedCodexAppCandidate {
   readonly appPath: string;
+  readonly reason: "missing" | "invalid";
   readonly error: string;
 }
 
@@ -127,15 +127,16 @@ function parseHostArchitecture(architecture: NodeJS.Architecture): MacosExecutab
   throw discoveryError("GOAL_PROGRESS_CODEX_APP_UNSUPPORTED_HOST_ARCH", architecture);
 }
 
-function parseArchitectures(output: string): readonly MacosExecutableArchitecture[] {
-  const architectures = output.trim().split(/\s+/u).filter(Boolean);
-  if (
-    architectures.length === 0 ||
-    architectures.some((architecture) => architecture !== "arm64" && architecture !== "x86_64")
-  ) {
-    throw discoveryError("GOAL_PROGRESS_CODEX_APP_INVALID_ARCH", output.trim());
+function parseMachOArchitectures(fileDescription: string): readonly MacosExecutableArchitecture[] {
+  const architectures = fileDescription.match(/\b(?:arm64|x86_64)\b/gu) ?? [];
+  if (architectures.length === 0) {
+    throw discoveryError("GOAL_PROGRESS_CODEX_APP_INVALID_ARCH", fileDescription);
   }
   return [...new Set(architectures)] as MacosExecutableArchitecture[];
+}
+
+function isMissingPathError(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException | null)?.code === "ENOENT";
 }
 
 function assertSafeExecutableName(executableName: string): void {
@@ -221,18 +222,6 @@ export async function inspectCodexMacosApp(
   ]);
   requireSuccessfulCommand(signatureVerification, "GOAL_PROGRESS_CODEX_APP_SIGNATURE_INVALID");
 
-  const lipoResult = await runner(SYSTEM_COMMANDS.lipo, ["-archs", realExecutablePath]);
-  const architectures = parseArchitectures(
-    requireSuccessfulCommand(lipoResult, "GOAL_PROGRESS_CODEX_APP_ARCH_READ_FAILED"),
-  );
-  const hostArchitecture = options.hostArchitecture ?? parseHostArchitecture(process.arch);
-  if (!architectures.includes(hostArchitecture)) {
-    throw discoveryError(
-      "GOAL_PROGRESS_CODEX_APP_HOST_ARCH_MISMATCH",
-      `${hostArchitecture} not in ${architectures.join(",")}`,
-    );
-  }
-
   const fileResult = await runner(SYSTEM_COMMANDS.file, ["-b", realExecutablePath]);
   const fileDescription = requireSuccessfulCommand(
     fileResult,
@@ -240,6 +229,14 @@ export async function inspectCodexMacosApp(
   );
   if (!fileDescription.includes("Mach-O")) {
     throw discoveryError("GOAL_PROGRESS_CODEX_APP_EXECUTABLE_NOT_MACHO");
+  }
+  const architectures = parseMachOArchitectures(fileDescription);
+  const hostArchitecture = options.hostArchitecture ?? parseHostArchitecture(process.arch);
+  if (!architectures.includes(hostArchitecture)) {
+    throw discoveryError(
+      "GOAL_PROGRESS_CODEX_APP_HOST_ARCH_MISMATCH",
+      `${hostArchitecture} not in ${architectures.join(",")}`,
+    );
   }
 
   return {
@@ -312,6 +309,7 @@ export async function discoverCodexMacosApps(
     } catch (error) {
       rejectedCandidates.push({
         appPath: candidatePath,
+        reason: isMissingPathError(error) ? "missing" : "invalid",
         error: error instanceof Error ? error.message : String(error),
       });
     }
@@ -329,6 +327,21 @@ export async function requireSingleCodexMacosApp(
 ): Promise<CodexMacosAppIdentity> {
   const discovery = await discoverCodexMacosApps(options);
   if (discovery.validApps.length === 0) {
+    const invalidCandidates = discovery.rejectedCandidates.filter(
+      (candidate) => candidate.reason === "invalid",
+    );
+    if (
+      invalidCandidates.length === 1 &&
+      invalidCandidates[0]?.error.startsWith("GOAL_PROGRESS_")
+    ) {
+      throw new Error(invalidCandidates[0].error);
+    }
+    if (invalidCandidates.length > 0) {
+      throw discoveryError(
+        "GOAL_PROGRESS_CODEX_APP_VALIDATION_FAILED",
+        invalidCandidates.map((candidate) => candidate.error).join("; "),
+      );
+    }
     throw discoveryError(
       "GOAL_PROGRESS_CODEX_APP_NOT_FOUND",
       discovery.rejectedCandidates.map((candidate) => candidate.error).join("; "),
