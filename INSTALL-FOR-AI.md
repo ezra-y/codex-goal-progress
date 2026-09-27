@@ -63,7 +63,16 @@ Run:
 ./bin/goal-progress verify --json
 ```
 
-Installation is complete when both commands return `"ok": true`.
+Check that both commands return `"ok": true` and that `details.releaseVersion` matches the
+`releaseVersion` in the downloaded `manifest.json`.
+
+Read `details.codexSessionReconnectRequired` from the install result. When it is true, the
+installation succeeded but existing chats still need to reload the plugin. Tell the user to
+reopen the affected chat or start a new one. Ask before a full Codex restart and avoid
+interrupting running work.
+
+These commands check installation and connectivity. Only report the visible progress workflow
+as tested after creating or opening an authorized test Goal and checking its actual card.
 
 If a command returns `"ok": false`, follow its single `nextStep`, then run Doctor and Verify
 again.
@@ -75,4 +84,6 @@ Tell the user:
 - the final install code
 - the Doctor code
 - the Verify code
-- whether Codex restarted
+- the installed release version
+- whether Codex restarted or an existing chat still needs to reconnect
+- whether an actual Goal card was tested; distinguish this from command-line checks

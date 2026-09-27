@@ -44,8 +44,8 @@ When the Goal already exists:
 2. Helper resolves the current thread and reads its native Goal.
 3. `goal_progress_activate({})` returns `initialize`, `get`, or `rescope-or-replace`.
 4. The current model reuses or prepares a checklist.
-5. `goal_progress_initialize` sends only the Contract ID, source, and objectives. Helper binds the
-   Contract to the current native Goal it reads at that moment.
+5. The model supplies `source` and `objectives` to `goal_progress_initialize`; the plugin generates
+   the Contract ID. Helper binds the Contract to the current native Goal it reads at that moment.
 
 When the Goal changes:
 
@@ -114,6 +114,17 @@ suite covers 11, 14, 16, and 20 px.
 The Renderer selects a matching built-in message catalog from the Codex document locale. Other
 locales use English UI copy while preserving locale-aware number formatting and the current text
 direction.
+
+## Codex updates and startup recovery
+
+Version 0.3.9 stores the verified app path and resolves its bundled CLI whenever it creates a
+new App Server connection. It supports the nested `CodexCLI.app` layout and the legacy layout
+without modifying Codex application files or signatures.
+
+App startup and renderer recovery have separate outcomes. If the page is late, the Helper
+records the cause and reuses its limited recovery retries without changing a successful
+startup result into a failure. An existing App Server connection is not automatically replaced
+solely because the Codex application on disk was updated.
 
 ## Local runtime
 

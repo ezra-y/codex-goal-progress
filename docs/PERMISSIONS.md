@@ -36,7 +36,7 @@ If macOS displays an additional permission prompt:
 3. Run `"$goal_progress" emergency-disable --json` when the prompt repeats.
 4. Attach the Doctor result to a private security report.
 
-## Removal
+## Removing a prebuilt installation
 
 Run:
 
@@ -44,4 +44,12 @@ Run:
 "$goal_progress" uninstall --json --keep-history
 ```
 
-Use `--delete-history` after the user requests Goal history deletion.
+`--keep-history` preserves Goal Progress checklists and progress records. Use `--delete-history`
+only after the user explicitly requests deletion of that plugin data. Native Codex Goals and
+chat history are separate and remain intact.
+
+## Removing a source installation
+
+Ask Codex to uninstall Goal Progress. The source plugin's `goal_progress_uninstall` tool removes
+its runtime and plugin progress data, while keeping native Goals, chat history, other plugins,
+and the shared marketplace. This source-uninstall flow does not offer `--keep-history`.
