@@ -471,7 +471,7 @@ export async function ensureSourceRuntime(): Promise<SourceRuntimeEnsureResult> 
       ...(configuration.pluginRoot ? { GOAL_PROGRESS_PLUGIN_ROOT: configuration.pluginRoot } : {}),
       GOAL_PROGRESS_RENDERER_BUNDLE_DIR: rendererRoot,
       GOAL_PROGRESS_STARTUP_LISTENER: startupListenerPath,
-      GOAL_PROGRESS_CODEX_COMMAND: resolve(app.realAppPath, "Contents/Resources/codex"),
+      GOAL_PROGRESS_CODEX_APP_PATH: app.realAppPath,
     },
     runAtLoad: true,
     keepAlive: true,
