@@ -1,0 +1,3 @@
+#!/bin/sh
+base=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+exec /bin/sh "$base/runtime/run-bootstrap.sh" mcp-server "$@"

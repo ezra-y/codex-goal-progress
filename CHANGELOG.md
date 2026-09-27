@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.9 - 2026-09-27
+
+- Keep Goal Progress working after recent Codex app updates.
+- Restore progress more reliably when the Codex window takes longer to become ready.
+
 ## 0.3.8 - 2026-09-16
 
 - Keep Goal Progress startup recovery working while the Xcode license remains pending.
