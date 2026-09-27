@@ -16,13 +16,17 @@
 
 ## 🆕 Latest update
 
-### v0.3.8 — More reliable recovery after Codex updates
+### v0.3.9 — Compatible with recent Codex updates
 
-**Updated: September 16, 2026**
+**Updated: September 27, 2026**
 
-- Goal Progress can identify the verified Codex app while the Xcode license remains pending.
-- Architecture detection now covers `arm64`, `x86_64`, and Universal Mach-O binaries through the existing system file description.
-- App validation reports the real identity or architecture failure when the app already exists.
+- Keep Goal Progress working after recent Codex app updates.
+- Restore progress more reliably when the Codex window takes longer to become ready.
+
+Your existing goals, checklists, progress and display preferences are preserved.
+
+[Release notes](https://github.com/Ezra-Y/codex-goal-progress/releases/tag/v0.3.9) ·
+[Full changelog](https://github.com/Ezra-Y/codex-goal-progress/blob/main/CHANGELOG.md)
 
 ## ✨ Features
 
@@ -64,8 +68,8 @@ sh /tmp/codex-goal-progress-install.sh
 The script downloads the macOS package and `SHA256SUMS`, verifies the ZIP, and runs the bundled
 installer. If Codex must restart, the script asks first.
 
-After installation, reopen Codex when requested, then open a new task so the new Plugin session
-loads.
+After installation, follow the reconnect prompt: reopen the affected chat or start a new one so
+it loads the updated plugin. Finish running work before a full Codex restart.
 
 ## 🛠️ Requirements
 

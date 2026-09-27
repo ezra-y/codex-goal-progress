@@ -16,13 +16,17 @@
 
 ## 🆕 最近更新
 
-### v0.3.8 — Codex 更新后恢复更稳定
+### v0.3.9 — 适配近期 Codex 更新
 
-**更新日期：2026 年 9 月 16 日**
+**更新日期：2026 年 9 月 27 日**
 
-- Xcode 许可证处于待确认状态时，Goal Progress 也能识别已验证的 Codex 应用。
-- 架构识别覆盖 `arm64`、`x86_64` 与 Universal Mach-O 应用。
-- 应用已经存在但校验失败时，直接显示真实校验原因。
+- 更新 Codex 后，Goal Progress 继续正常工作。
+- Codex 窗口加载较慢时，进度恢复更可靠。
+
+保留已有目标、清单、进度和显示偏好。
+
+[查看发布说明](https://github.com/Ezra-Y/codex-goal-progress/releases/tag/v0.3.9) ·
+[完整更新记录](https://github.com/Ezra-Y/codex-goal-progress/blob/main/CHANGELOG.md)
 
 ## ✨ 功能特性
 
@@ -63,7 +67,7 @@ sh /tmp/codex-goal-progress-install.sh
 脚本会下载 macOS 安装包和 `SHA256SUMS`，校验 ZIP，然后运行安装包内置的安装器。
 需要重启 Codex 时，脚本会先询问。
 
-安装后按提示重新打开 Codex，再打开一个新任务，让新的 Plugin 会话加载。
+安装后按提示重新打开当前聊天，或创建新聊天，让更新后的插件加载。需要完整重启 Codex 时，先等正在运行的任务结束。
 
 ## 🛠️ 环境要求
 
