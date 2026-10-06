@@ -16,17 +16,15 @@
 
 ## 🆕 最近更新
 
-### v0.3.9 — 适配近期 Codex 更新
+### v0.3.10 — 本机重构候选
 
-**更新日期：2026 年 9 月 27 日**
+**候选日期：2026 年 10 月 5 日。尚未公开发布。**
 
-- 更新 Codex 后，Goal Progress 继续正常工作。
-- Codex 窗口加载较慢时，进度恢复更可靠。
+- 按当前显示的聊天恢复进度，排除隐藏的缓存页面。
+- 页面恢复与后台连接分别处理。
+- 分别报告安装、当前显示和未执行的完整流程验证。
 
-保留已有目标、清单、进度和显示偏好。
-
-[查看发布说明](https://github.com/Ezra-Y/codex-goal-progress/releases/tag/v0.3.9) ·
-[完整更新记录](https://github.com/Ezra-Y/codex-goal-progress/blob/main/CHANGELOG.md)
+公开最新正式版仍为 [v0.3.9](https://github.com/Ezra-Y/codex-goal-progress/releases/tag/v0.3.9)。
 
 ## ✨ 功能特性
 

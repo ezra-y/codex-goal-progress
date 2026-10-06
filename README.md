@@ -16,17 +16,15 @@
 
 ## 🆕 Latest update
 
-### v0.3.9 — Compatible with recent Codex updates
+### v0.3.10 — Local refactor candidate
 
-**Updated: September 27, 2026**
+**Candidate date: October 5, 2026. Not publicly released.**
 
-- Keep Goal Progress working after recent Codex app updates.
-- Restore progress more reliably when the Codex window takes longer to become ready.
+- Restore progress within the currently displayed chat, excluding hidden cached pages.
+- Keep page recovery separate from the local connection.
+- Report installation, current display, and untested workflows separately.
 
-Your existing goals, checklists, progress and display preferences are preserved.
-
-[Release notes](https://github.com/Ezra-Y/codex-goal-progress/releases/tag/v0.3.9) ·
-[Full changelog](https://github.com/Ezra-Y/codex-goal-progress/blob/main/CHANGELOG.md)
+The latest published version remains [v0.3.9](https://github.com/Ezra-Y/codex-goal-progress/releases/tag/v0.3.9).
 
 ## ✨ Features
 
