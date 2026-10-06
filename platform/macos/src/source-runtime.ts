@@ -705,7 +705,7 @@ export async function inspectSourceRuntime(
     changed: false,
     nextStep: ok ? null : "Run the source Plugin again to repair its local runtime.",
     details: {
-      verification,
+      verification: { ...verification, installation: ok ? "pass" : "fail" },
       releaseVersion: GOAL_PROGRESS_RELEASE_VERSION,
       sourceRuntimeRoot: configuration.sourceRuntimeRoot,
       helperLauncherPath: configuration.helperLauncherPath,
