@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.10 - 2026-10-05
+
+Unpublished local refactor candidate: resolve the active chat once, separate display recovery from transport recovery, and distinguish installation from display checks.
+
 ## 0.3.9 - 2026-09-27
 
 - Keep Goal Progress working after recent Codex app updates.

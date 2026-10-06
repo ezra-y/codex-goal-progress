@@ -6,7 +6,8 @@ This page lists the published platform and runtime surfaces.
 
 | Surface | Current value |
 |---|---|
-| Goal Progress release | v0.3.9 |
+| Goal Progress release | v0.3.10 |
+| Status | Unpublished local candidate; latest public release v0.3.9 |
 | Operating system | macOS |
 | Architecture | Apple Silicon arm64 |
 | Application | Codex Desktop |
