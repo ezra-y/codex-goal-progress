@@ -527,6 +527,8 @@ export class GoalProgressHelper {
       event: "startup.handoff",
       pid: event.pid,
       code: response.code,
+      ...(response.mismatchReason === undefined ? {} : { mismatchReason: response.mismatchReason }),
+      ...(response.clockSkewMs === undefined ? {} : { clockSkewMs: response.clockSkewMs }),
       ...(failureCause === undefined ? {} : { causeCode: failureCause }),
       durationMs: Date.now() - startedAt,
       ...(response.mainPid === undefined ? {} : { mainPid: response.mainPid }),
