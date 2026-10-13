@@ -73,6 +73,21 @@ def check_install(name, version):
     return manifest
 
 
+def wait_for_normal_reopen(app, info):
+    executable = str(app / 'Contents/MacOS' / info['CFBundleExecutable'])
+    deadline = time.monotonic() + 120
+    while time.monotonic() < deadline:
+        ps = subprocess.check_output(['/bin/ps', '-axo', 'pid=,command='], text=True, timeout=10)
+        commands = [line.strip().split(maxsplit=1) for line in ps.splitlines()]
+        normal = [parts[0] for parts in commands if len(parts) == 2 and parts[1] == executable]
+        jobs = subprocess.check_output(['launchctl', 'list'], text=True, timeout=10)
+        if not (PRODUCT / 'runtime/cdp.json').exists() and len(normal) == 1 and 'com.codexgoalprogress.restore-handoff-v2' not in jobs:
+            (EVIDENCE / 'normal-reopen.json').write_text(json.dumps({'pids':normal,'runtimeRemoved':True,'restoreWorkerFinished':True}))
+            return
+        time.sleep(0.5)
+    raise TimeoutError('Codex did not finish its documented normal-reopen handoff')
+
+
 def main():
     if os.environ.get('GITHUB_ACTIONS') != 'true' or os.environ.get('RUNNER_ENVIRONMENT') != 'github-hosted':
         raise RuntimeError('This destructive installation check requires a fresh GitHub-hosted VM')
@@ -124,7 +139,7 @@ def main():
         result = json.loads(run(f'uninstall-{attempt}', [binary, 'uninstall', '--json', '--keep-history']).stdout)
         if result['code'] == 'UNINSTALL_OK': break
         assert result['code'] == 'UNINSTALL_RESTORE_SCHEDULED'
-        time.sleep(5)
+        wait_for_normal_reopen(app, info)
     assert result['ok'] and result['code'] == 'UNINSTALL_OK'
     assert all(not (PRODUCT / name).exists() for name in ['install', 'runtime'])
     assert run('service-removed', ['launchctl', 'print', SERVICE], check=False).returncode != 0
