@@ -616,6 +616,14 @@ export async function verifyCodexCdpRuntimeIdentity(
 ): Promise<"running" | "exited"> {
   validateRuntimeState(state);
   const app = await inspectRuntimeApp(state, runner);
+  return verifyRuntimeProcessIdentity(state, app, runner);
+}
+
+async function verifyRuntimeProcessIdentity(
+  state: CodexCdpRuntimeState,
+  app: CodexMacosAppIdentity,
+  runner: CommandRunner,
+): Promise<"running" | "exited"> {
   if (!processExists(state.mainPid)) {
     await verifyExitedRuntime(state, runner);
     return "exited";
@@ -901,18 +909,39 @@ export async function stopCodexCdpRuntime(
   state: CodexCdpRuntimeState,
   options: StopCodexCdpOptions = {},
 ): Promise<RestoreCodexCdpResult> {
+  return (await inspectCodexCdpRuntime(state, options)).stop();
+}
+
+export async function inspectCodexCdpRuntime(
+  state: CodexCdpRuntimeState,
+  options: StopCodexCdpOptions = {},
+) {
   validateRuntimeState(state);
-  if ((await verifyCodexCdpRuntimeIdentity(state, options.runner)) === "exited") {
-    return { mainPid: state.mainPid, forced: false, portClosed: true };
-  }
-  return stopProtectedCodexProcess(
-    {
-      mainPid: state.mainPid,
-      processStartedAt: state.processStartedAt,
-      command: state.command,
-      executablePath: state.executablePath,
-      port: state.port,
+  const runner = options.runner ?? runSystemCommand;
+  const app = await inspectRuntimeApp(state, runner);
+  const identity = await verifyRuntimeProcessIdentity(state, app, runner);
+  return {
+    app,
+    identity,
+    async stop(): Promise<RestoreCodexCdpResult> {
+      // 签名仅在本次操作中复用；停止前重新读取进程和端口身份。
+      if ((await verifyRuntimeProcessIdentity(state, app, runner)) === "exited") {
+        return { mainPid: state.mainPid, forced: false, portClosed: true };
+      }
+      const result = await stopProtectedCodexProcess(
+        {
+          mainPid: state.mainPid,
+          processStartedAt: state.processStartedAt,
+          command: state.command,
+          executablePath: state.executablePath,
+          port: state.port,
+        },
+        options,
+      );
+      if ((await verifyRuntimeProcessIdentity(state, app, runner)) !== "exited") {
+        throw discoveryError("GOAL_PROGRESS_CDP_RUNTIME_STOP_FAILED");
+      }
+      return result;
     },
-    options,
-  );
+  };
 }

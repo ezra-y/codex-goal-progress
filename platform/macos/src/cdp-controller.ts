@@ -17,15 +17,14 @@ import {
 import {
   allocateRandomLoopbackPort,
   createCodexCdpRuntimeState,
+  inspectCodexCdpRuntime,
   type inspectProcess,
   inspectRunningProcess,
   launchCodexWithCdp,
   listCodexMainProcesses,
   readCodexCdpRuntimeState,
-  stopCodexCdpRuntime,
   stopLaunchedCodexCdpProcess,
   verifyCodexCdpListenerOwnership,
-  verifyCodexCdpRuntimeIdentity,
   waitForCodexCdpListenerOwnership,
   writeCodexCdpRuntimeState,
 } from "./cdp-runtime.js";
@@ -445,24 +444,17 @@ async function restoreCdpInstallation(
     }
     throw error;
   }
-  const identity = await verifyCodexCdpRuntimeIdentity(state);
+  const runtime = await inspectCodexCdpRuntime(state);
   if (
-    identity === "running" &&
+    runtime.identity === "running" &&
     allowSchedule &&
     process.env.GOAL_PROGRESS_INTERNAL_RESTORE_HANDOFF !== "1"
   ) {
     await scheduleCodexRestoreHandoff(restartCodex);
     return { changed: true, scheduled: true, restartedCodex: false };
   }
-  const app = await inspectCodexMacosApp(state.appPath);
-  if (
-    app.realExecutablePath !== state.executablePath ||
-    app.bundleId !== state.bundleId ||
-    app.teamId !== state.teamId
-  ) {
-    throw new Error("GOAL_PROGRESS_CDP_RUNTIME_APP_MISMATCH");
-  }
-  await stopCodexCdpRuntime(state);
+  const app = runtime.app;
+  await runtime.stop();
   await unlink(paths.cdpRuntimePath);
   if (restartCodex) {
     if (reopen) {

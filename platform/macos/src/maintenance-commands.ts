@@ -56,7 +56,7 @@ export function createMaintenanceCommands(dependencies: MaintenanceCommandDepend
           "After current tasks finish and a restart is confirmed, run install --json --restart-codex to rebuild connection identity, then retry this command.",
       });
     }
-    await verifyCodexCdpRuntimeIdentity(state);
+    if (command === "uninstall") await verifyCodexCdpRuntimeIdentity(state);
     return null;
   };
 

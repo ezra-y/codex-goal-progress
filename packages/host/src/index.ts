@@ -2305,13 +2305,10 @@ export class GoalProgressHelper {
   }
 
   async #handleDoctorIpc(request: HelperDoctorIpcRequest): Promise<GoalProgressIpcHandlerResult> {
-    const doctor = await inspectGoalProgressLocal(
-      this.paths,
-      request.params.sessionId,
-      true,
-      this.#store,
-    );
-    const runtime = await this.#inspectRuntimeDoctor(request.params.sessionId);
+    const [doctor, runtime] = await Promise.all([
+      inspectGoalProgressLocal(this.paths, request.params.sessionId, true, this.#store),
+      this.#inspectRuntimeDoctor(request.params.sessionId),
+    ]);
     return {
       revision:
         doctor.store.checked && doctor.store.revision !== null ? doctor.store.revision : null,
