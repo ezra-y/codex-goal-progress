@@ -645,6 +645,24 @@ export async function invokeGoalProgressPageApi(
   argument?: unknown,
   timeoutMs?: number,
 ): Promise<unknown> {
+  if (method === "health") {
+    // Read one snapshot by value; a cleanup round trip must not replace a valid health result.
+    const evaluated = await sender.send(
+      "Runtime.evaluate",
+      {
+        expression: "globalThis.__CODEX_GOAL_PROGRESS__?.health() ?? null",
+        awaitPromise: true,
+        returnByValue: true,
+      },
+      timeoutMs === undefined ? undefined : { timeoutMs },
+    );
+    const result = RuntimeCallByValueResultSchema.safeParse(evaluated);
+    if (!result.success) throw new GoalProgressPageError("GOAL_PROGRESS_PAGE_API_FAILED");
+    if (result.data.result.value == null) {
+      throw new GoalProgressPageError("GOAL_PROGRESS_PAGE_API_UNAVAILABLE");
+    }
+    return result.data.result.value;
+  }
   const deadline = timeoutMs === undefined ? undefined : Date.now() + timeoutMs;
   const options = () =>
     deadline === undefined ? undefined : { timeoutMs: Math.max(1, deadline - Date.now()) };
