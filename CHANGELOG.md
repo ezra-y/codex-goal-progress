@@ -1,8 +1,12 @@
 # Changelog
 
-## 0.3.10 - 2026-10-05
+## 0.3.10 - 2026-10-13
 
-Unpublished local refactor candidate: resolve the active chat once, separate display recovery from transport recovery, and distinguish installation from display checks.
+- Restore the right progress when reopening chats or switching between windows.
+- Keep progress working when your system timezone changes.
+- Report missing progress correctly and complete local installation checks without waiting on unrelated plugin catalogs.
+
+Your existing goals, checklists, progress and display preferences are preserved.
 
 ## 0.3.9 - 2026-09-27
 

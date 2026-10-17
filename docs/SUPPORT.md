@@ -7,7 +7,7 @@ This page lists the published platform and runtime surfaces.
 | Surface | Current value |
 |---|---|
 | Goal Progress release | v0.3.10 |
-| Status | Unpublished local candidate; latest public release v0.3.9 |
+| Status | Release 0.3.10 |
 | Operating system | macOS |
 | Architecture | Apple Silicon arm64 |
 | Application | Codex Desktop |
@@ -29,6 +29,12 @@ A successful app startup and delayed progress-page recovery are reported separat
 resolve as the window loads; repeated failures still need investigation.
 
 For the latest user-facing changes, see the [release notes](../CHANGELOG.md).
+
+## Supported chat sources
+
+Enable Goal Progress in a chat created through the normal **New chat** interface.
+Chats created by an agent through a tool are currently rejected with
+`CODEX_REQUEST_THREAD_UNTRUSTED`; this release keeps that compatibility boundary.
 
 ## Interface adaptation
 
