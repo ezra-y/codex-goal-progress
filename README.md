@@ -3,7 +3,7 @@
     <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress logo" width="130"><br>
     Codex Goal Progress
   </h1>
-  <p>A native progress bar for Codex Goals, powered by verified checklists and local progress tracking.</p>
+  <p>A native progress bar for Codex Goals — see what is done, what is running now, and what comes next.</p>
   <p>
     <strong>English</strong> ·
     <a href="https://github.com/Ezra-Y/codex-goal-progress/blob/main/README.zh-CN.md">简体中文</a>
@@ -14,41 +14,28 @@
   <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress in action">
 </p>
 
-## 🆕 Latest update
+## ✨ Overview
 
-### v0.3.10 — Reliable progress after Codex updates
+Codex Goal Progress adds a live progress card right beside native Codex Goals so you can follow long tasks at a glance.
 
-- Restore the right progress when reopening chats or switching between windows.
-- Keep progress working when your system timezone changes.
-- Report missing progress correctly and finish local installation checks without waiting on unrelated plugin catalogs.
-
-Existing goals, checklists, progress and display preferences are preserved.
-
-## ✨ Features
-
-Displays a progress view beside the native Codex Goal, bringing together current objective
-progress, overall progress, and Token usage attributable to that Goal.
-
-| Capability | Behavior |
+| Capability | What you get |
 |---|---|
-| Rule-driven progress | Calculates objective and overall progress from a validated checklist; Token usage and elapsed time remain separate supporting data. |
-| Verifiable calculation | The model handles only the necessary Goal understanding and checklist updates; the local Helper manages state and progress calculation. |
-| Native theme adaptation | Follows Codex Light/Dark mode and the user's current accent color. |
-| Type scale adaptation | Reads the current Codex UI font size and derives spacing continuously from it. |
-| Layout adaptation | Measures the real native Goal and composer geometry to coordinate fixed and draggable floating layouts. |
-| Language adaptation | Reads the live Codex document locale and direction, selects a matching built-in catalog, and falls back to English. |
+| Step-by-step and overall progress | Breaks a Goal into clear checklist steps and shows current step progress alongside overall completion. |
+| Separate time and Token metrics | Displays elapsed time and Token usage attributed to the Goal as independent supporting indicators. |
+| Native appearance | Matches Codex Light and Dark themes, your accent color, and your current interface font size. |
+| Flexible layout | Stays docked beside the native Goal or switches to a draggable floating view, even across multiple windows. |
+| Automatic language matching | Follows the active Codex interface language and text direction automatically. |
+| Persistent history and preferences | Restores your progress and display settings when reopening tasks or restarting Codex. |
 
 ## 🚀 Quick start
 
 ### Install from a plugin marketplace
 
-The source plugin requires an Apple Silicon Mac, Codex Desktop, Node.js 22.12 or newer,
-and pnpm 11. Install Goal Progress from the marketplace. On first use it installs the locked
-dependencies and builds the Helper in Codex plugin data; later starts reuse that build.
+Requires an Apple Silicon Mac, Codex Desktop, Node.js 22.12 or newer, and pnpm 11. Install **Goal Progress** from the Codex plugin marketplace; the first launch completes local setup automatically.
 
 ### Install with AI
 
-Send this instruction to an AI:
+Send this prompt to an AI coding agent:
 
 ```text
 Install and verify https://github.com/Ezra-Y/codex-goal-progress by following its INSTALL-FOR-AI.md.
@@ -61,31 +48,23 @@ curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/downloa
 sh /tmp/codex-goal-progress-install.sh
 ```
 
-The script downloads the macOS package and `SHA256SUMS`, verifies the ZIP, and runs the bundled
-installer. If Codex must restart, the script asks first.
-
-After installation, follow the reconnect prompt: reopen the affected chat or start a new one so
-it loads the updated plugin. Finish running work before a full Codex restart.
+The prebuilt macOS installer includes its own runtime and asks before restarting Codex if needed. After installation, reopen your chat or start a new one so Codex loads the plugin.
 
 ## 🛠️ Requirements
 
 - Apple Silicon Mac
 - Codex Desktop
-- Source Plugin: Node.js 22.12 or newer and pnpm 11
-
-The prebuilt macOS Release includes its own runtime and does not require Node.js or pnpm.
+- Source plugin only: Node.js 22.12 or newer and pnpm 11 (not needed for the Terminal installer)
 
 ## 🎯 How to use
 
-Open a native Codex Goal, then select the **Goal Progress** Skill.
+1. Open a native Codex Goal in Codex Desktop.
+2. Select the **Goal Progress** Skill for that Goal.
+3. Follow step-by-step progress, overall completion, elapsed time, and Token usage directly beside the Goal, and adjust view or animation options from the `⋯` menu anytime.
 
-The current Codex model prepares or reuses that Goal's checklist and creates a local progress
-record.
+Goal Progress is opt-in per Goal. Any Goal where you do not enable it continues with the standard Codex experience.
 
-Enable Goal Progress separately for each new Goal. Ordinary Goals continue through the native
-Codex flow.
-
-## 🌓 Progress states and themes
+## 🌓 Views and themes
 
 ### Preparing the checklist
 
@@ -111,34 +90,19 @@ Codex flow.
   <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-architecture.png" alt="How Codex Goal Progress works">
 </p>
 
-- The current model updates checklist evidence through local MCP tools.
-- Helper validates revisions and is the only state writer.
-- Core derives objective and overall progress from the checklist.
-- Renderer receives a display-only ViewModel.
-- The source Plugin builds the Helper in Codex Plugin data; the prebuilt Release uses a self-contained Node SEA Helper.
+Codex Goal Progress runs locally on your Mac. As Codex completes each step of your Goal, it updates a structured checklist, calculates step and overall percentages locally, and renders the progress card inside Codex Desktop.
 
-Read the [architecture](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md),
-[permissions](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md), and
-[support reference](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/SUPPORT.md)
-for details.
+For technical details, see [Architecture](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md), [Permissions](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md), and [Support](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/SUPPORT.md).
 
-## 🔐 Privacy and permissions
+## 🔄 Updates and removal
 
-Goal Progress uses:
+- **Prebuilt installation:** Check and install updates directly from the `⋯` menu inside the progress card, or run the Terminal installer again.
+- **Marketplace installation:** Check for new releases from the `⋯` menu and update through the Codex plugin marketplace. To uninstall, ask Codex to uninstall Goal Progress.
 
-- local files under Codex Plugin data or its application-support directory;
-- a private local Unix socket;
-- a loopback CDP connection to the verified Codex process;
-- a background Helper registered through launchd;
-- three Plugin Hooks.
+## 🔐 Privacy
 
-See [PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)
-for the exact scope and removal steps.
+All checklists, progress records, and display preferences stay on your Mac with no external cloud service. Full scope and removal steps are documented in [PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md).
 
 ## License
 
 [MIT](https://github.com/Ezra-Y/codex-goal-progress/blob/main/LICENSE)
-
-For source installations, **Check for updates** queries the published GitHub release. **View update notes** opens its release notes; install the update through the Codex plugin marketplace. It does not silently switch to a prebuilt Helper.
-
-To remove a source installation, ask Codex to uninstall Goal Progress. The `goal_progress_uninstall` tool removes this source plugin, its Helper and its progress data. It keeps native Goals, other plugins and the shared marketplace. The first response reports that removal has started; the final result is recorded in `CODEX_HOME/logs/goal-progress-uninstall.log`.
