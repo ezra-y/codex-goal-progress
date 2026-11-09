@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.11 - 2026-11-09
+
+- Compatible with the latest Codex Desktop update.
+- Faster local status checks.
+
+Existing goals, checklists, progress, and display preferences are preserved.
+
 ## 0.3.10 - 2026-10-13
 
 - Restore the right progress when reopening chats or switching between windows.

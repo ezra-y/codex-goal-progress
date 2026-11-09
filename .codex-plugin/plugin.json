@@ -1,7 +1,7 @@
 {
   "name": "codex-goal-progress",
-  "version": "0.3.10",
-  "description": "Explicitly attach deterministic progress tracking to one native Codex Goal.",
+  "version": "0.3.11",
+  "description": "A native progress bar for Codex Goals — see what is done, what is running now, and what comes next.",
   "author": {
     "name": "Codex Goal Progress Contributors"
   },
@@ -10,8 +10,8 @@
   "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "Goal Progress",
-    "shortDescription": "Track one native Goal with verified progress.",
-    "longDescription": "Adds an explicit, checklist-based progress Contract to the current native Codex Goal while local Core code computes every percentage.",
+    "shortDescription": "See live step-by-step progress beside native Codex Goals.",
+    "longDescription": "Displays step-by-step and overall progress, elapsed time, and Goal-attributed Token usage right beside native Codex Goals, adapting to your theme, font size, layout, and language.",
     "developerName": "Codex Goal Progress Contributors",
     "category": "Productivity",
     "logo": "./assets/codex-goal-progress-plugin-logo.png",

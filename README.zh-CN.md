@@ -3,7 +3,7 @@
     <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-logo.png" alt="Codex Goal Progress 标志" width="130"><br>
     Codex Goal Progress
   </h1>
-  <p>为 Codex 原生 Goal 提供由已验证清单和本地进度追踪驱动的进度条。</p>
+  <p>为 Codex 原生 Goal 提供实时进度条，一眼看清已完成、进行中与下一步。</p>
   <p>
     <a href="https://github.com/Ezra-Y/codex-goal-progress/blob/main/README.md">English</a> ·
     <strong>简体中文</strong>
@@ -11,39 +11,27 @@
 </div>
 
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress 演示">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-demo.gif" alt="Codex Goal Progress 演示">
 </p>
 
-## 🆕 最近更新
+## ✨ 产品概览
 
-### v0.3.10 — Codex 更新后更可靠地恢复进度
+Codex Goal Progress 在原生 Codex Goal 旁边显示实时进度卡片，帮助你直观跟进长时间任务的执行情况。
 
-- 重新打开聊天或切换窗口时，恢复各自的正确进度。
-- 系统时区变化后，进度插件继续正常工作。
-- 进度显示失败时准确报错，本地安装检查不再等待无关插件目录。
-
-现有目标、清单、进度和显示偏好保持。
-
-## ✨ 功能特性
-
-在 Codex 原生 Goal 旁显示进度视图，集中展示当前小目标、总体进度，以及能够确认归属于该 Goal 的 Token 用量。
-
-| 能力 | 表现 |
+| 能力 | 体验 |
 |---|---|
-| 规则驱动进度 | 根据已验证的 Checklist 计算小目标和总体进度；Token 与耗时保持为独立辅助信息。 |
-| 可验证计算 | 模型只负责必要的 Goal 理解和 Checklist 更新；本地 Helper 管理状态并计算进度。 |
-| 原生主题适配 | 跟随 Codex 的浅色/深色主题和用户当前选择的强调色。 |
-| 字号适配 | 读取 Codex 当前 UI 字号，并由字号连续计算间距。 |
-| 布局适配 | 测量真实原生 Goal 和输入框尺寸，协调固定布局与可拖动漂浮布局。 |
-| 语言适配 | 读取 Codex 当前文档语言和文字方向，选择对应的内置词典，并以英文作为最终回退。 |
+| 分步与总体进度 | 将目标拆分为清晰的步骤清单，同时展示当前步骤进度与总体完成度。 |
+| 独立的耗时与 Token 指标 | 单独显示任务已用时间与归属于该 Goal 的 Token 用量，与完成百分比互不混算。 |
+| 原生外观融合 | 自动跟随 Codex 浅色与深色主题、当前强调色及界面字号。 |
+| 灵活显示位置 | 可固定停靠在原生 Goal 旁，也可切换为可自由拖动的漂浮卡片，并在多窗口间独立工作。 |
+| 自动语言匹配 | 自动跟随当前 Codex 界面语言与文字方向。 |
+| 持久保存进度与偏好 | 重新打开聊天或重启 Codex 后，自动恢复历史进度和显示设置。 |
 
 ## 🚀 快速开始
 
 ### 从插件市场安装
 
-源码插件需要 Apple Silicon Mac、Codex Desktop、Node.js 22.12 或更高版本和 pnpm 11。
-首次使用时安装锁定版本的依赖，在 Codex 插件数据目录构建 Helper；后续直接复用。
-首次安装依赖需要联网。
+需要 Apple Silicon Mac、Codex Desktop、Node.js 22.12 或更高版本以及 pnpm 11。在 Codex 插件市场中安装 **Goal Progress**，首次启动时会自动完成本地初始化。
 
 ### 让 AI 安装
 
@@ -53,40 +41,35 @@
 请按照仓库中的 INSTALL-FOR-AI.md，安装并验证 https://github.com/Ezra-Y/codex-goal-progress。
 ```
 
-### 从预构建包安装
+### 从终端一键安装
 
 ```bash
 curl -fsSL https://github.com/Ezra-Y/codex-goal-progress/releases/latest/download/install.sh -o /tmp/codex-goal-progress-install.sh
 sh /tmp/codex-goal-progress-install.sh
 ```
 
-脚本会下载 macOS 安装包和 `SHA256SUMS`，校验 ZIP，然后运行安装包内置的安装器。
-需要重启 Codex 时，脚本会先询问。
-
-安装后按提示重新打开当前聊天，或创建新聊天，让更新后的插件加载。需要完整重启 Codex 时，先等正在运行的任务结束。
+预构建 macOS 安装包自带运行时环境；如需重启 Codex，脚本会先征求你的确认。安装完成后，重新打开聊天或新建聊天即可加载插件。
 
 ## 🛠️ 环境要求
 
 - Apple Silicon Mac
 - Codex Desktop
-- 源码插件：Node.js 22.12 或更高版本，以及 pnpm 11
-
-预构建 macOS Release 已包含 Node.js 运行时和所需程序。
+- 仅插件市场源码版需要：Node.js 22.12 或更高版本，以及 pnpm 11（终端一键安装版已自带运行时）
 
 ## 🎯 如何使用
 
-打开一个原生 Codex Goal，然后选择 **Goal Progress** Skill。
+1. 在 Codex Desktop 中打开一个原生 Codex Goal。
+2. 为该 Goal 选择 **Goal Progress** Skill。
+3. 在 Goal 旁直接查看分步进度、总体完成度、耗时与 Token 用量，随时通过卡片右上角的 `⋯` 菜单切换显示方式或动效设置。
 
-当前 Codex 模型会整理或复用该 Goal 的 Checklist，并创建本地进度记录。
+每个新 Goal 按需单独启用 Goal Progress；未启用的普通 Goal 保持 Codex 原生体验。
 
-每个新 Goal 需要单独启用 Goal Progress。普通 Goal 继续使用 Codex 原生流程。
-
-## 🌓 进度状态与主题
+## 🌓 显示效果与主题
 
 ### 正在准备验收清单
 
 <p align="center">
-  <img src="docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress 正在准备验收清单" width="760">
+  <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/0911a93fa55162333c6c772bde478fab29af2660/docs/assets/codex-goal-progress-preparing-light-en.gif" alt="Goal Progress 正在准备验收清单" width="760">
 </p>
 
 ### 浅色
@@ -107,33 +90,19 @@ sh /tmp/codex-goal-progress-install.sh
   <img src="https://raw.githubusercontent.com/Ezra-Y/codex-goal-progress/main/docs/assets/codex-goal-progress-architecture.png" alt="Codex Goal Progress 工作原理">
 </p>
 
-- 当前模型通过本地 MCP 工具更新 Checklist 证据。
-- Helper 校验 revision，并作为唯一状态写入者。
-- Core 根据 Checklist 计算小目标进度和总体进度。
-- Renderer 只接收用于显示的 ViewModel。
-- 源码插件在 Codex 插件数据目录中构建 Helper；预构建 Release 使用自包含的 Node SEA Helper。
+Codex Goal Progress 完全在你的 Mac 本地运行。Codex 每推进一项工作就更新对应的步骤清单，本地服务据此计算分步与总体完成百分比，并在 Codex Desktop 界面内实时呈现进度卡片。
 
-更多信息请查看[技术架构](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md)、
-[权限范围](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)和
-[支持说明](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/SUPPORT.md)。
+如需了解底层设计，请查看[技术架构](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/ARCHITECTURE.md)、[权限范围](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)和[支持说明](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/SUPPORT.md)。
 
-## 🔐 隐私与权限
+## 🔄 更新与卸载
 
-Goal Progress 使用：
+- **终端预构建版：** 直接在进度卡片的 `⋯` 菜单中检查并一键更新，或重新运行终端安装命令。
+- **插件市场版：** 在 `⋯` 菜单中查看新版本说明后通过 Codex 插件市场更新；需要卸载时，直接对 Codex 说“卸载 Goal Progress”即可。
 
-- Codex 插件数据目录或应用支持目录中的本地文件；
-- 私有本地 Unix Socket；
-- 连接已验证 Codex 进程的 loopback CDP；
-- 由 launchd 注册的后台 Helper；
-- 三个 Plugin Hook。
+## 🔐 隐私说明
 
-完整范围和卸载步骤请查看
-[PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)。
+所有步骤清单、历史进度和显示偏好均保存在你的 Mac 本地，无外部云端服务。完整权限范围与卸载清理方式请查看 [PERMISSIONS.md](https://github.com/Ezra-Y/codex-goal-progress/blob/main/docs/PERMISSIONS.md)。
 
 ## 许可证
 
 [MIT](https://github.com/Ezra-Y/codex-goal-progress/blob/main/LICENSE)
-
-源码安装的“检查更新”会查询 GitHub 正式发布版本。“查看更新说明”打开发布说明；请通过 Codex 插件市场安装更新。它不会自动换成预构建 Helper。
-
-卸载源码版时，对 Codex 说“卸载 Goal Progress”即可。工具删除这个源码插件、Helper 和插件进度数据，保留原生 Goal、其他插件和共享市场。先返回“开始卸载”，最终结果写入 `CODEX_HOME/logs/goal-progress-uninstall.log`。
