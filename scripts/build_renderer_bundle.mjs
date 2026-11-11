@@ -22,6 +22,7 @@ await mkdir(outputDirectory, { recursive: true });
 await build({
   absWorkingDir: root,
   bundle: true,
+  charset: "utf8",
   entryPoints: ["packages/codex-adapter/src/browser-entry.ts"],
   format: "iife",
   legalComments: "none",
