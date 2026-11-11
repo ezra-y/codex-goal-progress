@@ -13,6 +13,20 @@ await Promise.all(
   managedOutputDirectories.map((directory) => rm(directory, { recursive: true, force: true })),
 );
 
+async function collectTypeScriptFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true }).catch(() => []);
+  const files = [];
+  for (const entry of entries) {
+    const fullPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await collectTypeScriptFiles(fullPath)));
+    } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+      files.push(fullPath);
+    }
+  }
+  return files;
+}
+
 const entryPoints = [];
 for (const parent of ["packages", "platform"]) {
   const modules = await readdir(resolve(root, parent), { withFileTypes: true });
@@ -20,20 +34,10 @@ for (const parent of ["packages", "platform"]) {
     if (!module.isDirectory()) {
       continue;
     }
-    const sourceDirectory = resolve(root, parent, module.name, "src");
-    const sources = await readdir(sourceDirectory, { withFileTypes: true }).catch(() => []);
-    for (const source of sources) {
-      if (source.isFile() && source.name.endsWith(".ts")) {
-        entryPoints.push(resolve(parent, module.name, "src", source.name));
-      }
-    }
+    entryPoints.push(...(await collectTypeScriptFiles(resolve(root, parent, module.name, "src"))));
   }
 }
-for (const source of await readdir(resolve(root, "hooks/src"), { withFileTypes: true })) {
-  if (source.isFile() && source.name.endsWith(".ts")) {
-    entryPoints.push(resolve("hooks/src", source.name));
-  }
-}
+entryPoints.push(...(await collectTypeScriptFiles(resolve(root, "hooks/src"))));
 
 await build({
   absWorkingDir: root,

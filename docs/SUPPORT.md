@@ -6,8 +6,8 @@ This page lists the published platform and runtime surfaces.
 
 | Surface | Current value |
 |---|---|
-| Goal Progress release | v0.3.11 |
-| Status | Release 0.3.11 |
+| Goal Progress release | v0.3.12 |
+| Status | Release 0.3.12 |
 | Operating system | macOS |
 | Architecture | Apple Silicon arm64 |
 | Application | Codex Desktop |
@@ -15,7 +15,7 @@ This page lists the published platform and runtime surfaces.
 | Goal Contract | schema v2 |
 | IPC | protocol v4 |
 | Renderer UI intent | protocol v2 |
-| Page Host | v64 |
+| Page Host | v65 |
 
 ## Recent Codex updates
 
